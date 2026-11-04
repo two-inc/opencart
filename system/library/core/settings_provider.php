@@ -79,9 +79,10 @@ final class SettingsProvider
     /** The checkout title in every language the merchant has not set one for. */
     public const DEFAULT_TITLE = 'Business invoice';
 
-    /** The shop's own status names the maps start on: fulfil on Shipped, and so on. */
+    /** The longest vendor name sent as a header value. */
     public const VENDOR_MAX = 255;
 
+    /** The shop's own status names the maps start on: fulfil on Shipped, and so on. */
     public const DEFAULT_STATUS_NAMES = [
         'confirmed_status_id' => 'Processing',
         'fulfil_status_ids' => 'Shipped',
