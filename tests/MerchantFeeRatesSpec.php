@@ -114,6 +114,7 @@ final class MerchantFeeRatesSpec
     /**
      * @param list<HttpResponse>    $answers
      * @param array<string, string> $stored
+     * @param-out int               $now
      * @return array{0: MerchantFeeRates, 1: MemoryStore, 2: ScriptedTransport}
      */
     private static function rates(array $answers, array $stored = ['api_key' => 'k'], ?int &$now = null): array

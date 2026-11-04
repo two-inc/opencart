@@ -53,7 +53,7 @@ final class MerchantFeeRates
      *
      * @param array<mixed> $days       the terms the page shows, raw
      * @param string       $buyerCountry the shop's own country: there is no buyer on a settings page
-     * @return array{success: bool, currency?: string, fees?: array<string, array{percentage: float, fixed: float}>, stale?: bool, fetched_at?: int, error?: string, http_status?: int, message?: string}
+     * @return array{success: bool, currency?: string, fees?: array<int|string, array{percentage: float, fixed: float}>, stale?: bool, fetched_at?: int, error?: string, http_status?: int, message?: string}
      */
     public function fetch(array $days, string $buyerCountry): array
     {
@@ -127,7 +127,7 @@ final class MerchantFeeRates
      * account of it, which fetch() strips before answering.
      *
      * @param list<int> $terms
-     * @return array{success: bool, currency?: string, fees?: array<string, array{percentage: float, fixed: float}>, error?: string, http_status?: int, message?: string, detail?: string}
+     * @return array{success: bool, currency?: string, fees?: array<int|string, array{percentage: float, fixed: float}>, error?: string, http_status?: int, message?: string, detail?: string}
      */
     private function live(array $terms, string $country): array
     {
@@ -184,7 +184,7 @@ final class MerchantFeeRates
     /**
      * The last good set for the slot, re-validated on read, or null.
      *
-     * @return array{success: bool, currency: string, fees: array<string, array{percentage: float, fixed: float}>, fetched_at: int}|null
+     * @return array{success: bool, currency: string, fees: array<int|string, array{percentage: float, fixed: float}>, fetched_at: int}|null
      */
     private function stored(string $slot): ?array
     {
