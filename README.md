@@ -42,6 +42,12 @@ Map your order statuses in the extension's Order management tab: an order Two co
 
 Partial fulfilment is not offered from the shop: to fulfil part of an order, use the Two merchant portal.
 
+## Diagnostics
+
+The Diagnostics tab holds the operational settings: debug logging, the SSL verification bypass (off unless you switch it on, and a security risk whenever it is on), trusted proxies and the checkout rate limit, and custom request headers. Add a header row when your IT administrator asks for one: each is sent on every call the shop makes to Two, and a row ticked "Also send from browser" is also sent by the buyer's browser on the sole-trader autofill call, so its value is public. While any row is invalid nothing on the tab is saved, and each bad row is named.
+
+The tab also links to the extension's last 100 error log lines (the API key and header values redacted), refreshes the cached merchant profile on demand, and shows the scheduled refresh URL. Call that URL once a day from your crontab, or rely on OpenCart's own cron URL, which runs the same refresh daily. The URL carries a random token, not your API key: keep it secret. The token can also be sent as an `X-Two-Cron-Token` header or a POST field.
+
 ## Stable extension contract: order postprocessing
 
 Every order request the extension sends to Two (order create, update, confirm, cancel, capture, that is fulfil, and refund today; intent as it lands) passes through one OpenCart event just before it is sent, so your code can change the payload. Subscribe the way any OpenCart extension subscribes to an event: an `event` row (Extensions > Events) with the trigger `catalog/extension/two/order_postprocessing` and an action whose method takes the payload by reference:
