@@ -49,6 +49,7 @@ final class PostprocessingSpec
         }
 
         self::testContext();
+        self::testTaxSubtotalsSwitch();
         self::testDiffRedactsBuyerData();
         self::testUnknownRequestType();
         self::testRecomputeTotals();
@@ -61,6 +62,31 @@ final class PostprocessingSpec
         $context = $subscribers->contexts[0];
         foreach (['request_type' => 'cancel', 'trigger' => 'buyer_cancel', 'endpoint' => '/v1/order/x/cancel', 'contract_version' => 1, 'order_id' => 7, 'shipping_tax_rate' => null, 'fallback_shipping_tax_rate' => null] as $key => $expected) {
             TinyAssert::same($expected, array_key_exists($key, $context) ? $context[$key] : 'missing', 'context carries ' . $key);
+        }
+    }
+
+    /**
+     * Validate tax subtotals: off leaves the plugin's split out of every
+     * request type that carries one, before the subscribers see it; a
+     * subscriber may still add its own. On sends it as built.
+     */
+    private static function testTaxSubtotalsSwitch(): void
+    {
+        $split = [['tax_rate' => '0.25', 'taxable_amount' => '100.00', 'tax_amount' => '25.00']];
+        $payload = ['gross_amount' => '125.00', 'tax_subtotals' => $split];
+        $own = [['tax_rate' => '0.25', 'taxable_amount' => '1.00', 'tax_amount' => '0.25']];
+        $adds = static fn (array $p): array => $p + ['tax_subtotals' => $own];
+        $cases = [];
+        foreach ([Postprocessing::ORDER_INTENT, Postprocessing::ORDER_CREATE, Postprocessing::ORDER_UPDATE, Postprocessing::REFUND] as $type) {
+            $cases[] = ['type' => $type, 'on' => true, 'handlers' => [], 'sent' => $payload, 'seen' => true, 'description' => $type . ': on sends the split'];
+            $cases[] = ['type' => $type, 'on' => false, 'handlers' => [], 'sent' => ['gross_amount' => '125.00'], 'seen' => false, 'description' => $type . ': off leaves the split out'];
+            $cases[] = ['type' => $type, 'on' => false, 'handlers' => ['merchant.adds' => $adds], 'sent' => ['gross_amount' => '125.00', 'tax_subtotals' => $own], 'seen' => false, 'description' => $type . ': off, a subscriber may add its own'];
+        }
+        foreach ($cases as $case) {
+            $subscribers = new ScriptedSubscribers($case['handlers']);
+            $sent = (new Postprocessing($subscribers, new RecordingLogger(), $case['on']))->apply($case['type'], 't', '/v1/x', $payload);
+            TinyAssert::same($case['sent'], $sent, 'tax subtotals: ' . $case['description']);
+            TinyAssert::same($case['seen'], array_key_exists('tax_subtotals', $subscribers->payloads[0] ?? []), 'tax subtotals: ' . $case['description'] . ' (what the subscribers are handed)');
         }
     }
 

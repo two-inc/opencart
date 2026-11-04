@@ -128,7 +128,7 @@ final class Services
      */
     public function orderFlow(\Opencart\System\Engine\Event $event): OrderFlow
     {
-        $postprocessing = new Postprocessing(new EventSubscribers($this->db, $event), $this->logger);
+        $postprocessing = new Postprocessing(new EventSubscribers($this->db, $event), $this->logger, $this->settings->taxSubtotals());
 
         return new OrderFlow($this->client, new OrderBuilder(), $postprocessing, new ErrorMapper(), $this->orders, $this->logger);
     }
@@ -136,7 +136,7 @@ final class Services
     /** Fulfil, cancel and the invoice download, sharing the checkout flow's Two reads and snapshot check. */
     public function orderLifecycle(\Opencart\System\Engine\Event $event): OrderLifecycle
     {
-        $postprocessing = new Postprocessing(new EventSubscribers($this->db, $event), $this->logger);
+        $postprocessing = new Postprocessing(new EventSubscribers($this->db, $event), $this->logger, $this->settings->taxSubtotals());
         $flow = new OrderFlow($this->client, new OrderBuilder(), $postprocessing, new ErrorMapper(), $this->orders, $this->logger);
 
         return new OrderLifecycle($flow, $this->client, $postprocessing, new ErrorMapper(), $this->orders, $this->logger);
@@ -145,13 +145,13 @@ final class Services
     /** Refunds and the credit note. */
     public function orderRefunds(\Opencart\System\Engine\Event $event): OrderRefunds
     {
-        return new OrderRefunds($this->client, new Postprocessing(new EventSubscribers($this->db, $event), $this->logger), new ErrorMapper(), $this->orders, $this->refunds, $this->logger);
+        return new OrderRefunds($this->client, new Postprocessing(new EventSubscribers($this->db, $event), $this->logger, $this->settings->taxSubtotals()), new ErrorMapper(), $this->orders, $this->refunds, $this->logger);
     }
 
     /** Order-edit sync, sharing the checkout flow's rebuild and Two reads. */
     public function orderEdit(\Opencart\System\Engine\Event $event): OrderEdit
     {
-        $postprocessing = new Postprocessing(new EventSubscribers($this->db, $event), $this->logger);
+        $postprocessing = new Postprocessing(new EventSubscribers($this->db, $event), $this->logger, $this->settings->taxSubtotals());
         $flow = new OrderFlow($this->client, new OrderBuilder(), $postprocessing, new ErrorMapper(), $this->orders, $this->logger);
 
         return new OrderEdit($flow, $this->client, new OrderBuilder(), $postprocessing, new ErrorMapper(), $this->orders, $this->logger);

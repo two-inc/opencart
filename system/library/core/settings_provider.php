@@ -36,6 +36,7 @@ final class SettingsProvider
         'enable_order_intent' => '1',
         'show_about_link' => '1',
         'display_tooltips' => '1',
+        'enable_tax_subtotals' => '1',
         'disable_ssl_verify' => '0',
         'debug_mode' => '0',
         'custom_headers' => '[]',
@@ -204,6 +205,16 @@ final class SettingsProvider
     public function showAboutLink(): bool
     {
         return self::isOnByDefault($this->store->get('show_about_link'));
+    }
+
+    /**
+     * Validate tax subtotals (Order management): whether the per-rate
+     * tax_subtotals split goes with order intents, orders, order edits and
+     * refunds. On unless switched off, as on a fresh install.
+     */
+    public function taxSubtotals(): bool
+    {
+        return self::isOnByDefault($this->store->get('enable_tax_subtotals'));
     }
 
     /** Whether the optional fields show their help as a tooltip on the label. On unless switched off. */

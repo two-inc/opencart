@@ -53,6 +53,8 @@ final class SettingsProviderSpec
         ['stored' => ['show_about_link' => '0'], 'getter' => 'showAboutLink', 'expected' => false, 'description' => 'the explainer link switched off'],
         ['stored' => [], 'getter' => 'displayTooltips', 'expected' => true, 'description' => 'tooltips are on for a shop that predates the switch'],
         ['stored' => ['display_tooltips' => '0'], 'getter' => 'displayTooltips', 'expected' => false, 'description' => 'tooltips switched off'],
+        ['stored' => [], 'getter' => 'taxSubtotals', 'expected' => true, 'description' => 'tax subtotals are sent for a shop that predates the switch'],
+        ['stored' => ['enable_tax_subtotals' => '0'], 'getter' => 'taxSubtotals', 'expected' => false, 'description' => 'tax subtotals switched off'],
     ];
 
     /** @var list<array{a: array<string, string>, b: array<string, string>, same: bool, description: string}> */

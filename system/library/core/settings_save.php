@@ -51,8 +51,8 @@ final class SettingsSave
     public const TERMS_UNKNOWN = 'terms_unknown';
     public const DEFAULT_TERM_UNKNOWN = 'default_term_unknown';
 
-    /** The on/off settings: the placement switch, the tile's switches and the optional field toggles (Checkout fields), and the rate-limit switch (Diagnostics). */
-    public const SWITCHES = ['company_search_in_address', 'address_lookup', 'enable_order_intent', 'show_about_link', 'display_tooltips', 'enable_invoice_email', 'enable_po_number', 'enable_project', 'enable_department', 'disable_rate_limit'];
+    /** The on/off settings: the placement switch, the tile's switches and the optional field toggles (Checkout fields), Validate tax subtotals (Order management) and the rate-limit switch (Diagnostics). */
+    public const SWITCHES = ['company_search_in_address', 'address_lookup', 'enable_order_intent', 'show_about_link', 'display_tooltips', 'enable_invoice_email', 'enable_po_number', 'enable_project', 'enable_department', 'enable_tax_subtotals', 'disable_rate_limit'];
 
     /** Printable ASCII with no spaces: a key is sent as a header value, so nothing else may reach the wire. */
     private const KEY = '/^[\x21-\x7E]+\z/';

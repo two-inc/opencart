@@ -152,6 +152,7 @@ final class SettingsSaveSpec
             [['subtitle' => [1 => ' Pay in 30 days ', 2 => '']], [], ['subtitle' => '{"1":"Pay in 30 days","2":""}'], 'subtitles are stored per language, trimmed, blank allowed'],
             [['enable_order_intent' => '0', 'show_about_link' => '0', 'display_tooltips' => '1'], [], ['enable_order_intent' => '0', 'show_about_link' => '0', 'display_tooltips' => '1'], 'the tile switches are stored'],
             [['display_tooltips' => 'yes'], ['display_tooltips' => SettingsSave::SWITCH_INVALID], ['display_tooltips' => null], 'a tile switch that is not 0 or 1 is refused'],
+            [['enable_tax_subtotals' => '0'], [], ['enable_tax_subtotals' => '0'], 'Validate tax subtotals is stored'],
         ];
         foreach ($cases as [$submitted, $errors, $after, $description]) {
             [$save, $store] = self::save([], null, []);
