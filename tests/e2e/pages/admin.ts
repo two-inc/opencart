@@ -5,15 +5,27 @@ import { ADMIN_PASSWORD, ADMIN_USER } from "../config";
 // The OpenCart admin's order page: the history form, the order editor and the
 // extension's Two tab.
 
-export async function openOrder(page: Page, orderId: number): Promise<void> {
+/** Logs in to the admin and answers the session's user_token. */
+async function login(page: Page): Promise<string> {
   await page.goto("/admin/index.php?route=common/login");
   await page.fill("#input-username", ADMIN_USER);
   await page.fill("#input-password", ADMIN_PASSWORD);
   await page.click("button[type=submit]");
   await page.waitForURL(/user_token=/);
-  const token = new URL(page.url()).searchParams.get("user_token");
+  return new URL(page.url()).searchParams.get("user_token") ?? "";
+}
+
+export async function openOrder(page: Page, orderId: number): Promise<void> {
+  const token = await login(page);
   await page.goto(`/admin/index.php?route=sale/order.info&order_id=${orderId}&user_token=${token}`);
   await expect(page.locator("#input-order-status")).toBeVisible();
+}
+
+/** The extension's settings page (Extensions > Payments > Two). */
+export async function openSettings(page: Page): Promise<void> {
+  const token = await login(page);
+  await page.goto(`/admin/index.php?route=extension/two/payment/two&user_token=${token}`);
+  await expect(page.locator("#form-payment")).toBeVisible();
 }
 
 /** Adds an order history line at a status, as a merchant moving the order on does. */

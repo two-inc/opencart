@@ -30,15 +30,15 @@ make archive           # dist/two.ocmod.zip
 
 ## Languages
 
-The extension ships OpenCart language files for en-gb, nb-no, sv-se, nl-nl and es-es, in the admin and at checkout. A shop language is matched by its OpenCart language code, so install the matching OpenCart language pack. The payment method title is set per language on the Checkout fields tab; a language with none set shows that language's default.
+The extension ships OpenCart language files for en-gb, nb-no, sv-se, nl-nl and es-es, in the admin and at checkout. A shop language is matched by its OpenCart language code, so install the matching OpenCart language pack. The payment method title and an optional subtitle are set per language on the Checkout fields tab; a language with no title set shows that language's default, and one with no subtitle shows none.
 
 ## Payment terms and the fee
 
-The buyer chooses from the payment terms your Two account offers; the Payment terms tab narrows them and sets the default. To pass Two's fee on to the buyer, set a surcharge per term there and select the tax class it is charged at: the fee is an order total (Extensions > Order Totals > Two payment terms fee), taxed by your shop's own tax rules like any other charge. Keep its sort order before Taxes.
+The buyer chooses from the payment terms your Two account offers; the Payment terms tab narrows them and sets the default, and shows beside each term the fee Two charges you for offering it. To pass Two's fee on to the buyer, set a surcharge per term there and select the tax class it is charged at: the fee is an order total (Extensions > Order Totals > Two payment terms fee), taxed by your shop's own tax rules like any other charge. Keep its sort order before Taxes.
 
 ## Order lifecycle
 
-Map your order statuses in the extension's Order management tab: moving an order into the fulfilment status fulfils it with Two, the cancel status cancels it, and the refund status refunds whatever is left. Edits to an order before it is fulfilled are sent to Two. The Two tab on the admin order page refunds chosen lines or an amount, and downloads the invoice and the credit note.
+Map your order statuses in the extension's Order management tab: an order Two confirms is placed at the confirmed status (Processing on a fresh install), moving an order into the fulfilment status fulfils it with Two, the cancel status cancels it, and the refund status refunds whatever is left. Edits to an order before it is fulfilled are sent to Two. The Two tab on the admin order page refunds chosen lines or an amount, and downloads the invoice and the credit note.
 
 Partial fulfilment is not offered from the shop: to fulfil part of an order, use the Two merchant portal.
 
@@ -53,6 +53,7 @@ public function handle(array &$payload, array $context): void
 Your subscriber runs for requests sent from the admin too (the refund form on the order page): the extension fires the event on the order's store front (with the order's store as `config_store_id`), the way OpenCart's own admin order edits run, so a `catalog/` subscriber sees every request whichever side sends it.
 
 - `context` carries `request_type` (`order_intent`, `order_create`, `order_update`, `order_confirm`, `capture`, `refund`, `cancel`), `trigger`, `endpoint`, `order_id`, the shop's `order`, `shipping_tax_rate`, `fallback_shipping_tax_rate` and `contract_version` (1). Confirm, cancel and capture carry an empty payload, and so does a refund of a whole order nothing has been refunded from yet; what your handler returns is what is sent. A refund that waits for a retry is resent exactly as your handler returned it the first time, without running the handlers again.
+- With Validate tax subtotals switched off (Order management), the payload reaches your handler without `tax_subtotals`; a handler may add its own, which is sent.
 - Handlers run in the event's sort order. The extension never recomputes after them: a handler that edits a line also updates the totals it affects, for example with the totals helper `\Opencart\System\Library\Extension\Two\Core\Postprocessing::recomputeTotals($payload)`.
 - With no handler registered, the extension refuses an order whose lines do not add up to the total and tax the shop charged. With one registered and enabled, even one that changes nothing, those shop-match checks are yours, and the log says so once per request. To run them yourself: `\Opencart\System\Library\Extension\Two\Core\OrderBuilder::shopMatchFailures($payload, $order)`.
 - A handler that throws, or leaves the payload as something that is not an encodable array, refuses the request. The buyer sees the generic refusal and the log names `TWO_ORDER_POSTPROCESSING_HOOK_FAILED`, the exception class and where it was thrown.
