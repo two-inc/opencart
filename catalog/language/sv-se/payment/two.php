@@ -103,3 +103,13 @@ $_['error_term'] = 'Det betalningsvillkoret är inte tillgängligt. Välj ett an
 $_['error_placement_terms'] = 'Denna betalningsmetod är inte tillgänglig.';
 $_['error_placement_fee'] = '%s är inte tillgängligt för den här ordern just nu. Välj en annan betalningsmetod.';
 $_['error_placement_fee_changed'] = 'Avgiften för betalningsvillkor har ändrats. Kontrollera ordersumman och bekräfta igen.';
+
+// TWO-27051: the explainer link and the optional fields' tooltips. %s is the brand's product name.
+$_['text_about'] = 'Vad är %s?';
+$_['text_about_body'] = '%s är en betalningslösning för B2B-köp online, som låter dig köpa från dina favorithandlare och leverantörer på handelskredit. Genom att använda %s kan du få tillgång till flexibel handelskredit direkt för att göra inköp enkelt.';
+$_['text_about_strong'] = 'Köp nu, ta emot dina varor, betala din faktura senare.';
+$_['text_about_more'] = 'Klicka för att läsa mer';
+$_['help_invoice_email'] = 'Vart %s ska skicka fakturan för denna order, om den skiljer sig från ditt kontos e-postadress.';
+$_['help_purchase_order_number'] = 'Din interna inköpsorderreferens för denna order.';
+$_['help_project'] = 'Projektet som ska kopplas till detta köp, för din egen interna referens.';
+$_['help_department'] = 'Avdelningen som ska kopplas till detta köp, för din egen interna referens.';

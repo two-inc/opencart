@@ -95,15 +95,32 @@ final class ErrorMapper
         if (is_scalar($body['error_code'] ?? null)) {
             $parts[] = (string) $body['error_code'];
         }
-        foreach (['error_message', 'detail', 'message', 'error_details', 'error'] as $key) {
-            if (is_scalar($body[$key] ?? null) && trim((string) $body[$key]) !== '') {
-                $parts[] = trim((string) $body[$key]);
-                break;
-            }
+        $own = self::ownMessage($response, PHP_INT_MAX);
+        if ($own !== '') {
+            $parts[] = $own;
         }
         $reason = implode(': ', $parts);
 
         return mb_strlen($reason) > self::REASON_LIMIT ? mb_substr($reason, 0, self::REASON_LIMIT) . '...' : $reason;
+    }
+
+    /**
+     * Two's own message in an error body (the first of the fields Two uses
+     * for it), trimmed and cut to $limit characters, or empty when it sent
+     * none. For merchant-facing admin copy; never shown to a buyer.
+     */
+    public static function ownMessage(HttpResponse $response, int $limit = 500): string
+    {
+        $body = $response->json() ?? [];
+        foreach (['error_message', 'detail', 'message', 'error_details', 'error'] as $key) {
+            if (is_scalar($body[$key] ?? null) && trim((string) $body[$key]) !== '') {
+                $message = trim((string) $body[$key]);
+
+                return mb_strlen($message) > $limit ? mb_substr($message, 0, $limit) . '...' : $message;
+            }
+        }
+
+        return '';
     }
 
     /**

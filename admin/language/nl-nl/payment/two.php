@@ -237,3 +237,36 @@ $_['text_health_fx'] = 'Wisselkoersen van %s opgehaald %s';
 $_['text_withheld_no_terms'] = 'er wordt geen betaaltermijn aangeboden: je account biedt geen van de termijnen die op het tabblad Betaaltermijnen zijn aangevinkt voor dit type termijn.';
 $_['text_withheld_fee_total_off'] = 'er is een toeslag ingesteld, maar het besteltotaal Two-toeslag betaaltermijnen is niet ingeschakeld. Schakel het in onder Extensies > Besteltotalen, of zet de toeslagmethode op Geen toeslag.';
 $_['error_surcharge_percent_range'] = '%1$s voor de termijn van %2$d dagen moet tussen 0 en 100 liggen: het is het deel van de toeslag dat aan de koper wordt doorberekend.';
+
+// TWO-27051: vendor name (General), subtitle and the tile switches (Checkout fields), the confirmed status and Validate tax subtotals (Order management), the merchant fee per term (Payment terms). %s is the brand's product name.
+$_['entry_vendor_name'] = 'Leveranciersnaam (optioneel)';
+$_['help_vendor_name'] = 'Als deze winkel een van meerdere leverancierssites is die dezelfde %1$s-handelaarsaccount delen, voer hier een naam in om deze specifieke site/leverancier te identificeren op elke bestelling die naar %1$s wordt gestuurd - laat leeg als je maar één site gebruikt.';
+$_['error_vendor_invalid'] = 'Voer een leveranciersnaam in van maximaal 255 tekens, zonder regeleinden of letters met accenten: deze wordt bij elk verzoek als header meegestuurd.';
+$_['entry_subtitle'] = 'Subtitel';
+$_['help_subtitle'] = 'Optionele ondertitel die bij het afrekenen onder de titel wordt weergegeven.';
+$_['entry_enable_order_intent'] = 'Order-intent voorgoedkeuringscontrole inschakelen';
+$_['help_enable_order_intent'] = 'Als je Ja kiest, vraagt het afrekenen %1$s om een voorbeeld van de ordergoedkeuring voordat de koper de betaling verstuurt, en toont het resultaat in de betaaltegel. Als je Nee kiest, wordt deze voorbeeldaanroep overgeslagen - de koper doorloopt nog steeds de echte goedkeuringscontrole van %1$s bij het versturen van de betaling.';
+$_['entry_show_about_link'] = 'Toon uitlegkoppeling "Wat is %s"';
+$_['help_show_about_link'] = 'Als je Ja kiest, zien kopers een info-tooltip "Wat is %1$s?" met een koppeling naar een uitlegbron in de %1$s-betaaltegel bij het afrekenen.';
+$_['entry_display_tooltips'] = 'Invoertooltips weergeven';
+$_['help_display_tooltips'] = 'Als je Ja kiest, tonen de optionele afrekenvelden hierboven een korte helptooltip bij hun label.';
+$_['legend_tax'] = 'Belasting';
+$_['entry_enable_tax_subtotals'] = 'Btw-subtotalen valideren';
+$_['help_enable_tax_subtotals'] = 'Als je Ja kiest, wordt een tax_subtotals-uitsplitsing per btw-tarief meegestuurd met orderintenties, orders, orderwijzigingen en terugbetalingen, ter validatie tegen de orderregels. Als je Nee kiest, worden tax_subtotals bij al deze verzoeken weggelaten.';
+$_['entry_confirmed'] = '%s: geverifieerd, klaar voor uitlevering';
+$_['help_confirmed'] = 'De betaling is geverifieerd en de bestelling is klaar om door de merchant te worden uitgeleverd. De merchant kan de bestelling nu verwerken en verzenden. Standaard: In behandeling';
+$_['text_default_confirmed'] = '%s: geverifieerd, klaar voor uitlevering → In behandeling';
+$_['error_status_conflict'] = 'Deze status is ook gekoppeld aan het uitleveren, annuleren of terugbetalen van bestellingen, dus een bestelling zou worden verwerkt zodra deze is bevestigd. Kies een andere bestelstatus.';
+$_['text_fees_stale'] = 'De kosten konden niet worden vernieuwd, dus de laatst opgehaalde bedragen worden weergegeven.';
+$_['text_fees_stale_dated'] = 'De kosten konden niet worden vernieuwd, dus de bedragen die op %s zijn opgehaald worden weergegeven.';
+$_['text_fees_unavailable'] = 'De kosten konden niet worden geladen omdat de prijsservice niet bereikbaar was. De bedragen naast elke termijn ontbreken, ze zijn niet nul.';
+$_['text_fees_rejected'] = 'De kosten konden niet worden geladen. De prijsservice heeft het verzoek geweigerd met HTTP %1$s: %2$s. De bedragen naast elke termijn ontbreken, ze zijn niet nul.';
+$_['text_fees_rejected_bare'] = 'De kosten konden niet worden geladen. De prijsservice heeft het verzoek geweigerd met HTTP %s. De bedragen naast elke termijn ontbreken, ze zijn niet nul.';
+$_['text_fees_stale_rejected'] = 'De prijsservice heeft het verzoek geweigerd met HTTP %1$s: %2$s.';
+$_['text_fees_stale_rejected_bare'] = 'De prijsservice heeft het verzoek geweigerd met HTTP %s.';
+$_['text_fees_no_api_key'] = 'Kosten kunnen niet worden weergegeven totdat er een API-sleutel is opgeslagen op het tabblad Algemeen.';
+$_['text_fees_no_figure'] = 'geen bedrag';
+
+// TWO-27051 review: a map that names the confirmed status, and the subtitle's length.
+$_['error_status_is_confirmed'] = 'Bestellingen krijgen deze status wanneer ze worden bevestigd, dus ze zouden meteen worden verwerkt. Kies een andere bestelstatus, of wijzig de status voor bevestigde bestellingen.';
+$_['error_subtitle_too_long'] = 'Voer een subtitel in van maximaal 255 tekens.';

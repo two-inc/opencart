@@ -13,6 +13,7 @@ use Opencart\System\Library\Extension\Two\Core\Environment;
 use Opencart\System\Library\Extension\Two\Core\ErrorMapper;
 use Opencart\System\Library\Extension\Two\Core\FeeQuote;
 use Opencart\System\Library\Extension\Two\Core\FxRates;
+use Opencart\System\Library\Extension\Two\Core\MerchantFeeRates;
 use Opencart\System\Library\Extension\Two\Core\OrderBuilder;
 use Opencart\System\Library\Extension\Two\Core\OrderFlow;
 use Opencart\System\Library\Extension\Two\Core\OrderEdit;
@@ -92,6 +93,8 @@ final class Services
     public readonly DbRefundRecords $refunds;
     public readonly FxRates $fx;
     public readonly FeeQuote $fees;
+    /** The merchant's own fee per term, for the Payment terms tab. */
+    public readonly MerchantFeeRates $feeRates;
     private readonly LogLogger $logger;
 
     public function __construct(private readonly \Opencart\System\Library\DB $db, \Opencart\System\Library\Log $log, int $storeId = 0)
@@ -109,6 +112,7 @@ final class Services
         $this->refunds = new DbRefundRecords($db);
         $this->fx = new FxRates($this->client, $this->settings, $logger);
         $this->fees = new FeeQuote($this->client, $this->fx, $logger);
+        $this->feeRates = new MerchantFeeRates($this->client, $this->settings, $logger);
     }
 
     /** The payment terms offered now: the merchant record's, narrowed by the merchant's settings. */
@@ -128,7 +132,7 @@ final class Services
      */
     public function orderFlow(\Opencart\System\Engine\Event $event): OrderFlow
     {
-        $postprocessing = new Postprocessing(new EventSubscribers($this->db, $event), $this->logger);
+        $postprocessing = new Postprocessing(new EventSubscribers($this->db, $event), $this->logger, $this->settings->taxSubtotals());
 
         return new OrderFlow($this->client, new OrderBuilder(), $postprocessing, new ErrorMapper(), $this->orders, $this->logger);
     }
@@ -136,7 +140,7 @@ final class Services
     /** Fulfil, cancel and the invoice download, sharing the checkout flow's Two reads and snapshot check. */
     public function orderLifecycle(\Opencart\System\Engine\Event $event): OrderLifecycle
     {
-        $postprocessing = new Postprocessing(new EventSubscribers($this->db, $event), $this->logger);
+        $postprocessing = new Postprocessing(new EventSubscribers($this->db, $event), $this->logger, $this->settings->taxSubtotals());
         $flow = new OrderFlow($this->client, new OrderBuilder(), $postprocessing, new ErrorMapper(), $this->orders, $this->logger);
 
         return new OrderLifecycle($flow, $this->client, $postprocessing, new ErrorMapper(), $this->orders, $this->logger);
@@ -145,13 +149,13 @@ final class Services
     /** Refunds and the credit note. */
     public function orderRefunds(\Opencart\System\Engine\Event $event): OrderRefunds
     {
-        return new OrderRefunds($this->client, new Postprocessing(new EventSubscribers($this->db, $event), $this->logger), new ErrorMapper(), $this->orders, $this->refunds, $this->logger);
+        return new OrderRefunds($this->client, new Postprocessing(new EventSubscribers($this->db, $event), $this->logger, $this->settings->taxSubtotals()), new ErrorMapper(), $this->orders, $this->refunds, $this->logger);
     }
 
     /** Order-edit sync, sharing the checkout flow's rebuild and Two reads. */
     public function orderEdit(\Opencart\System\Engine\Event $event): OrderEdit
     {
-        $postprocessing = new Postprocessing(new EventSubscribers($this->db, $event), $this->logger);
+        $postprocessing = new Postprocessing(new EventSubscribers($this->db, $event), $this->logger, $this->settings->taxSubtotals());
         $flow = new OrderFlow($this->client, new OrderBuilder(), $postprocessing, new ErrorMapper(), $this->orders, $this->logger);
 
         return new OrderEdit($flow, $this->client, new OrderBuilder(), $postprocessing, new ErrorMapper(), $this->orders, $this->logger);

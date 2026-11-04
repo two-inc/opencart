@@ -157,6 +157,11 @@ final class Client
         $apiKey = $this->settings->apiKey();
         if ($authenticated && $apiKey !== '') {
             $headers['X-API-Key'] = $apiKey;
+            // Names this site among several sharing one merchant account; only ever beside the key.
+            $vendor = $this->settings->vendorName();
+            if ($vendor !== '') {
+                $headers['X-Vendor-Name'] = $vendor;
+            }
         }
 
         return $headers;

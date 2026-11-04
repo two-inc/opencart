@@ -238,6 +238,12 @@ function api(method, path, body, key) {
   if (method === "POST" && path === "/v1/pricing/order/fee") {
     return [200, { buyer_fee_share: "0.00", currency: body?.currency }];
   }
+  if (method === "POST" && path === "/pricing/v1/merchant/rates") {
+    // What Two charges the merchant per term, numbers as strings as Two sends them: 1% plus 0.10 per 30 days.
+    if (key !== API_KEY) return error(401, "AUTHENTICATION_INVALID", "Authentication headers invalid", "X-API-Key is incorrect or has expired");
+    const terms = Array.isArray(body?.net_terms) ? body.net_terms : [];
+    return [200, { currency: "GBP", rates: terms.map((days) => ({ net_terms: days, percentage_fee: String(days / 30), fixed_fee: (days / 300).toFixed(2) })) }];
+  }
   if (method === "GET" && path === "/companies/v2/company") {
     return [200, { items: [{ name: "E2E Trading Ltd", national_identifier: { id: "12345678" }, highlight: "", lookup_id: "e2e-1" }] }];
   }

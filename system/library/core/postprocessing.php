@@ -43,9 +43,15 @@ final class Postprocessing
     public const DIFF_LIMIT = 40;
     private const REDACTED = 'redacted';
 
+    /**
+     * @param bool $taxSubtotals the merchant's Validate tax subtotals switch (Order management): when off, the
+     *                           plugin's own tax_subtotals are left out of every request before the subscribers
+     *                           run, so a subscriber may still add its own
+     */
     public function __construct(
         private readonly PostprocessingSubscribers $subscribers,
         private readonly Logger $logger,
+        private readonly bool $taxSubtotals = true,
     ) {
     }
 
@@ -75,6 +81,10 @@ final class Postprocessing
         ];
         $handlers = $this->subscribers->names();
         $facts = ['request_type' => $requestType, 'trigger' => $trigger];
+        if (!$this->taxSubtotals) {
+            // The shop-match checks were worked out on the full payload; Two is sent none of the split.
+            unset($payload['tax_subtotals']);
+        }
 
         try {
             $result = $this->subscribers->dispatch($payload, $context);

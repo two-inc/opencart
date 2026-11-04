@@ -136,9 +136,34 @@ final class SettingsSaveSpec
             [['fulfil_status_ids' => ['3', '16']], ['fulfil_status_ids' => SettingsSave::STATUS_VOID], ['fulfil_status_ids' => null], 'the void status is refused in the fulfilment map'],
             [['cancel_status_id' => '16', 'refund_status_id' => '11'], ['cancel_status_id' => SettingsSave::STATUS_VOID], ['cancel_status_id' => null, 'refund_status_id' => '11'], 'the void status is refused as the cancel status'],
             [['cancel_status_id' => '7', 'refund_status_id' => '16'], ['refund_status_id' => SettingsSave::STATUS_VOID], ['cancel_status_id' => '7', 'refund_status_id' => null], 'the void status is refused as the refund status'],
+            [['confirmed_status_id' => '5'], [], ['confirmed_status_id' => '5'], 'the confirmed status is stored'],
+            [['confirmed_status_id' => '0'], ['confirmed_status_id' => SettingsSave::STATUS_MISSING], ['confirmed_status_id' => null], 'the confirmed status is required'],
+            [['confirmed_status_id' => '99'], ['confirmed_status_id' => SettingsSave::STATUS_UNKNOWN], ['confirmed_status_id' => null], 'a confirmed status the shop does not have is refused'],
+            [['confirmed_status_id' => '16'], ['confirmed_status_id' => SettingsSave::STATUS_VOID], ['confirmed_status_id' => null], 'the void status is refused as the confirmed status'],
+            [['confirmed_status_id' => '3', 'fulfil_status_ids' => ['', '3'], 'cancel_status_id' => '7', 'refund_status_id' => '11'], ['confirmed_status_id' => SettingsSave::STATUS_CONFLICT, 'fulfil_status_ids' => SettingsSave::STATUS_IS_CONFIRMED], ['confirmed_status_id' => null, 'fulfil_status_ids' => null, 'cancel_status_id' => '7'], 'a confirmed status that fulfils: both sides refused, the rest saved'],
+            [['confirmed_status_id' => '7', 'fulfil_status_ids' => ['', '3'], 'cancel_status_id' => '7', 'refund_status_id' => '11'], ['confirmed_status_id' => SettingsSave::STATUS_CONFLICT, 'cancel_status_id' => SettingsSave::STATUS_IS_CONFIRMED], ['confirmed_status_id' => null, 'cancel_status_id' => null, 'fulfil_status_ids' => '[3]'], 'a confirmed status that cancels: both sides refused'],
+            [['confirmed_status_id' => '11', 'fulfil_status_ids' => ['', '3'], 'cancel_status_id' => '7', 'refund_status_id' => '11'], ['confirmed_status_id' => SettingsSave::STATUS_CONFLICT, 'refund_status_id' => SettingsSave::STATUS_IS_CONFIRMED], ['confirmed_status_id' => null, 'refund_status_id' => null], 'a confirmed status that refunds: both sides refused'],
+            [['fulfil_status_ids' => ['', '3', '5']], ['fulfil_status_ids' => SettingsSave::STATUS_IS_CONFIRMED], ['fulfil_status_ids' => '[3]', 'confirmed_status_id' => '5'], 'a fulfil map changed onto the stored confirmed status is refused, the stored map kept', ['confirmed_status_id' => '5', 'fulfil_status_ids' => '[3]']],
+            [['cancel_status_id' => '5', 'refund_status_id' => '5'], ['cancel_status_id' => SettingsSave::STATUS_IS_CONFIRMED, 'refund_status_id' => SettingsSave::STATUS_IS_CONFIRMED], ['cancel_status_id' => '7', 'refund_status_id' => '11'], 'cancel and refund maps changed onto the stored confirmed status are refused', ['confirmed_status_id' => '5', 'cancel_status_id' => '7', 'refund_status_id' => '11']],
+            [['confirmed_status_id' => '3'], ['confirmed_status_id' => SettingsSave::STATUS_CONFLICT], ['confirmed_status_id' => '5'], 'a confirmed status changed onto a stored fulfil status is refused', ['confirmed_status_id' => '5', 'fulfil_status_ids' => '[3]']],
+            [['fulfil_status_ids' => ['', '3', '5']], [], ['fulfil_status_ids' => '[3,5]'], 'with no confirmed status saved, the maps are judged against nothing (the shop default is posted with the form)'],
+            [['subtitle' => [1 => str_repeat('a', 255), 2 => str_repeat("\u{e9}", 255)]], [], ['subtitle' => (string) json_encode((object) [1 => str_repeat('a', 255), 2 => str_repeat("\u{e9}", 255)], JSON_UNESCAPED_UNICODE)], 'a subtitle of 255 characters is stored, counted in characters'],
+            [['subtitle' => [1 => 'ok', 2 => str_repeat('a', 256)]], ['subtitle' => SettingsSave::SUBTITLE_TOO_LONG], ['subtitle' => null], 'a subtitle over 255 characters in any language keeps the stored subtitles'],
+            [['confirmed_status_id' => '5', 'fulfil_status_ids' => ['', '3'], 'cancel_status_id' => '7', 'refund_status_id' => '11'], [], ['confirmed_status_id' => '5'], 'a confirmed status no map acts on is stored beside them'],
+            [['vendor_name' => ' North site '], [], ['vendor_name' => 'North site'], 'the vendor name is stored, trimmed'],
+            [['vendor_name' => ''], [], ['vendor_name' => ''], 'an empty vendor name is stored: single site'],
+            [['vendor_name' => "North\r\nX-API-Key: x"], ['vendor_name' => SettingsSave::VENDOR_INVALID], ['vendor_name' => null], 'a vendor name with a line break is refused'],
+            [['vendor_name' => 'Nord' . "\u{e9}"], ['vendor_name' => SettingsSave::VENDOR_INVALID], ['vendor_name' => null], 'a non-ASCII vendor name is refused, since it goes as a header'],
+            [['vendor_name' => str_repeat('a', 256)], ['vendor_name' => SettingsSave::VENDOR_INVALID], ['vendor_name' => null], 'a vendor name over 255 characters is refused'],
+            [['subtitle' => [1 => ' Pay in 30 days ', 2 => '']], [], ['subtitle' => '{"1":"Pay in 30 days","2":""}'], 'subtitles are stored per language, trimmed, blank allowed'],
+            [['enable_order_intent' => '0', 'show_about_link' => '0', 'display_tooltips' => '1'], [], ['enable_order_intent' => '0', 'show_about_link' => '0', 'display_tooltips' => '1'], 'the tile switches are stored'],
+            [['display_tooltips' => 'yes'], ['display_tooltips' => SettingsSave::SWITCH_INVALID], ['display_tooltips' => null], 'a tile switch that is not 0 or 1 is refused'],
+            [['enable_tax_subtotals' => '0'], [], ['enable_tax_subtotals' => '0'], 'Validate tax subtotals is stored'],
         ];
-        foreach ($cases as [$submitted, $errors, $after, $description]) {
-            [$save, $store] = self::save([], null, []);
+        // A fifth column, when present, is what is stored before the save.
+        foreach ($cases as $case) {
+            [$submitted, $errors, $after, $description] = $case;
+            [$save, $store] = self::save($case[4] ?? [], null, []);
             $result = $save->save($submitted, self::STATUSES, 16);
             TinyAssert::same($errors, $result['errors'], 'fields: ' . $description);
             foreach ($after as $key => $value) {

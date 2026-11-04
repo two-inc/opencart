@@ -185,4 +185,17 @@ describe('order intent from the tile', () => {
         await checkout.tileReady(form);
         expect([calls.filter(([route]) => route === 'i').length, description]).toEqual([asked, description]);
     });
+
+    test.each([
+        [true, 1, 'the preview on asks once the company is known'],
+        [undefined, 1, 'a page without the switch asks, as before it existed'],
+        [false, 0, 'the preview switched off asks nothing'],
+    ])('intent preview %s', async (preview, asked, description) => {
+        const form = tile('address', '<p data-two-company-summary>Buying for Acme</p>');
+        const { calls, fetchImpl } = shop({ i: { outcome: 'approved', notice: 'likely' } });
+        const cfg = config(preview === undefined ? {} : { intent_preview: preview });
+        const checkout = new Checkout(cfg, document, new Api(cfg, fetchImpl), window);
+        await checkout.tileReady(form);
+        expect([calls.filter(([route]) => route === 'i').length, description]).toEqual([asked, description]);
+    });
 });

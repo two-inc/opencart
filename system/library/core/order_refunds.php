@@ -420,8 +420,28 @@ final class OrderRefunds
     }
 
     /**
-     * The rest of a partly refunded order, one line per tax rate: Two's tax
-     * subtotals for the order less those of each refund it holds. Null when
+     * The per-rate split of an order or a refund as Two holds it: its tax
+     * subtotals, else, when it carries none (Validate tax subtotals off sends
+     * none), the sums of its own lines per rate. Empty when it has neither,
+     * so the rest does not add up and is refused rather than guessed.
+     *
+     * @param array<string, mixed> $item
+     * @return list<array<string, mixed>>
+     */
+    private static function split(array $item): array
+    {
+        $subtotals = self::list($item['tax_subtotals'] ?? null);
+        if ($subtotals !== []) {
+            return $subtotals;
+        }
+        $lines = self::list($item['line_items'] ?? null);
+
+        return $lines === [] ? [] : self::list(Postprocessing::recomputeTotals(['line_items' => $lines])['tax_subtotals'] ?? null);
+    }
+
+    /**
+     * The rest of a partly refunded order, one line per tax rate: Two's split
+     * for the order less that of each refund it holds (split()). Null when
      * those do not add up to what remains (within a cent a rate).
      *
      * @param array<string, mixed> $two
@@ -438,9 +458,9 @@ final class OrderRefunds
                 $buckets[$rate]['tax'] += $sign * abs(Postprocessing::cents($subtotal['tax_amount'] ?? 0));
             }
         };
-        $add($two['tax_subtotals'] ?? null, 1);
+        $add(self::split($two), 1);
         foreach (self::list($two['refunds'] ?? null) as $refund) {
-            $add($refund['tax_subtotals'] ?? null, -1);
+            $add(self::split($refund), -1);
         }
         $lines = [];
         foreach ($buckets as $rate => $bucket) {

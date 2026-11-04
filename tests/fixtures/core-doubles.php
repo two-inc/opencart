@@ -115,6 +115,9 @@ final class ScriptedSubscribers implements \Opencart\System\Library\Extension\Tw
     /** @var list<array<string, mixed>> */
     public array $contexts = [];
 
+    /** @var list<array<string, mixed>> the payload each dispatch was handed */
+    public array $payloads = [];
+
     /** @param array<string, \Closure(array<string, mixed>, array<string, mixed>): mixed> $handlers by name */
     public function __construct(private readonly array $handlers = [])
     {
@@ -128,6 +131,7 @@ final class ScriptedSubscribers implements \Opencart\System\Library\Extension\Tw
     public function dispatch(array $payload, array $context): mixed
     {
         $this->contexts[] = $context;
+        $this->payloads[] = $payload;
         $result = $payload;
         foreach ($this->handlers as $handler) {
             $result = $handler($result, $context);

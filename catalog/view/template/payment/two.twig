@@ -1,5 +1,12 @@
 {# OpenCart 4.1 renders Twig with autoescape off: every value is escaped here. #}
 <form id="form-two" class="mb-3" data-two-tile="{{ in_tile ? 'search' : 'address' }}">
+  {% if subtitle or about_url %}
+    <p class="mb-3" data-two-subtitle>
+      {% if subtitle %}<span>{{ subtitle|e }}</span>{% endif %}
+      {# The explainer link: noopener without noreferrer, as the brand's page attributes the visit by its Referer. #}
+      {% if about_url %}<a href="{{ about_url|e }}" target="_blank" rel="noopener" title="{{ text_about_tooltip|e }}" data-bs-toggle="tooltip" data-two-about>{{ text_about|e }}</a>{% endif %}
+    </p>
+  {% endif %}
   {% if in_tile %}
     {# The one company control in tile placement: the shared search mounts on this field. Its country is the billing address's. #}
     <div class="mb-3">
@@ -13,7 +20,7 @@
   {% endif %}
   {% for field in fields %}
     <div class="mb-3">
-      <label for="input-two-{{ field.name|e }}" class="form-label">{{ field.label|e }} <span class="text-muted">({{ text_optional|e }})</span></label>
+      <label for="input-two-{{ field.name|e }}" class="form-label"{% if field.help %} title="{{ field.help|e }}"{% endif %}>{{ field.label|e }} <span class="text-muted">({{ text_optional|e }})</span></label>
       <input type="{{ field.type|e }}" name="two_{{ field.name|e }}" id="input-two-{{ field.name|e }}" value="" class="form-control" maxlength="255" data-two-optional-field>
     </div>
   {% endfor %}

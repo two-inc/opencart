@@ -237,3 +237,36 @@ $_['text_health_fx'] = 'Valutakursene fra %s ble hentet %s';
 $_['text_withheld_no_terms'] = 'ingen betalingsvilkår tilbys: kontoen din tilbyr ingen av vilkårene som er krysset av på fanen Betalingsvilkår for denne vilkårstypen.';
 $_['text_withheld_fee_total_off'] = 'et tillegg er satt, men ordretotalen Two-gebyr for betalingsvilkår er ikke aktivert. Aktiver den under Utvidelser > Ordretotaler, eller sett metoden for tillegg til Ingen tillegg.';
 $_['error_surcharge_percent_range'] = '%1$s for vilkåret på %2$d dager må være mellom 0 og 100: det er andelen av gebyret som videreføres til kjøperen.';
+
+// TWO-27051: vendor name (General), subtitle and the tile switches (Checkout fields), the confirmed status and Validate tax subtotals (Order management), the merchant fee per term (Payment terms). %s is the brand's product name.
+$_['entry_vendor_name'] = 'Leverandørnavn (valgfritt)';
+$_['help_vendor_name'] = 'Hvis denne butikken representerer ett av flere leverandørnettsteder som deler samme %1$s-selgerkonto, skriv inn et navn her for å identifisere dette spesifikke nettstedet/leverandøren på hver bestilling som sendes til %1$s - la stå tomt hvis du bare driver ett nettsted.';
+$_['error_vendor_invalid'] = 'Skriv inn et leverandørnavn på høyst 255 tegn, uten linjeskift eller bokstaver med aksenter: det sendes med hver forespørsel som en header.';
+$_['entry_subtitle'] = 'Undertittel';
+$_['help_subtitle'] = 'Valgfri undertittel som vises under tittelen i kassen.';
+$_['entry_enable_order_intent'] = 'Aktiver forhåndsgodkjenningskontroll for bestillingsintensjon';
+$_['help_enable_order_intent'] = 'Hvis du velger Ja, spør kassen %1$s om en forhåndsvisning av ordregodkjenningen før kjøperen sender betalingen, og viser resultatet i betalingsflisen. Hvis du velger Nei, hoppes dette forhåndskallet over - kjøperen går fortsatt gjennom den faktiske godkjenningskontrollen hos %1$s når betalingen sendes.';
+$_['entry_show_about_link'] = 'Vis forklaringslenken "Hva er %s"';
+$_['help_show_about_link'] = 'Hvis du velger Ja, ser kjøperne en info-verktøytips "Hva er %1$s?" med en lenke til en forklaringsressurs i %1$s-betalingsflisen ved kassen.';
+$_['entry_display_tooltips'] = 'Vis inndata-verktøytips';
+$_['help_display_tooltips'] = 'Hvis du velger Ja, viser de valgfrie kassefeltene ovenfor et kort hjelpe-verktøytips på etiketten.';
+$_['legend_tax'] = 'Skatt';
+$_['entry_enable_tax_subtotals'] = 'Valider avgiftsdelsummer';
+$_['help_enable_tax_subtotals'] = 'Hvis du velger Ja, blir en tax_subtotals-oppdeling per avgiftssats sendt med ordreintensjoner, ordrer, ordreendringer og refusjoner, for validering mot ordrelinjene. Hvis du velger Nei, utelates tax_subtotals fra alle disse.';
+$_['entry_confirmed'] = '%s: verifisert, klar for oppfyllelse';
+$_['help_confirmed'] = 'Betalingen er verifisert og ordren er klar for oppfyllelse hos selgeren. Selgeren kan nå behandle og sende ordren. Standard: Under behandling';
+$_['text_default_confirmed'] = '%s: verifisert, klar for oppfyllelse → Under behandling';
+$_['error_status_conflict'] = 'Denne statusen er også koblet til oppfyllelse, kansellering eller refusjon av ordrer, så en ordre ville bli behandlet i det øyeblikket den bekreftes. Velg en annen ordrestatus.';
+$_['text_fees_stale'] = 'Gebyrene kunne ikke oppdateres, så de sist hentede beløpene vises.';
+$_['text_fees_stale_dated'] = 'Gebyrene kunne ikke oppdateres, så beløpene som ble hentet %s vises.';
+$_['text_fees_unavailable'] = 'Gebyrene kunne ikke lastes fordi pristjenesten ikke var tilgjengelig. Beløpene ved siden av hvert betalingsvilkår mangler, de er ikke null.';
+$_['text_fees_rejected'] = 'Gebyrene kunne ikke lastes. Pristjenesten avviste forespørselen med HTTP %1$s: %2$s. Beløpene ved siden av hvert betalingsvilkår mangler, de er ikke null.';
+$_['text_fees_rejected_bare'] = 'Gebyrene kunne ikke lastes. Pristjenesten avviste forespørselen med HTTP %s. Beløpene ved siden av hvert betalingsvilkår mangler, de er ikke null.';
+$_['text_fees_stale_rejected'] = 'Pristjenesten avviste forespørselen med HTTP %1$s: %2$s.';
+$_['text_fees_stale_rejected_bare'] = 'Pristjenesten avviste forespørselen med HTTP %s.';
+$_['text_fees_no_api_key'] = 'Gebyrer kan ikke vises før en API-nøkkel er lagret på fanen Generelt.';
+$_['text_fees_no_figure'] = 'ikke oppgitt';
+
+// TWO-27051 review: a map that names the confirmed status, and the subtitle's length.
+$_['error_status_is_confirmed'] = 'Ordrer får denne statusen når de bekreftes, så de ville bli behandlet med en gang. Velg en annen ordrestatus, eller endre statusen for bekreftede ordrer.';
+$_['error_subtitle_too_long'] = 'Skriv inn en undertittel på høyst 255 tegn.';

@@ -62,6 +62,8 @@ final class OrderRefundsSpec
             ['stored' => 'CONFIRMED', 'responses' => [self::two('CONFIRMED')], 'outcome' => OrderLifecycle::REFUSED, 'calls' => [$read], 'row' => null, 'description' => 'not fulfilled at Two: refused, nothing sent'],
             ['stored' => 'FULFILLED', 'responses' => [self::json(500, [])], 'outcome' => OrderLifecycle::REFUSED, 'calls' => [$read], 'row' => null, 'description' => 'Two cannot be read: refused'],
             ['stored' => 'FULFILLED', 'responses' => [self::two('REFUNDED', [self::refund('r1', '100.00', '0.00', '0.00')])], 'outcome' => OrderLifecycle::REFUSED, 'calls' => [$read], 'row' => null, 'description' => 'Two\'s subtotals do not split the rest: refused, nothing guessed'],
+            ['stored' => 'REFUNDED', 'responses' => [self::two('REFUNDED', [self::lineRefund('r1', '80.00', '20.00')], false), self::json(201, ['id' => 'r2']), self::two('REFUNDED', [self::lineRefund('r1', '80.00', '20.00'), self::lineRefund('r2', '120.00', '30.00')], false)], 'outcome' => OrderLifecycle::DONE, 'calls' => [$read, $post, $read], 'row' => RefundRecords::DONE, 'amount' => '150.00', 'description' => 'Two holds no subtotals (tax subtotals off): the rest is split from the order\'s and the refunds\' own lines'],
+            ['stored' => 'REFUNDED', 'responses' => [self::two('REFUNDED', [['id' => 'r1', 'total_amount' => '-100.00']], false)], 'outcome' => OrderLifecycle::REFUSED, 'calls' => [$read], 'row' => null, 'description' => 'a refund with neither subtotals nor lines: refused, nothing guessed'],
             ['stored' => 'FULFILLED', 'responses' => [self::two('FULFILLED'), self::json(400, ['error_code' => 'X'])], 'outcome' => OrderLifecycle::REFUSED, 'calls' => [$read, $post], 'row' => RefundRecords::REFUSED, 'description' => 'Two refuses: refused, the row says so'],
             ['stored' => 'FULFILLED', 'responses' => [self::two('FULFILLED'), HttpResponse::unreachable('timeout'), self::two('REFUNDED', [self::refund('r1', '250.00', '200.00', '50.00')])], 'outcome' => OrderLifecycle::DONE, 'calls' => [$read, $post, $read], 'row' => RefundRecords::DONE, 'description' => 'a timeout, but the refunded total shows it: done'],
             ['stored' => 'FULFILLED', 'responses' => [self::two('FULFILLED'), HttpResponse::unreachable('timeout'), self::two('FULFILLED')], 'outcome' => OrderRefunds::UNKNOWN, 'calls' => [$read, $post, $read], 'row' => RefundRecords::UNKNOWN, 'description' => 'a timeout and no rise: unknown, awaiting a retry'],
@@ -289,14 +291,21 @@ final class OrderRefundsSpec
     }
 
     /** @param list<array<string, mixed>> $refunds */
-    private static function two(string $state, array $refunds = []): HttpResponse
+    private static function two(string $state, array $refunds = [], bool $split = true): HttpResponse
     {
         return self::json(200, [
             'id' => self::ID, 'state' => $state, 'status' => 'APPROVED', 'currency' => 'NOK', 'gross_amount' => '250.00',
-            'tax_subtotals' => [['tax_rate' => '0.25', 'taxable_amount' => '200.00', 'tax_amount' => '50.00']],
             'line_items' => [['id' => self::LINE, 'name' => 'Widget', 'quantity' => 2, 'unit_price' => '100.00', 'net_amount' => '200.00', 'tax_amount' => '50.00', 'tax_rate' => '0.25']],
             'refunds' => $refunds,
-        ]);
+        ] + ($split ? ['tax_subtotals' => [['tax_rate' => '0.25', 'taxable_amount' => '200.00', 'tax_amount' => '50.00']]] : []));
+    }
+
+    /** @return array<string, mixed> a refund as Two lists one sent without tax subtotals: its lines only */
+    private static function lineRefund(string $id, string $net, string $tax): array
+    {
+        $gross = Postprocessing::money(Postprocessing::cents($net) + Postprocessing::cents($tax));
+
+        return ['id' => $id, 'total_amount' => '-' . $gross, 'line_items' => [['net_amount' => $net, 'tax_amount' => $tax, 'gross_amount' => $gross, 'tax_rate' => '0.25']]];
     }
 
     /** @return array<string, mixed> a refund as Two lists it, its total negative */

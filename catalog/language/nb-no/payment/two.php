@@ -103,3 +103,13 @@ $_['error_term'] = 'Det betalingsvilkåret er ikke tilgjengelig. Velg et annet.'
 $_['error_placement_terms'] = 'Denne betalingsmåten er ikke tilgjengelig.';
 $_['error_placement_fee'] = '%s er ikke tilgjengelig for denne ordren akkurat nå. Velg en annen betalingsmåte.';
 $_['error_placement_fee_changed'] = 'Gebyret for betalingsvilkår er endret. Kontroller ordretotalen og bekreft på nytt.';
+
+// TWO-27051: the explainer link and the optional fields' tooltips. %s is the brand's product name.
+$_['text_about'] = 'Hva er %s?';
+$_['text_about_body'] = '%s er en betalingsløsning for B2B-kjøp på nettet, som lar deg kjøpe fra dine favorittforhandlere og leverandører på handelskreditt. Ved å bruke %s kan du få tilgang til fleksibel handelskreditt umiddelbart for å gjøre kjøp enkelt.';
+$_['text_about_strong'] = 'Kjøp nå, motta varene dine, betal fakturaen senere.';
+$_['text_about_more'] = 'Klikk for å lese mer';
+$_['help_invoice_email'] = 'Hvor %s skal sende fakturaen for denne ordren, hvis den avviker fra kontoens e-postadresse.';
+$_['help_purchase_order_number'] = 'Din interne bestillingsreferanse for denne ordren.';
+$_['help_project'] = 'Prosjektet som skal knyttes til dette kjøpet, for din egen interne referanse.';
+$_['help_department'] = 'Avdelingen som skal knyttes til dette kjøpet, for din egen interne referanse.';

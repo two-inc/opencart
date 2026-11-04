@@ -39,6 +39,13 @@ final class SettingsSave
     public const STATUS_UNKNOWN = 'status_unknown';
     /** The shop's void status: OpenCart sets it on orders being edited, so the order lifecycle never acts on it. */
     public const STATUS_VOID = 'status_void';
+    /** The confirmed status is also a fulfil, cancel or refund status, so confirming an order would act on it at once. */
+    public const STATUS_CONFLICT = 'status_conflict';
+    /** A fulfil, cancel or refund map names the confirmed status: the other side of STATUS_CONFLICT. */
+    public const STATUS_IS_CONFIRMED = 'status_is_confirmed';
+    public const VENDOR_INVALID = 'vendor_invalid';
+    public const SUBTITLE_TOO_LONG = 'subtitle_too_long';
+    public const SUBTITLE_MAX = 255;
     public const SWITCH_INVALID = 'switch_invalid';
     public const MINIMUM_INVALID = 'minimum_invalid';
     public const BASIS_INVALID = 'basis_invalid';
@@ -48,12 +55,11 @@ final class SettingsSave
     public const TERMS_UNKNOWN = 'terms_unknown';
     public const DEFAULT_TERM_UNKNOWN = 'default_term_unknown';
 
-    /** The on/off settings: the placement switch and the optional field toggles (Checkout fields), and the rate-limit switch (Diagnostics). */
-    public const SWITCHES = ['company_search_in_address', 'address_lookup', 'enable_invoice_email', 'enable_po_number', 'enable_project', 'enable_department', 'disable_rate_limit'];
+    /** The on/off settings: the placement switch, the tile's switches and the optional field toggles (Checkout fields), Validate tax subtotals (Order management) and the rate-limit switch (Diagnostics). */
+    public const SWITCHES = ['company_search_in_address', 'address_lookup', 'enable_order_intent', 'show_about_link', 'display_tooltips', 'enable_invoice_email', 'enable_po_number', 'enable_project', 'enable_department', 'enable_tax_subtotals', 'disable_rate_limit'];
 
     /** Printable ASCII with no spaces: a key is sent as a header value, so nothing else may reach the wire. */
     private const KEY = '/^[\x21-\x7E]+\z/';
-
     public function __construct(
         private readonly SettingsProvider $settings,
         private readonly Environment $environment,
@@ -66,7 +72,7 @@ final class SettingsSave
      * Validates and writes the submitted settings in one write, then brings
      * the verdict (and, for new credentials, the merchant record) up to date.
      *
-     * @param array{api_key?: string, environment?: string, title?: array<int, string>, fulfil_status_ids?: list<string>, cancel_status_id?: string, refund_status_id?: string, company_search_in_address?: string, address_lookup?: string, enable_invoice_email?: string, enable_po_number?: string, enable_project?: string, enable_department?: string, min_order_amount?: string, min_order_basis?: string, trusted_proxies?: string, disable_rate_limit?: string, payment_term_type?: string, payment_terms?: list<string>, default_payment_term?: string, surcharge_type?: string, surcharge_differential?: string, surcharge_rounding_basis?: string, surcharge_rounding_step?: string, surcharge_line_description?: string, surcharge_tax_class_id?: string, surcharge_grid?: array<int|string, array<string, string>>} $submitted
+     * @param array{api_key?: string, environment?: string, vendor_name?: string, title?: array<int, string>, subtitle?: array<int, string>, fulfil_status_ids?: list<string>, confirmed_status_id?: string, cancel_status_id?: string, refund_status_id?: string, enable_order_intent?: string, show_about_link?: string, display_tooltips?: string, company_search_in_address?: string, address_lookup?: string, enable_invoice_email?: string, enable_po_number?: string, enable_project?: string, enable_department?: string, min_order_amount?: string, min_order_basis?: string, trusted_proxies?: string, disable_rate_limit?: string, payment_term_type?: string, payment_terms?: list<string>, default_payment_term?: string, surcharge_type?: string, surcharge_differential?: string, surcharge_rounding_basis?: string, surcharge_rounding_step?: string, surcharge_line_description?: string, surcharge_tax_class_id?: string, surcharge_grid?: array<int|string, array<string, string>>} $submitted
      * @param list<int> $orderStatusIds the shop's order statuses, which the maps may name
      * @param int       $voidStatusId   the shop's void status (0 for none), which no map may name
      * @param list<int> $taxClassIds    the shop's tax classes, which the surcharge's tax class must be one of
@@ -105,7 +111,7 @@ final class SettingsSave
             }
         }
 
-        foreach (['cancel_status_id', 'refund_status_id'] as $key) {
+        foreach (['confirmed_status_id', 'cancel_status_id', 'refund_status_id'] as $key) {
             if (!isset($submitted[$key])) {
                 continue;
             }
@@ -120,6 +126,26 @@ final class SettingsSave
                 $errors[$key] = $error;
             } else {
                 $write[$key] = $id;
+            }
+        }
+        $this->refuseStatusConflicts($write, $errors);
+
+        if (isset($submitted['vendor_name'])) {
+            $vendor = trim($submitted['vendor_name']);
+            if ($vendor === '' || SettingsProvider::isSendableVendorName($vendor)) {
+                $write['vendor_name'] = $vendor;
+            } else {
+                $errors['vendor_name'] = self::VENDOR_INVALID;
+            }
+        }
+
+        if (isset($submitted['subtitle'])) {
+            // Optional in every language: blank shows no subtitle.
+            $subtitles = array_map('trim', $submitted['subtitle']);
+            if (array_filter($subtitles, static fn (string $subtitle): bool => mb_strlen($subtitle) > self::SUBTITLE_MAX) === []) {
+                $write['subtitle'] = (string) json_encode((object) $subtitles, JSON_UNESCAPED_UNICODE);
+            } else {
+                $errors['subtitle'] = self::SUBTITLE_TOO_LONG;
             }
         }
 
@@ -179,6 +205,44 @@ final class SettingsSave
         }
 
         return ['errors' => $errors, 'credentials' => $credentials, 'status' => $checked['status'], 'code' => $checked['code']];
+    }
+
+    /**
+     * A Two-confirmed order is placed at the confirmed status, so that status
+     * may not also fulfil, cancel or refund: the order would be acted on the
+     * moment it is placed. Judged on the settings as they will stand after
+     * this save, from either side: whichever of the clashing fields this save
+     * would write is refused (the confirmed status, a map, or both), so the
+     * stored settings never clash.
+     *
+     * @param array<string, string> $write
+     * @param array<string, string> $errors
+     */
+    private function refuseStatusConflicts(array &$write, array &$errors): void
+    {
+        $confirmed = isset($write['confirmed_status_id']) ? (int) $write['confirmed_status_id'] : $this->settings->confirmedStatusId();
+        if ($confirmed === null) {
+            return;
+        }
+        $maps = [
+            'fulfil_status_ids' => isset($write['fulfil_status_ids']) ? array_map('intval', (array) json_decode($write['fulfil_status_ids'], true)) : $this->settings->fulfilStatusIds(),
+            'cancel_status_id' => [(int) ($write['cancel_status_id'] ?? $this->settings->cancelStatusId())],
+            'refund_status_id' => [(int) ($write['refund_status_id'] ?? $this->settings->refundStatusId())],
+        ];
+        $clashing = array_keys(array_filter($maps, static fn (array $ids): bool => in_array($confirmed, $ids, true)));
+        if ($clashing === []) {
+            return;
+        }
+        if (isset($write['confirmed_status_id'])) {
+            $errors['confirmed_status_id'] = self::STATUS_CONFLICT;
+            unset($write['confirmed_status_id']);
+        }
+        foreach ($clashing as $key) {
+            if (isset($write[$key])) {
+                $errors[$key] = self::STATUS_IS_CONFIRMED;
+                unset($write[$key]);
+            }
+        }
     }
 
     /**

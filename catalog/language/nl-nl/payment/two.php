@@ -103,3 +103,13 @@ $_['error_term'] = 'Die betaaltermijn is niet beschikbaar. Kies een andere.';
 $_['error_placement_terms'] = 'Deze betaalmethode is niet beschikbaar.';
 $_['error_placement_fee'] = '%s is op dit moment niet beschikbaar voor deze bestelling. Kies een andere betaalmethode.';
 $_['error_placement_fee_changed'] = 'De vergoeding voor je betaaltermijn is gewijzigd. Controleer het totaalbedrag en bevestig opnieuw.';
+
+// TWO-27051: the explainer link and the optional fields' tooltips. %s is the brand's product name.
+$_['text_about'] = 'Wat is %s?';
+$_['text_about_body'] = '%s is een betaaloplossing voor online B2B-aankopen, waarmee je bij je favoriete winkels en leveranciers op handelskrediet kunt kopen. Met %s krijg je direct toegang tot flexibel handelskrediet, zodat inkopen eenvoudig blijft.';
+$_['text_about_strong'] = 'Koop nu, ontvang je goederen, betaal je factuur later.';
+$_['text_about_more'] = 'Klik voor meer informatie';
+$_['help_invoice_email'] = 'Waar %s de factuur voor deze bestelling naartoe moet sturen, als dit afwijkt van je account-e-mailadres.';
+$_['help_purchase_order_number'] = 'Je interne inkooporderreferentie voor deze bestelling.';
+$_['help_project'] = 'Het project dat aan deze aankoop moet worden gekoppeld, voor je eigen interne referentie.';
+$_['help_department'] = 'De afdeling die aan deze aankoop moet worden gekoppeld, voor je eigen interne referentie.';
