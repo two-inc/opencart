@@ -10,7 +10,7 @@ use Opencart\System\Library\Extension\Two\Core\SettingsProvider;
  */
 final class SettingsProviderSpec
 {
-    /** @var list<array{stored: array<string, string>, getter: string, expected: mixed, description: string}> */
+    /** @var list<array{stored: array<string, string>, getter: string, args?: list<int>, expected: mixed, description: string}> */
     private const CASES = [
         ['stored' => [], 'getter' => 'apiKey', 'expected' => '', 'description' => 'no key stored reads as empty'],
         ['stored' => ['api_key' => ' secret '], 'getter' => 'apiKey', 'expected' => 'secret', 'description' => 'the key is trimmed'],
@@ -35,6 +35,24 @@ final class SettingsProviderSpec
         ['stored' => ['refund_status_id' => ' 11 '], 'getter' => 'refundStatusId', 'expected' => 11, 'description' => 'the refund status, trimmed'],
         ['stored' => ['refund_status_id' => 'x'], 'getter' => 'refundStatusId', 'expected' => null, 'description' => 'a malformed refund status is none'],
         ['stored' => ['custom_headers' => '[{"name":"X-N","value":42}]'], 'getter' => 'customHeaderRows', 'expected' => [['name' => 'X-N', 'value' => '42']], 'description' => 'a numeric value reads as a string'],
+        ['stored' => [], 'getter' => 'confirmedStatusId', 'expected' => null, 'description' => 'no confirmed status stored'],
+        ['stored' => ['confirmed_status_id' => '2'], 'getter' => 'confirmedStatusId', 'expected' => 2, 'description' => 'the confirmed status'],
+        ['stored' => [], 'getter' => 'placedStatusId', 'args' => [1], 'expected' => 1, 'description' => 'with no confirmed status an order is placed at the shop default'],
+        ['stored' => ['confirmed_status_id' => '0'], 'getter' => 'placedStatusId', 'args' => [1], 'expected' => 1, 'description' => 'a zero confirmed status places at the shop default'],
+        ['stored' => ['confirmed_status_id' => '2'], 'getter' => 'placedStatusId', 'args' => [1], 'expected' => 2, 'description' => 'a confirmed status places the order there'],
+        ['stored' => [], 'getter' => 'vendorName', 'expected' => '', 'description' => 'no vendor name stored'],
+        ['stored' => ['vendor_name' => ' North site '], 'getter' => 'vendorName', 'expected' => 'North site', 'description' => 'the vendor name, trimmed'],
+        ['stored' => [], 'getter' => 'subtitle', 'args' => [1], 'expected' => '', 'description' => 'no subtitle stored shows none'],
+        ['stored' => ['subtitle' => '{"1":" Pay later ","2":"Betal senere"}'], 'getter' => 'subtitle', 'args' => [2], 'expected' => 'Betal senere', 'description' => 'the subtitle for the language'],
+        ['stored' => ['subtitle' => '{"1":" Pay later "}'], 'getter' => 'subtitle', 'args' => [1], 'expected' => 'Pay later', 'description' => 'the subtitle is trimmed'],
+        ['stored' => ['subtitle' => '{"1":"Pay later"}'], 'getter' => 'subtitle', 'args' => [3], 'expected' => '', 'description' => 'a language with no subtitle shows none, never another language\'s'],
+        ['stored' => ['subtitle' => 'not json'], 'getter' => 'subtitle', 'args' => [1], 'expected' => '', 'description' => 'malformed subtitles show none'],
+        ['stored' => [], 'getter' => 'orderIntentPreview', 'expected' => true, 'description' => 'the intent preview is on for a shop that predates the switch'],
+        ['stored' => ['enable_order_intent' => '0'], 'getter' => 'orderIntentPreview', 'expected' => false, 'description' => 'the intent preview switched off'],
+        ['stored' => [], 'getter' => 'showAboutLink', 'expected' => true, 'description' => 'the explainer link is on for a shop that predates the switch'],
+        ['stored' => ['show_about_link' => '0'], 'getter' => 'showAboutLink', 'expected' => false, 'description' => 'the explainer link switched off'],
+        ['stored' => [], 'getter' => 'displayTooltips', 'expected' => true, 'description' => 'tooltips are on for a shop that predates the switch'],
+        ['stored' => ['display_tooltips' => '0'], 'getter' => 'displayTooltips', 'expected' => false, 'description' => 'tooltips switched off'],
     ];
 
     /** @var list<array{a: array<string, string>, b: array<string, string>, same: bool, description: string}> */
@@ -67,7 +85,7 @@ final class SettingsProviderSpec
 
         foreach (self::CASES as $case) {
             $settings = new SettingsProvider(new MemoryStore($case['stored']));
-            TinyAssert::same($case['expected'], $settings->{$case['getter']}(), $case['description']);
+            TinyAssert::same($case['expected'], $settings->{$case['getter']}(...($case['args'] ?? [])), $case['description']);
         }
 
         foreach (self::FINGERPRINTS as $case) {

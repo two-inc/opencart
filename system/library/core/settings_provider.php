@@ -30,6 +30,12 @@ final class SettingsProvider
         'fulfil_status_ids' => '[]',
         'cancel_status_id' => '0',
         'refund_status_id' => '0',
+        'confirmed_status_id' => '0',
+        'vendor_name' => '',
+        'subtitle' => '{}',
+        'enable_order_intent' => '1',
+        'show_about_link' => '1',
+        'display_tooltips' => '1',
         'disable_ssl_verify' => '0',
         'debug_mode' => '0',
         'custom_headers' => '[]',
@@ -74,6 +80,7 @@ final class SettingsProvider
 
     /** The shop's own status names the maps start on: fulfil on Shipped, and so on. */
     public const DEFAULT_STATUS_NAMES = [
+        'confirmed_status_id' => 'Processing',
         'fulfil_status_ids' => 'Shipped',
         'cancel_status_id' => 'Canceled',
         'refund_status_id' => 'Refunded',
@@ -130,6 +137,25 @@ final class SettingsProvider
         return array_values(array_unique(array_filter($ids, static fn (int $id): bool => $id > 0)));
     }
 
+    /**
+     * The order status an order takes when Two confirms it (verified, ready
+     * for fulfilment), or null when none is mapped.
+     */
+    public function confirmedStatusId(): ?int
+    {
+        return self::statusId($this->store->get('confirmed_status_id'));
+    }
+
+    /**
+     * The status a Two-confirmed order is placed at: the merchant's
+     * confirmed status, else the shop's default order status, as every shop
+     * placed orders before the setting existed.
+     */
+    public function placedStatusId(int $shopDefault): int
+    {
+        return $this->confirmedStatusId() ?? $shopDefault;
+    }
+
     /** The order status that cancels the order with Two, or null when none is mapped. */
     public function cancelStatusId(): ?int
     {
@@ -140,6 +166,50 @@ final class SettingsProvider
     public function refundStatusId(): ?int
     {
         return self::statusId($this->store->get('refund_status_id'));
+    }
+
+    /**
+     * The merchant's vendor name (General), sent as X-Vendor-Name with every
+     * keyed request so Two can tell apart sites that share one merchant
+     * account. Empty, the single-site case, sends nothing.
+     */
+    public function vendorName(): string
+    {
+        return trim((string) $this->store->get('vendor_name'));
+    }
+
+    /**
+     * The optional subtitle under the payment method title at checkout, in
+     * one language, trimmed. Empty renders no subtitle: the brand declares no
+     * default tagline (Build Guide section 6.2).
+     */
+    public function subtitle(int $languageId): string
+    {
+        $subtitles = json_decode((string) $this->store->get('subtitle'), true);
+
+        return is_array($subtitles) && is_scalar($subtitles[(string) $languageId] ?? null) ? trim((string) $subtitles[(string) $languageId]) : '';
+    }
+
+    /**
+     * Whether the tile asks the order intent as a preview once the company
+     * is known (Checkout fields). Confirm asks its own intent whatever this
+     * says. On unless switched off, as on a fresh install.
+     */
+    public function orderIntentPreview(): bool
+    {
+        return self::isOnByDefault($this->store->get('enable_order_intent'));
+    }
+
+    /** Whether the tile shows the "What is Two?" explainer link. On unless switched off. */
+    public function showAboutLink(): bool
+    {
+        return self::isOnByDefault($this->store->get('show_about_link'));
+    }
+
+    /** Whether the optional fields show their help as a tooltip on the label. On unless switched off. */
+    public function displayTooltips(): bool
+    {
+        return self::isOnByDefault($this->store->get('display_tooltips'));
     }
 
     /**
@@ -317,5 +387,11 @@ final class SettingsProvider
     private static function isOn(?string $value): bool
     {
         return trim((string) $value) === '1';
+    }
+
+    /** A switch that is on until the merchant stores 0: a shop that predates it reads as a fresh install. */
+    private static function isOnByDefault(?string $value): bool
+    {
+        return trim((string) ($value ?? '1')) !== '0';
     }
 }
