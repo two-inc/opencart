@@ -139,6 +139,19 @@ class Two extends \Opencart\System\Engine\Controller
         $data['min_order_basis'] = $settings->merchantMinimumOrderBasis() ?? '';
         $data['trusted_proxies'] = trim((string) $settings->store()->get('trusted_proxies'));
         $data['disable_rate_limit'] = $settings->rateLimitDisabled();
+
+        // Diagnostics, in the reference plugin's order.
+        $data['debug_mode'] = $settings->debugLogging();
+        $data['disable_ssl_verify'] = !$settings->verifyTls();
+        $data['custom_headers'] = $settings->customHeaderRows();
+        $data['refresh_profile'] = $this->url->link(self::ROUTE . '.refreshProfile', $token);
+        $data['error_log'] = $this->url->link(self::ROUTE . '.errorLog', $token);
+        // OpenCart's own cron runner, shared by every extension: it runs each due job, the daily refresh among them.
+        $data['cron_url'] = HTTP_CATALOG . 'index.php?route=cron/cron';
+        $this->load->model('setting/cron');
+        $cron = $this->model_setting_cron->getCronByCode(Services::CRON_CODE);
+        $data['cron_last_run'] = $cron !== [] && (string) $cron['date_modified'] !== (string) $cron['date_added'] ? (string) $cron['date_modified'] : '';
+        $data['cron_registered'] = $cron !== [] && (bool) $cron['status'];
         $shopCurrency = (string) $this->config->get('config_currency');
         $data['entry_min_order_amount'] = sprintf($this->language->get('entry_min_order_amount'), $shopCurrency);
 
@@ -202,7 +215,7 @@ class Two extends \Opencart\System\Engine\Controller
         $data['confirmed_status_id'] = $settings->placedStatusId((int) $this->config->get('config_order_status_id'));
         $data['enable_tax_subtotals'] = $settings->taxSubtotals();
 
-        foreach (['help_company_search_in_address', 'help_address_lookup', 'help_api_key', 'help_vendor_name', 'help_fulfil', 'help_cancel', 'help_refund', 'help_confirmed', 'entry_fulfil', 'entry_cancel', 'entry_refund', 'entry_confirmed', 'text_status_mapping_intro', 'text_default_confirmed', 'text_default_fulfil', 'text_default_cancel', 'text_default_refund'] as $key) {
+        foreach (['help_debug_mode', 'help_refresh_profile', 'help_custom_headers', 'help_company_search_in_address', 'help_address_lookup', 'help_api_key', 'help_vendor_name', 'help_fulfil', 'help_cancel', 'help_refund', 'help_confirmed', 'entry_fulfil', 'entry_cancel', 'entry_refund', 'entry_confirmed', 'text_status_mapping_intro', 'text_default_confirmed', 'text_default_fulfil', 'text_default_cancel', 'text_default_refund'] as $key) {
             $data[$key] = sprintf($this->language->get($key), $brand);
         }
         $data['help_environment'] = $this->language->get('help_environment');
@@ -253,6 +266,9 @@ class Two extends \Opencart\System\Engine\Controller
 
         foreach ($result['errors'] as $field => $code) {
             $json['error'][$field] = $field === 'surcharge_grid' ? $this->gridMessage($code) : $this->language->get('error_' . $code);
+        }
+        if (isset($result['errors']['custom_headers'])) {
+            $json['error']['custom_headers'] = $this->headersMessage($result['errors']['custom_headers'], $this->submitted($post)['custom_headers'] ?? []);
         }
         if (isset($result['errors']['trusted_proxies'])) {
             // Name the first entry that is not an IP or a range, as the reference plugin does.
@@ -777,11 +793,40 @@ class Two extends \Opencart\System\Engine\Controller
             }
             $submitted['surcharge_grid'] = $grid;
         }
+        if (isset($post[self::CODE . '_custom_headers_posted'])) {
+            // The table posts a marker, so removing every row saves an empty table.
+            $rows = [];
+            foreach (is_array($field('custom_headers')) ? $field('custom_headers') : [] as $row) {
+                if (is_array($row)) {
+                    $rows[] = ['name' => self::raw($row['name'] ?? ''), 'value' => self::raw($row['value'] ?? ''), 'send_from_browser' => self::raw($row['send_from_browser'] ?? '') === '1'];
+                }
+            }
+            $submitted['custom_headers'] = $rows;
+        }
         if (is_array($field('fulfil_status_ids'))) {
             $submitted['fulfil_status_ids'] = array_values(array_map(static fn (mixed $id): string => self::raw($id), $field('fulfil_status_ids')));
         }
 
         return $submitted;
+    }
+
+    /**
+     * The header table's refusals (code:row index, comma separated) as one
+     * sentence per row, naming the header, then that nothing on the tab
+     * was saved.
+     *
+     * @param list<array{name: string, value: string, send_from_browser: bool}> $rows
+     */
+    private function headersMessage(string $codes, array $rows): string
+    {
+        $sentences = [];
+        foreach (explode(',', $codes) as $refusal) {
+            [$code, $index] = array_pad(explode(':', $refusal), 2, '');
+            $sentences[] = sprintf($this->language->get('error_header_' . $code), trim($rows[(int) $index]['name'] ?? ''));
+        }
+        $sentences[] = $this->language->get('error_headers_tab');
+
+        return htmlspecialchars(implode(' ', $sentences), ENT_QUOTES, 'UTF-8');
     }
 
     /** The grid's refusals (code:column:days, comma separated) as one sentence per cell. */
