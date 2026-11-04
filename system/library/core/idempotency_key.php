@@ -74,6 +74,15 @@ final class IdempotencyKey
     }
 
     /**
+     * The merchant fee rates read for the Payment terms tab: a pure lookup
+     * with no side effect at Two, keyed by the payload's hash alone.
+     */
+    public static function merchantRates(string $payloadHash): string
+    {
+        return self::checked('merchant_rates_' . self::part($payloadHash));
+    }
+
+    /**
      * One mint of a sole-trader signup token ('delegation' or 'autofill').
      * $keyBase names the buyer's enrolment attempt (soleTraderAttempt), so
      * each click mints afresh and a retry of one click repeats its key.

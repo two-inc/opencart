@@ -80,10 +80,12 @@ class Two extends \Opencart\System\Engine\Controller
         $company = $inTile ? $this->companyFor('tile') : $this->addressCompany($this->buyerRole(false));
         $this->load->model(self::ROUTE);
         $fields = [];
-        foreach ($services->settings->optionalFields() as $field) {
-            $fields[] = ['name' => $field, 'label' => $this->language->get('entry_' . $field), 'type' => $field === 'invoice_email' ? 'email' : 'text'];
-        }
         $brand = Brand::default()->productName;
+        $tooltips = $services->settings->displayTooltips();
+        foreach ($services->settings->optionalFields() as $field) {
+            $fields[] = ['name' => $field, 'label' => $this->language->get('entry_' . $field), 'type' => $field === 'invoice_email' ? 'email' : 'text', 'help' => $tooltips ? sprintf($this->language->get('help_' . $field), $brand) : ''];
+        }
+        $aboutUrl = Brand::default()->aboutUrl;
         $model = $this->model_extension_two_payment_two;
         $terms = $services->paymentTerms();
         $selected = $terms->selected($model->chosenTerm());
@@ -95,6 +97,12 @@ class Two extends \Opencart\System\Engine\Controller
         ], $terms->offered());
 
         return $this->load->view(self::ROUTE, [
+            // Plain text under the method title; blank renders nothing (the brand declares no default tagline).
+            'subtitle' => $services->settings->subtitle((int) $this->config->get('config_language_id')),
+            // Only an http(s) target is ever linked.
+            'about_url' => $services->settings->showAboutLink() && preg_match('~^https?://~i', $aboutUrl) === 1 ? $aboutUrl : '',
+            'text_about' => sprintf($this->language->get('text_about'), $brand),
+            'text_about_tooltip' => sprintf($this->language->get('text_about_body'), $brand, $brand) . ' ' . $this->language->get('text_about_strong') . ' ' . $this->language->get('text_about_more'),
             'terms' => $chips,
             'selected_term' => $selected,
             'text_terms_title' => $this->language->get('text_terms_title'),
@@ -233,12 +241,13 @@ class Two extends \Opencart\System\Engine\Controller
         $orderId = (int) ($this->session->data['order_id'] ?? 0);
         $this->load->model('checkout/order');
         $order = $orderId > 0 ? $this->model_checkout_order->getOrder($orderId) : [];
-        if (!$order || !$this->unplaced($order) || ($this->session->data['payment_method']['code'] ?? '') !== 'two.two') {
+        $services = $this->services();
+        // The preview switched off (Checkout fields): nothing is asked here; confirm still asks its own intent.
+        if (!$services->settings->orderIntentPreview() || !$order || !$this->unplaced($order) || ($this->session->data['payment_method']['code'] ?? '') !== 'two.two') {
             $this->json(['outcome' => OrderFlow::UNDECIDED, 'notice' => '']);
 
             return;
         }
-        $services = $this->services();
         $this->load->model(self::ROUTE);
         $input = $this->model_extension_two_payment_two->orderInput($orderId, $this->buyerCompany($services->settings->companySearchInAddressArea()), []);
         if ($input === null) {
@@ -472,6 +481,7 @@ class Two extends \Opencart\System\Engine\Controller
             'companies' => $this->state()['companies'] ?? (object) [],
             'min_length' => CompanyLookup::MIN_TERM_LENGTH,
             'end_of_month' => $services->settings->paymentTermType() === PaymentTerms::END_OF_MONTH,
+            'intent_preview' => $services->settings->orderIntentPreview(),
             'i18n' => $copy,
         ];
     }
@@ -584,9 +594,11 @@ class Two extends \Opencart\System\Engine\Controller
         if ($after['place']) {
             // Placed with no comment: OpenCart puts the placing comment in the buyer's order confirmation
             // email, and the reference plugin places its order with none. The note is the merchant's.
-            $this->model_checkout_order->addHistory($orderId, (int) $this->config->get('config_order_status_id'));
+            // At the merchant's confirmed status (Order management), else the shop's default order status.
+            $status = $this->services()->settings->placedStatusId((int) $this->config->get('config_order_status_id'));
+            $this->model_checkout_order->addHistory($orderId, $status);
             $placed = $this->model_checkout_order->getOrder($orderId);
-            $this->historyNote($orderId, (int) ($placed['order_status_id'] ?? $this->config->get('config_order_status_id')), $result['message']);
+            $this->historyNote($orderId, (int) ($placed['order_status_id'] ?? $status), $result['message']);
             // The buyer's next checkout starts on the default chain again.
             unset($this->session->data['two_payment_term'], $this->session->data['two_fee_quotes']);
         } elseif ($after['note']) {

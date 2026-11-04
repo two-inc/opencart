@@ -33,3 +33,68 @@ test('a merchant who switched autofill off finds it off again after a round trip
     toggle(where);
     expect([fill.disabled, fill.checked]).toEqual([false, false]);
 });
+
+/**
+ * The merchant fee beside each payment term: how one term is drawn, what the
+ * line under the terms says, and one page load against a mocked shop.
+ */
+const TEXT = {
+    stale: 'STALE.', stale_dated: 'STALE ON %s.', unavailable: 'UNAVAILABLE.', rejected: 'REFUSED %1$s: %2$s.', rejected_bare: 'REFUSED %s.',
+    stale_rejected: 'WHY %1$s: %2$s.', stale_rejected_bare: 'WHY %s.', no_api_key: 'NO KEY.', no_figure: 'no figure'
+};
+
+function feePage(answer) {
+    document.body.innerHTML = '<div data-two-fee-rates="/fees" data-two-fee-text=\'' + JSON.stringify(TEXT) + '\'>'
+        + '<input type="checkbox" id="t30"><span data-two-term-fee="30"></span><span data-two-term-fee="60"></span><div data-two-fee-notice></div></div>';
+    global.fetch = jest.fn(() => Promise.resolve({ json: () => Promise.resolve(answer) }));
+    jest.isolateModules(() => require('../../admin/view/javascript/two_admin.js'));
+    return window.TwoAdmin.feesLoaded;
+}
+
+test.each([
+    [{ percentage: 1.5, fixed: 2 }, 'NOK', '(1.50% + 2.00 NOK)', 'a percentage and a fixed fee'],
+    [{ percentage: 1.5, fixed: 0 }, 'NOK', '(1.50%)', 'a percentage alone'],
+    [{ percentage: 0, fixed: 2 }, 'NOK', '(2.00 NOK)', 'a fixed fee alone'],
+    [{ percentage: 0.001, fixed: 0 }, 'NOK', '(0.00 NOK)', 'a fee that rounds to nothing shows zero with its currency'],
+    [undefined, 'NOK', '(no figure)', 'a term the answer did not price says so'],
+])('fee label: %j %s', (fee, currency, expected, description) => {
+    feePage({ success: false });
+    expect([window.TwoAdmin.feeLabel(fee, currency, TEXT), description]).toEqual([expected, description]);
+});
+
+test.each([
+    [{ success: true, fees: {}, stale: false }, '', 'a fresh set needs no notice'],
+    [{ success: true, fees: {}, stale: true }, 'STALE.', 'a stale set with no date'],
+    [{ success: true, fees: {}, stale: true, fetched_at_display: '2026-11-04 10:00Z' }, 'STALE ON 2026-11-04 10:00Z.', 'a stale set says when it was fetched'],
+    [{ success: true, fees: {}, stale: true, error: 'rejected', http_status: 400, message: 'bad country.' }, 'STALE. WHY 400: bad country.', 'a stale set after a refusal says why'],
+    [{ success: false, error: 'not_configured' }, 'NO KEY.', 'no key saved'],
+    [{ success: false, error: 'rejected', http_status: 422, message: ' $& odd ' }, 'REFUSED 422: $& odd.', 'a refusal quotes Two literally'],
+    [{ success: false, error: 'rejected', http_status: 400, message: '' }, 'REFUSED 400.', 'a refusal with no message'],
+    [{ success: false, error: 'upstream' }, 'UNAVAILABLE.', 'Two could not be reached'],
+    [null, 'UNAVAILABLE.', 'the shop did not answer'],
+])('fee notice: %j', (result, expected, description) => {
+    feePage({ success: false });
+    expect([window.TwoAdmin.feeNotice(result, TEXT), description]).toEqual([expected, description]);
+});
+
+test('the page asks for every rendered term and draws the answer', async () => {
+    await feePage({ success: true, currency: 'nok', fees: { 30: { percentage: 1.5, fixed: 0 } }, stale: false });
+    expect(global.fetch.mock.calls[0][0]).toBe('/fees');
+    expect(global.fetch.mock.calls[0][1].body.get('terms')).toBe('[30,60]');
+    const spans = Array.from(document.querySelectorAll('[data-two-term-fee]')).map((span) => span.textContent);
+    expect(spans).toEqual(['(1.50%)', '(no figure)']);
+    expect(document.querySelector('[data-two-fee-notice]').textContent).toBe('');
+});
+
+test.each([
+    [{ success: false, error: 'upstream' }, 2, 'a failure is asked again on a term change'],
+    [{ success: false, error: 'not_configured' }, 1, 'a missing key is final until the page is saved'],
+    [{ success: true, currency: 'NOK', fees: { 30: { percentage: 1, fixed: 0 } }, stale: false }, 1, 'a fresh set is not asked again'],
+])('re-ask on change: %j', async (answer, calls, description) => {
+    await feePage(answer);
+    const box = document.getElementById('t30');
+    box.checked = true;
+    box.dispatchEvent(new Event('change', { bubbles: true }));
+    await Promise.resolve();
+    expect([global.fetch.mock.calls.length, description]).toEqual([calls, description]);
+});

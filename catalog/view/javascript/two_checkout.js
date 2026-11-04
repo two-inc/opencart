@@ -298,7 +298,8 @@
         /** Asks the order intent and shows its notice; a later ask supersedes an earlier one. */
         intent() {
             const notice = this.doc.getElementById('two-intent-notice');
-            if (!this.tile || !notice) {
+            // The merchant switched the preview off: confirm still asks its own intent.
+            if (!this.tile || !notice || this.config.intent_preview === false) {
                 return Promise.resolve();
             }
             const seq = (this.intentSeq += 1);

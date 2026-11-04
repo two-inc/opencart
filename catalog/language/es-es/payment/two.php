@@ -103,3 +103,13 @@ $_['error_term'] = 'Ese plazo de pago no está disponible. Elige otro.';
 $_['error_placement_terms'] = 'Este método de pago no está disponible.';
 $_['error_placement_fee'] = '%s no está disponible para este pedido en este momento. Elige otro método de pago.';
 $_['error_placement_fee_changed'] = 'La comisión por plazo de pago ha cambiado. Revisa el total del pedido y vuelve a confirmar.';
+
+// TWO-27051: the explainer link and the optional fields' tooltips. %s is the brand's product name.
+$_['text_about'] = '¿Qué es %s?';
+$_['text_about_body'] = '%s es una solución de pago para compras B2B en línea que te permite comprar a tus comercios y proveedores favoritos con crédito comercial. Con %s, puedes acceder al instante a crédito comercial flexible para simplificar tus compras.';
+$_['text_about_strong'] = 'Compra ahora, recibe tus productos y paga tu factura más tarde.';
+$_['text_about_more'] = 'Haz clic para saber más';
+$_['help_invoice_email'] = 'Dónde debe %s enviar la factura de este pedido, si es distinta del correo electrónico de tu cuenta.';
+$_['help_purchase_order_number'] = 'Tu referencia interna de orden de compra para este pedido.';
+$_['help_project'] = 'El proyecto que se asociará a esta compra, para tu propia referencia interna.';
+$_['help_department'] = 'El departamento que se asociará a esta compra, para tu propia referencia interna.';

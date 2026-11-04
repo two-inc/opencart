@@ -80,6 +80,14 @@
                   <input type="text" name="payment_two_sort_order" value="{{ payment_two_sort_order }}" placeholder="{{ entry_sort_order }}" id="input-sort-order" class="form-control"/>
                 </div>
               </div>
+              <div class="row mb-3">
+                <label for="input-vendor-name" class="col-sm-2 col-form-label">{{ entry_vendor_name|e }}</label>
+                <div class="col-sm-10">
+                  <input type="text" name="payment_two_vendor_name" value="{{ vendor_name|e }}" id="input-vendor-name" class="form-control" maxlength="255"/>
+                  <div id="error-vendor-name" class="invalid-feedback"></div>
+                  <div class="form-text">{{ help_vendor_name|e }}</div>
+                </div>
+              </div>
             </div>
 
             <div id="tab-checkout-fields" class="tab-pane">
@@ -94,6 +102,19 @@
                   {% endfor %}
                   <div id="error-title" class="invalid-feedback"></div>
                   <div class="form-text">{{ help_title }}</div>
+                </div>
+              </div>
+              <div class="row mb-3">
+                <label class="col-sm-2 col-form-label">{{ entry_subtitle|e }}</label>
+                <div class="col-sm-10" id="input-subtitle">
+                  {% for language in languages %}
+                    <div class="input-group mb-1">
+                      <div class="input-group-text"><img src="{{ language.image }}" title="{{ language.name }}"/></div>
+                      <input type="text" name="payment_two_subtitle[{{ language.language_id }}]" value="{{ subtitles[language.language_id]|e }}" placeholder="{{ entry_subtitle|e }}" id="input-subtitle-{{ language.language_id }}" class="form-control" maxlength="255"/>
+                    </div>
+                  {% endfor %}
+                  <div id="error-subtitle" class="invalid-feedback"></div>
+                  <div class="form-text">{{ help_subtitle|e }}</div>
                 </div>
               </div>
               <div class="row mb-3">
@@ -118,19 +139,6 @@
                   <div class="form-text">{{ help_address_lookup }}</div>
                 </div>
               </div>
-              {% for field in optional_fields %}
-                <div class="row mb-3">
-                  <label class="col-sm-2 col-form-label">{{ field.label|e }}</label>
-                  <div class="col-sm-10">
-                    <div class="form-check form-switch form-switch-lg">
-                      <input type="hidden" name="payment_two_{{ field.key }}" value="0"/>
-                      <input type="checkbox" name="payment_two_{{ field.key }}" value="1" id="input-{{ field.key|replace({'_': '-'}) }}" class="form-check-input"{% if field.on %} checked{% endif %}/>
-                    </div>
-                    <div id="error-{{ field.key|replace({'_': '-'}) }}" class="invalid-feedback"></div>
-                    <div class="form-text">{{ field.help|e }}</div>
-                  </div>
-                </div>
-              {% endfor %}
               <div class="row mb-3">
                 <label for="input-min-order-amount" class="col-sm-2 col-form-label">{{ entry_min_order_amount|e }}</label>
                 <div class="col-sm-10">
@@ -151,6 +159,19 @@
                   <div class="form-text">{{ help_min_order_basis }}</div>
                 </div>
               </div>
+              {% for field in tile_switches|merge(optional_fields) %}
+                <div class="row mb-3">
+                  <label class="col-sm-2 col-form-label">{{ field.label|e }}</label>
+                  <div class="col-sm-10">
+                    <div class="form-check form-switch form-switch-lg">
+                      <input type="hidden" name="payment_two_{{ field.key }}" value="0"/>
+                      <input type="checkbox" name="payment_two_{{ field.key }}" value="1" id="input-{{ field.key|replace({'_': '-'}) }}" class="form-check-input"{% if field.on %} checked{% endif %}/>
+                    </div>
+                    <div id="error-{{ field.key|replace({'_': '-'}) }}" class="invalid-feedback"></div>
+                    <div class="form-text">{{ field.help|e }}</div>
+                  </div>
+                </div>
+              {% endfor %}
             </div>
 
             <div id="tab-payment-terms" class="tab-pane">
@@ -170,14 +191,15 @@
               </div>
               <div class="row mb-3">
                 <label class="col-sm-2 col-form-label">{{ entry_payment_terms|e }}</label>
-                <div class="col-sm-10" id="input-payment-terms">
+                <div class="col-sm-10" id="input-payment-terms" data-two-fee-rates="{{ fee_rates|e }}" data-two-fee-text="{{ fee_text|e }}">
                   <input type="hidden" name="payment_two_payment_terms[]" value=""/>
                   {% for days in record_terms %}
                     <div class="form-check form-check-inline">
                       <input type="checkbox" name="payment_two_payment_terms[]" value="{{ days }}" id="input-payment-term-{{ days }}" class="form-check-input"{% if days in ticked_terms %} checked{% endif %}/>
-                      <label for="input-payment-term-{{ days }}" class="form-check-label">{{ text_days|format(days)|e }}</label>
+                      <label for="input-payment-term-{{ days }}" class="form-check-label">{{ text_days|format(days)|e }} <span class="text-muted small" data-two-term-fee="{{ days }}"></span></label>
                     </div>
                   {% endfor %}
+                  <div class="form-text" data-two-fee-notice></div>
                   <div id="error-payment-terms" class="invalid-feedback"></div>
                   <div class="form-text">{{ help_payment_terms|e }}</div>
                 </div>
@@ -293,7 +315,19 @@
               <fieldset>
                 <legend>{{ legend_status_mapping }}</legend>
                 <p>{{ text_status_mapping_intro }}</p>
-                <p><strong>{{ text_default_mappings }}</strong><br/>{{ text_default_fulfil }}<br/>{{ text_default_cancel }}<br/>{{ text_default_refund }}</p>
+                <p><strong>{{ text_default_mappings }}</strong><br/>{{ text_default_confirmed }}<br/>{{ text_default_fulfil }}<br/>{{ text_default_cancel }}<br/>{{ text_default_refund }}</p>
+                <div class="row mb-3 required">
+                  <label for="input-confirmed-status-id" class="col-sm-2 col-form-label">{{ entry_confirmed }}</label>
+                  <div class="col-sm-10">
+                    <select name="payment_two_confirmed_status_id" id="input-confirmed-status-id" class="form-select">
+                      {% for status in order_statuses %}
+                        <option value="{{ status.order_status_id }}"{% if status.order_status_id == confirmed_status_id %} selected{% endif %}>{{ status.name }}</option>
+                      {% endfor %}
+                    </select>
+                    <div id="error-confirmed-status-id" class="invalid-feedback"></div>
+                    <div class="form-text">{{ help_confirmed }}</div>
+                  </div>
+                </div>
                 <div class="row mb-3">
                   <label for="input-fulfil-status-ids" class="col-sm-2 col-form-label">{{ entry_fulfil }}</label>
                   <div class="col-sm-10">
@@ -338,7 +372,20 @@
                   </div>
                 </div>
               </fieldset>
-              <p class="text-muted">{{ text_coming_later }}</p>
+              <fieldset>
+                <legend>{{ legend_tax|e }}</legend>
+                <div class="row mb-3">
+                  <label class="col-sm-2 col-form-label">{{ entry_enable_tax_subtotals|e }}</label>
+                  <div class="col-sm-10">
+                    <div class="form-check form-switch form-switch-lg">
+                      <input type="hidden" name="payment_two_enable_tax_subtotals" value="0"/>
+                      <input type="checkbox" name="payment_two_enable_tax_subtotals" value="1" id="input-enable-tax-subtotals" class="form-check-input"{% if enable_tax_subtotals %} checked{% endif %}/>
+                    </div>
+                    <div id="error-enable-tax-subtotals" class="invalid-feedback"></div>
+                    <div class="form-text">{{ help_enable_tax_subtotals|e }}</div>
+                  </div>
+                </div>
+              </fieldset>
             </div>
 
             <div id="tab-diagnostics" class="tab-pane">

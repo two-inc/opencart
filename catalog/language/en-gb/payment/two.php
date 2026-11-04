@@ -103,3 +103,13 @@ $_['error_term'] = 'That payment term is not available. Please choose another.';
 $_['error_placement_terms'] = 'This payment method is not available.';
 $_['error_placement_fee'] = '%s is not available for this order right now. Please choose another payment method.';
 $_['error_placement_fee_changed'] = 'Your payment terms fee changed. Please review your order total and confirm again.';
+
+// TWO-27051: the explainer link and the optional fields' tooltips. %s is the brand's product name.
+$_['text_about'] = 'What is %s?';
+$_['text_about_body'] = '%s is a payment solution for B2B purchases online, allowing you to buy from your favourite merchants and suppliers on trade credit. Using %s, you can access flexible trade credit instantly to make purchasing simple.';
+$_['text_about_strong'] = 'Buy now, receive your goods, pay your invoice later.';
+$_['text_about_more'] = 'Click to find out more';
+$_['help_invoice_email'] = 'Where %s should send the invoice for this order, if different from your account email.';
+$_['help_purchase_order_number'] = 'Your internal purchase order reference for this order.';
+$_['help_project'] = 'The project to associate with this purchase, for your own internal reference.';
+$_['help_department'] = 'The department to associate with this purchase, for your own internal reference.';

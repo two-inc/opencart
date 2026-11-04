@@ -49,6 +49,7 @@ use Opencart\System\Library\Extension\Two\Opencart\Services;
  * @property-read \Opencart\Admin\Model\Localisation\Language $model_localisation_language
  * @property-read \Opencart\Admin\Model\Localisation\OrderStatus $model_localisation_order_status
  * @property-read \Opencart\Admin\Model\Localisation\Currency $model_localisation_currency
+ * @property-read \Opencart\Admin\Model\Localisation\Country $model_localisation_country
  * @property-read \Opencart\Admin\Model\Localisation\TaxClass $model_localisation_tax_class
  * @property-read \Opencart\Admin\Model\Setting\Extension $model_setting_extension
  * @property-read \Opencart\Admin\Model\User\UserGroup $model_user_user_group
@@ -79,6 +80,7 @@ class Two extends \Opencart\System\Engine\Controller
         ];
         $data['save'] = $this->url->link(self::ROUTE . '.save', $token);
         $data['verify_key'] = $this->url->link(self::ROUTE . '.verifyKey', $token);
+        $data['fee_rates'] = $this->url->link(self::ROUTE . '.feeRates', $token);
         $data['back'] = $this->url->link('marketplace/extension', $token . '&type=payment');
 
         foreach (array_keys(self::PLATFORM_DEFAULTS) as $key) {
@@ -104,12 +106,15 @@ class Two extends \Opencart\System\Engine\Controller
         $data['merchant_id'] = is_scalar($record['id'] ?? null) ? (string) $record['id'] : '';
         $data['merchant_short_name'] = is_scalar($record['short_name'] ?? null) ? (string) $record['short_name'] : '';
         $data['record_fetched_at'] = $fetchedAt === null ? '' : gmdate('Y-m-d H:i', $fetchedAt) . 'Z';
+        $data['vendor_name'] = $settings->vendorName();
 
         // Checkout fields.
         $this->load->model('localisation/language');
         $data['languages'] = $this->model_localisation_language->getLanguages();
         $data['titles'] = [];
+        $data['subtitles'] = [];
         foreach ($data['languages'] as $language) {
+            $data['subtitles'][$language['language_id']] = $settings->subtitle((int) $language['language_id']);
             // Each language's default title from its own language file, over en-gb's as OpenCart does for a
             // language this extension does not ship, prefixed so this page's keys stay.
             $this->load->language(self::ROUTE, 'two_title', 'en-gb');
@@ -120,10 +125,16 @@ class Two extends \Opencart\System\Engine\Controller
         // Checkout fields: the placement switch, the optional fields and the minimum order.
         $data['company_search_in_address'] = $settings->companySearchInAddressArea();
         $data['address_lookup'] = $settings->addressLookupSwitch();
+        // The tile's switches, in the reference plugin's order, then the optional fields; tooltips last, as its help names the fields above it.
+        $data['tile_switches'] = [];
+        foreach (['enable_order_intent' => $settings->orderIntentPreview(), 'show_about_link' => $settings->showAboutLink()] as $key => $on) {
+            $data['tile_switches'][] = ['key' => $key, 'on' => $on, 'label' => sprintf($this->language->get('entry_' . $key), $brand), 'help' => sprintf($this->language->get('help_' . $key), $brand)];
+        }
         $data['optional_fields'] = [];
         foreach (SettingsProvider::OPTIONAL_FIELDS as $field => $key) {
             $data['optional_fields'][] = ['key' => $key, 'on' => in_array($field, $settings->optionalFields(), true), 'label' => $this->language->get('entry_' . $key), 'help' => sprintf($this->language->get('help_' . $key), $brand)];
         }
+        $data['optional_fields'][] = ['key' => 'display_tooltips', 'on' => $settings->displayTooltips(), 'label' => $this->language->get('entry_display_tooltips'), 'help' => $this->language->get('help_display_tooltips')];
         $data['min_order_amount'] = trim((string) $settings->store()->get('min_order_amount'));
         $data['min_order_basis'] = $settings->merchantMinimumOrderBasis() ?? '';
         $data['trusted_proxies'] = trim((string) $settings->store()->get('trusted_proxies'));
@@ -171,6 +182,12 @@ class Two extends \Opencart\System\Engine\Controller
         $data['help_payment_terms'] = sprintf($this->language->get('help_payment_terms'), $brand);
         $data['help_surcharge_type'] = sprintf($this->language->get('help_surcharge_type'), $brand);
         $data['help_surcharge_grid'] = sprintf($this->language->get('help_surcharge_grid'), $shopCurrency, $brand);
+        // The merchant fee beside each term: two_admin.js asks feeRates once the page is up, and words the outcome.
+        $feeText = [];
+        foreach (['stale', 'stale_dated', 'unavailable', 'rejected', 'rejected_bare', 'stale_rejected', 'stale_rejected_bare', 'no_api_key', 'no_figure'] as $key) {
+            $feeText[$key] = $this->language->get('text_fees_' . $key);
+        }
+        $data['fee_text'] = (string) json_encode($feeText, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
 
         // Order management.
         $this->load->model('localisation/order_status');
@@ -181,8 +198,11 @@ class Two extends \Opencart\System\Engine\Controller
         $data['fulfil_active'] = implode(', ', $active);
         $data['cancel_status_id'] = $settings->cancelStatusId();
         $data['refund_status_id'] = $settings->refundStatusId();
+        // A shop that predates the setting shows the status its orders are placed at today.
+        $data['confirmed_status_id'] = $settings->placedStatusId((int) $this->config->get('config_order_status_id'));
+        $data['enable_tax_subtotals'] = $settings->taxSubtotals();
 
-        foreach (['help_company_search_in_address', 'help_address_lookup', 'help_api_key', 'help_fulfil', 'help_cancel', 'help_refund', 'entry_fulfil', 'entry_cancel', 'entry_refund', 'text_status_mapping_intro', 'text_default_fulfil', 'text_default_cancel', 'text_default_refund'] as $key) {
+        foreach (['help_company_search_in_address', 'help_address_lookup', 'help_api_key', 'help_vendor_name', 'help_fulfil', 'help_cancel', 'help_refund', 'help_confirmed', 'entry_fulfil', 'entry_cancel', 'entry_refund', 'entry_confirmed', 'text_status_mapping_intro', 'text_default_confirmed', 'text_default_fulfil', 'text_default_cancel', 'text_default_refund'] as $key) {
             $data[$key] = sprintf($this->language->get($key), $brand);
         }
         $data['help_environment'] = $this->language->get('help_environment');
@@ -289,6 +309,31 @@ class Two extends \Opencart\System\Engine\Controller
             'merchant_id' => is_scalar($checked['merchant']['id'] ?? null) ? (string) $checked['merchant']['id'] : '',
             'merchant_short_name' => is_scalar($checked['merchant']['short_name'] ?? null) ? (string) $checked['merchant']['short_name'] : '',
         ]);
+    }
+
+    /**
+     * The fee Two charges the merchant for each term on the Payment terms tab,
+     * asked by two_admin.js once the page is up so a slow Two never holds the
+     * page. Posts `terms`, a JSON list of day counts. The buyer country is the
+     * shop's own, since a settings page has no buyer.
+     */
+    public function feeRates(): void
+    {
+        $this->load->language(self::ROUTE);
+        if (!$this->user->hasPermission('access', self::ROUTE)) {
+            $this->json(['success' => false, 'error' => 'permission', 'message' => $this->language->get('error_permission')]);
+
+            return;
+        }
+        $decoded = json_decode(self::raw($this->request->post['terms'] ?? ''), true);
+        $this->load->model('localisation/country');
+        $country = $this->model_localisation_country->getCountry((int) $this->config->get('config_country_id'));
+        $iso = is_array($country) && is_string($country['iso_code_2'] ?? null) && trim($country['iso_code_2']) !== '' ? $country['iso_code_2'] : 'NL';
+        $result = (new Services($this->db, $this->log))->feeRates->fetch(is_array($decoded) ? $decoded : [], $iso);
+        if (!empty($result['stale']) && ($result['fetched_at'] ?? 0) > 0) {
+            $result['fetched_at_display'] = gmdate('Y-m-d H:i', (int) $result['fetched_at']) . 'Z';
+        }
+        $this->json($result);
     }
 
     /**
@@ -690,13 +735,13 @@ class Two extends \Opencart\System\Engine\Controller
      * decoded here and escaped again when rendered.
      *
      * @param array<string, mixed> $post
-     * @return array{api_key?: string, environment?: string, title?: array<int, string>, fulfil_status_ids?: list<string>, cancel_status_id?: string, refund_status_id?: string, company_search_in_address?: string, address_lookup?: string, enable_invoice_email?: string, enable_po_number?: string, enable_project?: string, enable_department?: string, min_order_amount?: string, min_order_basis?: string, trusted_proxies?: string, disable_rate_limit?: string}
+     * @return array{api_key?: string, environment?: string, vendor_name?: string, title?: array<int, string>, subtitle?: array<int, string>, fulfil_status_ids?: list<string>, confirmed_status_id?: string, enable_order_intent?: string, show_about_link?: string, display_tooltips?: string, enable_tax_subtotals?: string, cancel_status_id?: string, refund_status_id?: string, company_search_in_address?: string, address_lookup?: string, enable_invoice_email?: string, enable_po_number?: string, enable_project?: string, enable_department?: string, min_order_amount?: string, min_order_basis?: string, trusted_proxies?: string, disable_rate_limit?: string}
      */
     private function submitted(array $post): array
     {
         $field = static fn (string $key): mixed => $post[self::CODE . '_' . $key] ?? null;
         $submitted = [];
-        foreach (array_merge(['api_key', 'environment', 'cancel_status_id', 'refund_status_id', 'min_order_amount', 'min_order_basis', 'trusted_proxies', 'payment_term_type', 'default_payment_term', 'surcharge_type', 'surcharge_differential', 'surcharge_line_description', 'surcharge_rounding_basis', 'surcharge_rounding_step', 'surcharge_tax_class_id'], SettingsSave::SWITCHES) as $key) {
+        foreach (array_merge(['api_key', 'environment', 'vendor_name', 'confirmed_status_id', 'cancel_status_id', 'refund_status_id', 'min_order_amount', 'min_order_basis', 'trusted_proxies', 'payment_term_type', 'default_payment_term', 'surcharge_type', 'surcharge_differential', 'surcharge_line_description', 'surcharge_rounding_basis', 'surcharge_rounding_step', 'surcharge_tax_class_id'], SettingsSave::SWITCHES) as $key) {
             if (is_scalar($field($key))) {
                 $submitted[$key] = self::raw($field($key));
             }
@@ -710,6 +755,14 @@ class Two extends \Opencart\System\Engine\Controller
                 $titles[(int) $language['language_id']] = self::raw($title);
             }
             $submitted['title'] = $titles;
+        }
+        if (is_array($field('subtitle'))) {
+            $this->load->model('localisation/language');
+            $subtitles = [];
+            foreach ($this->model_localisation_language->getLanguages() as $language) {
+                $subtitles[(int) $language['language_id']] = self::raw($field('subtitle')[$language['language_id']] ?? '');
+            }
+            $submitted['subtitle'] = $subtitles;
         }
         if (is_array($field('payment_terms'))) {
             $submitted['payment_terms'] = array_values(array_map(static fn (mixed $days): string => self::raw($days), $field('payment_terms')));

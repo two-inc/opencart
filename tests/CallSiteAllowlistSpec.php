@@ -25,6 +25,7 @@ final class CallSiteAllowlistSpec
         'system/library/core/company_lookup.php' => false,
         'system/library/core/fx_rates.php' => false,
         'system/library/core/fee_quote.php' => false,
+        'system/library/core/merchant_fee_rates.php' => false,
     ];
 
     /** Methods that send a body built by their callers, with those callers. */

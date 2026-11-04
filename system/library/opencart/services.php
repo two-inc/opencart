@@ -13,6 +13,7 @@ use Opencart\System\Library\Extension\Two\Core\Environment;
 use Opencart\System\Library\Extension\Two\Core\ErrorMapper;
 use Opencart\System\Library\Extension\Two\Core\FeeQuote;
 use Opencart\System\Library\Extension\Two\Core\FxRates;
+use Opencart\System\Library\Extension\Two\Core\MerchantFeeRates;
 use Opencart\System\Library\Extension\Two\Core\OrderBuilder;
 use Opencart\System\Library\Extension\Two\Core\OrderFlow;
 use Opencart\System\Library\Extension\Two\Core\OrderEdit;
@@ -92,6 +93,8 @@ final class Services
     public readonly DbRefundRecords $refunds;
     public readonly FxRates $fx;
     public readonly FeeQuote $fees;
+    /** The merchant's own fee per term, for the Payment terms tab. */
+    public readonly MerchantFeeRates $feeRates;
     private readonly LogLogger $logger;
 
     public function __construct(private readonly \Opencart\System\Library\DB $db, \Opencart\System\Library\Log $log, int $storeId = 0)
@@ -109,6 +112,7 @@ final class Services
         $this->refunds = new DbRefundRecords($db);
         $this->fx = new FxRates($this->client, $this->settings, $logger);
         $this->fees = new FeeQuote($this->client, $this->fx, $logger);
+        $this->feeRates = new MerchantFeeRates($this->client, $this->settings, $logger);
     }
 
     /** The payment terms offered now: the merchant record's, narrowed by the merchant's settings. */
