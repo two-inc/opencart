@@ -159,6 +159,14 @@ final class SettingsSaveSpec
             [['enable_order_intent' => '0', 'show_about_link' => '0', 'display_tooltips' => '1'], [], ['enable_order_intent' => '0', 'show_about_link' => '0', 'display_tooltips' => '1'], 'the tile switches are stored'],
             [['display_tooltips' => 'yes'], ['display_tooltips' => SettingsSave::SWITCH_INVALID], ['display_tooltips' => null], 'a tile switch that is not 0 or 1 is refused'],
             [['enable_tax_subtotals' => '0'], [], ['enable_tax_subtotals' => '0'], 'Validate tax subtotals is stored'],
+            [['debug_mode' => '1', 'disable_ssl_verify' => '1'], [], ['debug_mode' => '1', 'disable_ssl_verify' => '1'], 'debug logging and the SSL bypass are stored'],
+            [['custom_headers' => [['name' => ' X-Waf ', 'value' => ' t1 ', 'send_from_browser' => true], ['name' => '', 'value' => ''], ['name' => 'X-Other', 'value' => 'v']]], [], ['custom_headers' => '[{"name":"X-Waf","value":"t1","send_from_browser":true},{"name":"X-Other","value":"v","send_from_browser":false}]'], 'header rows are stored trimmed, blank rows dropped, the flag a bool'],
+            [['custom_headers' => []], [], ['custom_headers' => '[]'], 'an empty table is stored: no headers'],
+            [['custom_headers' => [['name' => 'X-Ok', 'value' => 'v'], ['name' => 'Host', 'value' => 'h'], ['name' => 'X-Nl', 'value' => "a\nb"]], 'debug_mode' => '1', 'disable_ssl_verify' => '1', 'trusted_proxies' => '10.0.0.1', 'disable_rate_limit' => '1', 'title' => [1 => 'Pay later']],
+                ['custom_headers' => CustomHeaders::NAME_RESERVED . ':1,' . CustomHeaders::VALUE_INVALID . ':2'],
+                ['custom_headers' => null, 'debug_mode' => null, 'disable_ssl_verify' => null, 'trusted_proxies' => null, 'disable_rate_limit' => null, 'title' => '{"1":"Pay later"}'],
+                'an invalid header row refuses the whole Diagnostics tab, every bad row named; other tabs save'],
+            [['custom_headers' => [['name' => 'X-Dup', 'value' => '1'], ['name' => 'x-dup', 'value' => '2']], 'debug_mode' => '1'], ['custom_headers' => CustomHeaders::NAME_DUPLICATE . ':1'], ['custom_headers' => null, 'debug_mode' => null], 'a duplicate header name refuses the tab'],
         ];
         // A fifth column, when present, is what is stored before the save.
         foreach ($cases as $case) {

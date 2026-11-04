@@ -56,7 +56,14 @@ final class SettingsSave
     public const DEFAULT_TERM_UNKNOWN = 'default_term_unknown';
 
     /** The on/off settings: the placement switch, the tile's switches and the optional field toggles (Checkout fields), Validate tax subtotals (Order management) and the rate-limit switch (Diagnostics). */
-    public const SWITCHES = ['company_search_in_address', 'address_lookup', 'enable_order_intent', 'show_about_link', 'display_tooltips', 'enable_invoice_email', 'enable_po_number', 'enable_project', 'enable_department', 'enable_tax_subtotals', 'disable_rate_limit'];
+    public const SWITCHES = ['company_search_in_address', 'address_lookup', 'enable_order_intent', 'show_about_link', 'display_tooltips', 'enable_invoice_email', 'enable_po_number', 'enable_project', 'enable_department', 'enable_tax_subtotals', 'debug_mode', 'disable_ssl_verify', 'disable_rate_limit'];
+
+    /**
+     * The Diagnostics tab's fields. An invalid custom header row refuses all
+     * of them, as the reference plugin's tab saves nothing while a row is
+     * invalid; the other tabs still save.
+     */
+    public const DIAGNOSTICS = ['debug_mode', 'disable_ssl_verify', 'trusted_proxies', 'custom_headers', 'disable_rate_limit'];
 
     /** Printable ASCII with no spaces: a key is sent as a header value, so nothing else may reach the wire. */
     private const KEY = '/^[\x21-\x7E]+\z/';
@@ -72,7 +79,7 @@ final class SettingsSave
      * Validates and writes the submitted settings in one write, then brings
      * the verdict (and, for new credentials, the merchant record) up to date.
      *
-     * @param array{api_key?: string, environment?: string, vendor_name?: string, title?: array<int, string>, subtitle?: array<int, string>, fulfil_status_ids?: list<string>, confirmed_status_id?: string, cancel_status_id?: string, refund_status_id?: string, enable_order_intent?: string, show_about_link?: string, display_tooltips?: string, company_search_in_address?: string, address_lookup?: string, enable_invoice_email?: string, enable_po_number?: string, enable_project?: string, enable_department?: string, min_order_amount?: string, min_order_basis?: string, trusted_proxies?: string, disable_rate_limit?: string, payment_term_type?: string, payment_terms?: list<string>, default_payment_term?: string, surcharge_type?: string, surcharge_differential?: string, surcharge_rounding_basis?: string, surcharge_rounding_step?: string, surcharge_line_description?: string, surcharge_tax_class_id?: string, surcharge_grid?: array<int|string, array<string, string>>} $submitted
+     * @param array{api_key?: string, environment?: string, vendor_name?: string, title?: array<int, string>, subtitle?: array<int, string>, fulfil_status_ids?: list<string>, confirmed_status_id?: string, cancel_status_id?: string, refund_status_id?: string, enable_order_intent?: string, show_about_link?: string, display_tooltips?: string, company_search_in_address?: string, address_lookup?: string, enable_invoice_email?: string, enable_po_number?: string, enable_project?: string, enable_department?: string, min_order_amount?: string, min_order_basis?: string, trusted_proxies?: string, disable_rate_limit?: string, debug_mode?: string, disable_ssl_verify?: string, custom_headers?: list<array{name?: string, value?: string, send_from_browser?: bool}>, payment_term_type?: string, payment_terms?: list<string>, default_payment_term?: string, surcharge_type?: string, surcharge_differential?: string, surcharge_rounding_basis?: string, surcharge_rounding_step?: string, surcharge_line_description?: string, surcharge_tax_class_id?: string, surcharge_grid?: array<int|string, array<string, string>>} $submitted
      * @param list<int> $orderStatusIds the shop's order statuses, which the maps may name
      * @param int       $voidStatusId   the shop's void status (0 for none), which no map may name
      * @param list<int> $taxClassIds    the shop's tax classes, which the surcharge's tax class must be one of
@@ -183,6 +190,21 @@ final class SettingsSave
                 $write['trusted_proxies'] = trim($submitted['trusted_proxies']);
             } else {
                 $errors['trusted_proxies'] = self::PROXY_INVALID;
+            }
+        }
+
+        if (isset($submitted['custom_headers'])) {
+            $rows = array_values(array_map(static fn (array $row): array => ['name' => trim((string) ($row['name'] ?? '')), 'value' => trim((string) ($row['value'] ?? '')), 'send_from_browser' => (bool) ($row['send_from_browser'] ?? false)], $submitted['custom_headers']));
+            $refused = (new CustomHeaders())->validate($rows);
+            if ($refused === []) {
+                // Blank rows are no rows; the browser flag is a JSON bool.
+                $write['custom_headers'] = (string) json_encode(array_values(array_filter($rows, static fn (array $row): bool => $row['name'] !== '' || $row['value'] !== '')));
+            } else {
+                // Halt and show: every refused row is named, and nothing on the tab is written.
+                $errors['custom_headers'] = implode(',', array_map(static fn (int $index, string $code): string => $code . ':' . $index, array_keys($refused), $refused));
+                foreach (self::DIAGNOSTICS as $key) {
+                    unset($write[$key]);
+                }
             }
         }
 
