@@ -46,7 +46,41 @@ final class RecordProviderSpec
         self::testRecordIsReadByTheKeysMerchant();
         self::testRecordIsBoundToCredentials();
         self::testScheduledRefresh();
+        self::testTokenRefresh();
         self::testRefreshOnRead();
+    }
+
+    /**
+     * The public refresh URL: each case is what is stored (the token, the last
+     * run's age, the last logged rejection's age), the token presented, and
+     * the outcome, how many calls reached Two and how many lines were logged.
+     */
+    private static function testTokenRefresh(): void
+    {
+        $token = str_repeat('ab', 20);
+        $ok = [new HttpResponse(200, '{"id":"m1"}'), new HttpResponse(200, '{"id":"m1"}')];
+        $cases = [
+            [[], $token, [], RecordProvider::CRON_REJECTED, 0, 1, 'no token stored: refused, and a request never mints one'],
+            [['cron_token' => $token], '', [], RecordProvider::CRON_REJECTED, 0, 1, 'no token presented'],
+            [['cron_token' => $token], 'ab', [], RecordProvider::CRON_REJECTED, 0, 1, 'a prefix of the token'],
+            [['cron_token' => $token], 'k', [], RecordProvider::CRON_REJECTED, 0, 1, 'the API key is not the token'],
+            [['cron_token' => $token, 'cron_reject_logged_at' => (string) (self::NOW - 60)], 'x', [], RecordProvider::CRON_REJECTED, 0, 0, 'a rejection within the hour is not logged again'],
+            [['cron_token' => $token, 'cron_reject_logged_at' => (string) (self::NOW - 3_600)], 'x', [], RecordProvider::CRON_REJECTED, 0, 1, 'a rejection an hour on is logged'],
+            [['cron_token' => $token], ' ' . $token . ' ', $ok, RecordProvider::CRON_REFRESHED, 2, 0, 'the token, trimmed: refreshed'],
+            [['cron_token' => $token, 'cron_last_run' => (string) (self::NOW - 60)], $token, $ok, RecordProvider::CRON_THROTTLED, 0, 0, 'a second run within 15 minutes is throttled'],
+            [['cron_token' => $token, 'cron_last_run' => (string) (self::NOW - 900)], $token, $ok, RecordProvider::CRON_REFRESHED, 2, 0, 'a run 15 minutes on refreshes'],
+            [['cron_token' => $token, 'api_key' => ''], $token, [], RecordProvider::CRON_UNCONFIGURED, 0, 0, 'no API key: nothing to refresh'],
+        ];
+        foreach ($cases as [$stored, $presented, $responses, $result, $calls, $logged, $description]) {
+            [$provider, $transport, $store, $logger] = self::provider($stored + ['api_key' => 'k'], $responses, null);
+            TinyAssert::same([$result, $calls, $logged], [$provider->runTokenRefresh($presented), count($transport->calls), count(array_filter($logger->lines, static fn (array $line): bool => $line['level'] === 'error'))], 'token refresh: ' . $description);
+            TinyAssert::same($stored['cron_token'] ?? null, $store->get(RecordProvider::CRON_TOKEN_KEY), 'token refresh: ' . $description . ' (token unchanged)');
+        }
+
+        [$provider, , $store] = self::provider([], [], null);
+        $minted = $provider->cronToken();
+        TinyAssert::same([1, 40, $minted], [preg_match('/^[0-9a-f]{40}$/', $minted), strlen($minted), $provider->cronToken()], 'the admin mints a 40-hex token once, then reads it back');
+        TinyAssert::same($minted, $store->get(RecordProvider::CRON_TOKEN_KEY), 'the minted token is stored');
     }
 
     /**

@@ -6,12 +6,14 @@ namespace Opencart\Admin\Controller\Extension\Two\Payment;
 
 use Opencart\System\Library\Extension\Two\Core\ApiKeyVerdict;
 use Opencart\System\Library\Extension\Two\Core\Brand;
+use Opencart\System\Library\Extension\Two\Core\ErrorLog;
 use Opencart\System\Library\Extension\Two\Core\Message;
 use Opencart\System\Library\Extension\Two\Core\OrderLifecycle;
 use Opencart\System\Library\Extension\Two\Core\OrderRefunds;
 use Opencart\System\Library\Extension\Two\Core\Postprocessing;
 use Opencart\System\Library\Extension\Two\Core\RefundRecords;
 use Opencart\System\Library\Extension\Two\Core\RateLimiter;
+use Opencart\System\Library\Extension\Two\Core\RecordProvider;
 use Opencart\System\Library\Extension\Two\Core\SettingsProvider;
 use Opencart\System\Library\Extension\Two\Core\SettingsSave;
 use Opencart\System\Library\Extension\Two\Core\Surcharge;
@@ -146,12 +148,10 @@ class Two extends \Opencart\System\Engine\Controller
         $data['custom_headers'] = $settings->customHeaderRows();
         $data['refresh_profile'] = $this->url->link(self::ROUTE . '.refreshProfile', $token);
         $data['error_log'] = $this->url->link(self::ROUTE . '.errorLog', $token);
-        // OpenCart's own cron runner, shared by every extension: it runs each due job, the daily refresh among them.
-        $data['cron_url'] = HTTP_CATALOG . 'index.php?route=cron/cron';
-        $this->load->model('setting/cron');
-        $cron = $this->model_setting_cron->getCronByCode(Services::CRON_CODE);
-        $data['cron_last_run'] = $cron !== [] && (string) $cron['date_modified'] !== (string) $cron['date_added'] ? (string) $cron['date_modified'] : '';
-        $data['cron_registered'] = $cron !== [] && (bool) $cron['status'];
+        // The refresh's own URL, guarded by a random token (never the API key). OpenCart's cron runner reaches the same refresh without it.
+        $data['cron_url'] = HTTP_CATALOG . 'index.php?route=' . Services::CRON_ACTION . '&token=' . rawurlencode($services->records->cronToken());
+        $ranAt = (int) $settings->store()->get(RecordProvider::CRON_LAST_RUN_KEY);
+        $data['cron_last_run'] = $ranAt > 0 ? sprintf($this->language->get('text_cron_last_run'), gmdate('Y-m-d H:i', $ranAt) . 'Z') : $this->language->get('text_cron_never');
         $shopCurrency = (string) $this->config->get('config_currency');
         $data['entry_min_order_amount'] = sprintf($this->language->get('entry_min_order_amount'), $shopCurrency);
 
@@ -215,7 +215,7 @@ class Two extends \Opencart\System\Engine\Controller
         $data['confirmed_status_id'] = $settings->placedStatusId((int) $this->config->get('config_order_status_id'));
         $data['enable_tax_subtotals'] = $settings->taxSubtotals();
 
-        foreach (['help_debug_mode', 'help_refresh_profile', 'help_custom_headers', 'help_company_search_in_address', 'help_address_lookup', 'help_api_key', 'help_vendor_name', 'help_fulfil', 'help_cancel', 'help_refund', 'help_confirmed', 'entry_fulfil', 'entry_cancel', 'entry_refund', 'entry_confirmed', 'text_status_mapping_intro', 'text_default_confirmed', 'text_default_fulfil', 'text_default_cancel', 'text_default_refund'] as $key) {
+        foreach (['help_debug_mode', 'help_refresh_profile', 'error_profile_refresh', 'help_custom_headers', 'help_company_search_in_address', 'help_address_lookup', 'help_api_key', 'help_vendor_name', 'help_fulfil', 'help_cancel', 'help_refund', 'help_confirmed', 'entry_fulfil', 'entry_cancel', 'entry_refund', 'entry_confirmed', 'text_status_mapping_intro', 'text_default_confirmed', 'text_default_fulfil', 'text_default_cancel', 'text_default_refund'] as $key) {
             $data[$key] = sprintf($this->language->get($key), $brand);
         }
         $data['help_environment'] = $this->language->get('help_environment');
@@ -351,6 +351,81 @@ class Two extends \Opencart\System\Engine\Controller
             $result['fetched_at_display'] = gmdate('Y-m-d H:i', (int) $result['fetched_at']) . 'Z';
         }
         $this->json($result);
+    }
+
+    /**
+     * The Diagnostics tab's "Refresh merchant profile" button: refetches the
+     * merchant record now. A failed refetch keeps the cached record. POST
+     * only, with the admin's user_token (OpenCart's login check) and the
+     * modify permission.
+     */
+    public function refreshProfile(): void
+    {
+        $this->load->language(self::ROUTE);
+        if (!$this->user->hasPermission('modify', self::ROUTE) || ($this->request->server['REQUEST_METHOD'] ?? '') !== 'POST') {
+            $this->json(['success' => false, 'message' => $this->language->get('error_permission')]);
+
+            return;
+        }
+        $refreshed = (new Services($this->db, $this->log))->records->refresh();
+        $this->json([
+            'success' => $refreshed,
+            'message' => $refreshed ? $this->language->get('text_profile_refreshed') : sprintf($this->language->get('error_profile_refresh'), Brand::default()->productName),
+        ]);
+    }
+
+    /**
+     * The Diagnostics tab's error log view: the extension's last 100 lines of
+     * the shop's error log, the API key and every custom header value
+     * redacted, each line HTML-escaped (ErrorLog::view). Needs the modify
+     * permission, as the log may hold buyer data.
+     */
+    public function errorLog(): void
+    {
+        $this->load->language(self::ROUTE);
+        if (!$this->user->hasPermission('modify', self::ROUTE)) {
+            $this->response->addHeader('HTTP/1.1 403 Forbidden');
+            $this->response->setOutput(htmlspecialchars($this->language->get('error_permission'), ENT_QUOTES, 'UTF-8'));
+
+            return;
+        }
+        $settings = (new Services($this->db, $this->log))->settings;
+        $secrets = array_merge([$settings->apiKey()], array_map(static fn (array $row): string => $row['value'], $settings->customHeaderRows()));
+        $brand = Brand::default()->productName;
+        $token = 'user_token=' . $this->session->data['user_token'];
+
+        $data = [
+            'lines' => ErrorLog::view($this->errorLogTail(), $secrets),
+            'heading_error_log' => sprintf($this->language->get('heading_error_log'), $brand),
+            'text_error_log_intro' => sprintf($this->language->get('text_error_log_intro'), ErrorLog::LIMIT, $brand),
+            'back' => $this->url->link(self::ROUTE, $token),
+            'header' => $this->load->controller('common/header'),
+            'column_left' => $this->load->controller('common/column_left'),
+            'footer' => $this->load->controller('common/footer'),
+        ];
+        $this->document->setTitle($data['heading_error_log']);
+        $this->response->setOutput($this->load->view(self::ROUTE . '_error_log', $data));
+    }
+
+    /** The end of the shop's error log: at most ErrorLog::TAIL_BYTES, empty when there is none. */
+    private function errorLogTail(): string
+    {
+        $path = DIR_LOGS . basename((string) $this->config->get('config_error_filename'));
+        if (!is_file($path) || !is_readable($path)) {
+            return '';
+        }
+        $handle = fopen($path, 'rb');
+        if ($handle === false) {
+            return '';
+        }
+        $size = (int) filesize($path);
+        if ($size > ErrorLog::TAIL_BYTES) {
+            fseek($handle, $size - ErrorLog::TAIL_BYTES);
+        }
+        $text = (string) stream_get_contents($handle);
+        fclose($handle);
+
+        return $text;
     }
 
     /**
@@ -752,7 +827,7 @@ class Two extends \Opencart\System\Engine\Controller
      * decoded here and escaped again when rendered.
      *
      * @param array<string, mixed> $post
-     * @return array{api_key?: string, environment?: string, vendor_name?: string, title?: array<int, string>, subtitle?: array<int, string>, fulfil_status_ids?: list<string>, confirmed_status_id?: string, enable_order_intent?: string, show_about_link?: string, display_tooltips?: string, enable_tax_subtotals?: string, cancel_status_id?: string, refund_status_id?: string, company_search_in_address?: string, address_lookup?: string, enable_invoice_email?: string, enable_po_number?: string, enable_project?: string, enable_department?: string, min_order_amount?: string, min_order_basis?: string, trusted_proxies?: string, disable_rate_limit?: string}
+     * @return array{api_key?: string, environment?: string, vendor_name?: string, title?: array<int, string>, subtitle?: array<int, string>, fulfil_status_ids?: list<string>, confirmed_status_id?: string, enable_order_intent?: string, show_about_link?: string, display_tooltips?: string, enable_tax_subtotals?: string, cancel_status_id?: string, refund_status_id?: string, company_search_in_address?: string, address_lookup?: string, enable_invoice_email?: string, enable_po_number?: string, enable_project?: string, enable_department?: string, min_order_amount?: string, min_order_basis?: string, trusted_proxies?: string, disable_rate_limit?: string, debug_mode?: string, disable_ssl_verify?: string, custom_headers?: list<array{name: string, value: string, send_from_browser: bool}>}
      */
     private function submitted(array $post): array
     {

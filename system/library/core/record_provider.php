@@ -43,6 +43,16 @@ final class RecordProvider
     public const CRON_REFRESHED = 'refreshed';
     public const CRON_FAILED = 'failed';
     public const CRON_UNCONFIGURED = 'unconfigured';
+    public const CRON_REJECTED = 'rejected';
+    public const CRON_THROTTLED = 'throttled';
+
+    /** The scheduled refresh URL's secret, and when a rejected call was last logged. */
+    public const CRON_TOKEN_KEY = 'cron_token';
+    public const CRON_REJECT_LOGGED_KEY = 'cron_reject_logged_at';
+
+    /** One accepted call of the public refresh URL per this many seconds: a daily crontab never trips it. */
+    public const CRON_MIN_INTERVAL = 900;
+    public const REJECT_LOG_INTERVAL = 3_600;
 
     /** Root fields of which at least one must be present for a body to be the record. */
     private const RECORD_FIELDS = ['id', 'available_terms', 'due_in_days', 'invoice_distributed_by_merchant', 'min_order_amount', 'supported_buyer_countries'];
@@ -142,6 +152,52 @@ final class RecordProvider
         $this->settings->store()->setMany([self::CRON_LAST_RUN_KEY => (string) ($this->clock)()]);
 
         return $this->refresh() ? self::CRON_REFRESHED : self::CRON_FAILED;
+    }
+
+    /**
+     * The secret in the Diagnostics tab's scheduled refresh URL, minted on
+     * first read so an existing install acquires one without an upgrade step.
+     * Random, and unrelated to the API key. Admin only: an unauthenticated
+     * request never mints one (see runTokenRefresh).
+     */
+    public function cronToken(): string
+    {
+        $token = trim((string) $this->settings->store()->get(self::CRON_TOKEN_KEY));
+        if ($token === '') {
+            $token = bin2hex(random_bytes(20));
+            $this->settings->store()->setMany([self::CRON_TOKEN_KEY => $token]);
+        }
+
+        return $token;
+    }
+
+    /**
+     * The scheduled refresh as called on its public URL by the merchant's
+     * own crontab: the presented token must match the stored one, and one
+     * accepted run per CRON_MIN_INTERVAL. A rejection is logged at most once
+     * per REJECT_LOG_INTERVAL, since anyone can call the URL. One of the
+     * CRON_* values.
+     */
+    public function runTokenRefresh(string $candidate): string
+    {
+        $candidate = trim($candidate);
+        $stored = trim((string) $this->settings->store()->get(self::CRON_TOKEN_KEY));
+        $now = ($this->clock)();
+        if ($candidate === '' || $stored === '' || !hash_equals($stored, $candidate)) {
+            $logged = (int) $this->settings->store()->get(self::CRON_REJECT_LOGGED_KEY);
+            if ($logged <= 0 || $now - $logged >= self::REJECT_LOG_INTERVAL) {
+                $this->settings->store()->setMany([self::CRON_REJECT_LOGGED_KEY => (string) $now]);
+                $this->logger->error('Two scheduled refresh rejected: bad or missing token. Further rejections are not logged for ' . self::REJECT_LOG_INTERVAL . ' seconds.');
+            }
+
+            return self::CRON_REJECTED;
+        }
+        $ranAt = (int) $this->settings->store()->get(self::CRON_LAST_RUN_KEY);
+        if ($ranAt > 0 && $now - $ranAt < self::CRON_MIN_INTERVAL && $this->settings->apiKey() !== '') {
+            return self::CRON_THROTTLED;
+        }
+
+        return $this->runScheduledRefresh();
     }
 
     /**

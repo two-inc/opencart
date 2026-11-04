@@ -194,12 +194,72 @@
         TwoAdmin.feesLoaded = load();
     }
 
+    /**
+     * Diagnostics: the custom request-header table. Add clones the row
+     * template under a fresh index (never reused, so no two rows share a
+     * name); Remove drops its row. The save checks the table and refuses
+     * the tab while a row is invalid.
+     */
+    function initHeaders() {
+        var box = document.querySelector('[data-two-headers]');
+        if (!box) {
+            return;
+        }
+        var rows = box.querySelector('[data-two-header-rows]');
+        var template = box.querySelector('[data-two-header-template]');
+        var next = rows.querySelectorAll('[data-two-header-row]').length;
+        box.addEventListener('click', function (event) {
+            var target = event.target instanceof Element ? event.target : null;
+            if (target && target.closest('[data-two-header-add]')) {
+                var html = template.innerHTML.replace(/__i__/g, String(next++));
+                rows.insertAdjacentHTML('beforeend', html.trim());
+                var added = rows.lastElementChild && rows.lastElementChild.querySelector('input[type="text"]');
+                if (added) {
+                    added.focus();
+                }
+            } else if (target && target.closest('[data-two-header-remove]')) {
+                var row = target.closest('[data-two-header-row]');
+                if (row) {
+                    row.remove();
+                }
+            }
+        });
+    }
+
+    /** Diagnostics: "Refresh merchant profile", which says how the refetch went beside the button. */
+    function initRefresh() {
+        var button = document.querySelector('[data-two-refresh]');
+        var result = document.querySelector('[data-two-refresh-result]');
+        if (!button || !result) {
+            return;
+        }
+        button.addEventListener('click', function () {
+            button.disabled = true;
+            result.textContent = '';
+            TwoAdmin.refreshed = fetch(button.getAttribute('data-two-refresh'), {method: 'POST', credentials: 'same-origin'})
+                .then(function (response) { return response.json(); })
+                .then(function (answer) {
+                    result.textContent = answer.message || '';
+                    result.className = 'ms-2 small text-' + (answer.success ? 'success' : 'danger');
+                })
+                .catch(function () {
+                    result.textContent = button.getAttribute('data-two-refresh-error') || '';
+                    result.className = 'ms-2 small text-danger';
+                })
+                .then(function () {
+                    button.disabled = false;
+                });
+        });
+    }
+
     var TwoAdmin = window.TwoAdmin = {feeLabel: feeLabel, feeNotice: feeNotice};
 
     function boot() {
         init();
         initAutofill();
         initFees();
+        initHeaders();
+        initRefresh();
     }
 
     if (document.readyState === 'loading') {

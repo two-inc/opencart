@@ -1,0 +1,24 @@
+{{ header }}{{ column_left }}
+<div id="content">
+  <div class="page-header">
+    <div class="container-fluid">
+      <div class="float-end"><a href="{{ back|e }}" class="btn btn-light"><i class="fa-solid fa-reply"></i></a></div>
+      <h1>{{ heading_error_log|e }}</h1>
+    </div>
+  </div>
+  <div class="container-fluid">
+    <div class="card">
+      <div class="card-body">
+        <p class="text-muted">{{ text_error_log_intro|e }}</p>
+        {% if lines %}
+        {# Each line is redacted and HTML-escaped by ErrorLog::view, so it is printed as is. #}
+        <pre id="two-error-log" class="small" style="white-space: pre-wrap;">{% for line in lines %}{{ line }}
+{% endfor %}</pre>
+        {% else %}
+        <p id="two-error-log-empty">{{ text_error_log_empty|e }}</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{{ footer }}

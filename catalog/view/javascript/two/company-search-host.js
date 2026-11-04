@@ -477,6 +477,9 @@
             config: {
                 checkoutApiUrl: this.config.checkout_api_url,
                 checkoutPageUrl: this.config.checkout_page_url,
+                // The header rows the merchant flagged to also send from the
+                // browser, for the sole trader's own call to Two.
+                customHeaders: this.config.custom_headers || {},
                 // The placement rule, enforced without touching the component:
                 // in the tile it offers no manual entry and has no address mount.
                 isCompanySearchEnabled: !tile,
