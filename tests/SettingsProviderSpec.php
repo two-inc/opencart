@@ -10,7 +10,7 @@ use Opencart\System\Library\Extension\Two\Core\SettingsProvider;
  */
 final class SettingsProviderSpec
 {
-    /** @var list<array{stored: array<string, string>, getter: string, args?: list<int>, expected: mixed, description: string}> */
+    /** @var list<array{stored: array<string, string>, getter: string, args?: list<int|bool>, expected: mixed, description: string}> */
     private const CASES = [
         ['stored' => [], 'getter' => 'apiKey', 'expected' => '', 'description' => 'no key stored reads as empty'],
         ['stored' => ['api_key' => ' secret '], 'getter' => 'apiKey', 'expected' => 'secret', 'description' => 'the key is trimmed'],
@@ -42,6 +42,10 @@ final class SettingsProviderSpec
         ['stored' => ['confirmed_status_id' => '2'], 'getter' => 'placedStatusId', 'args' => [1], 'expected' => 2, 'description' => 'a confirmed status places the order there'],
         ['stored' => [], 'getter' => 'vendorName', 'expected' => '', 'description' => 'no vendor name stored'],
         ['stored' => ['vendor_name' => ' North site '], 'getter' => 'vendorName', 'expected' => 'North site', 'description' => 'the vendor name, trimmed'],
+        ['stored' => ['vendor_name' => "North\r\nX-API-Key: x"], 'getter' => 'vendorName', 'expected' => '', 'description' => 'a stored vendor name with a line break inside is never sent'],
+        ['stored' => ['vendor_name' => 'Nord' . "\u{e9}"], 'getter' => 'vendorName', 'expected' => '', 'description' => 'a stored non-ASCII vendor name is never sent'],
+        ['stored' => [], 'getter' => 'statusNamesToSeed', 'args' => [false], 'expected' => ['confirmed_status_id' => 'Processing', 'fulfil_status_ids' => 'Shipped', 'cancel_status_id' => 'Canceled', 'refund_status_id' => 'Refunded'], 'description' => 'a fresh install names every map, the confirmed status included'],
+        ['stored' => [], 'getter' => 'statusNamesToSeed', 'args' => [true], 'expected' => ['fulfil_status_ids' => 'Shipped', 'cancel_status_id' => 'Canceled', 'refund_status_id' => 'Refunded'], 'description' => 'an existing install gets no confirmed status: it keeps placing at its default'],
         ['stored' => [], 'getter' => 'subtitle', 'args' => [1], 'expected' => '', 'description' => 'no subtitle stored shows none'],
         ['stored' => ['subtitle' => '{"1":" Pay later ","2":"Betal senere"}'], 'getter' => 'subtitle', 'args' => [2], 'expected' => 'Betal senere', 'description' => 'the subtitle for the language'],
         ['stored' => ['subtitle' => '{"1":" Pay later "}'], 'getter' => 'subtitle', 'args' => [1], 'expected' => 'Pay later', 'description' => 'the subtitle is trimmed'],

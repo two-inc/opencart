@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { orderStatusId, statusIdNamed, twoOrderId, twoSetting } from "../pages/shop";
+import { orderStatusId, shopDefaultStatusId, twoOrderId, twoSetting } from "../pages/shop";
 import { addToCart, chooseTwo, confirmAndReturn, guestDetails, placeOrder } from "../pages/storefront";
 import { expectState, requests, stubOrder } from "../pages/stub";
 
@@ -11,8 +11,9 @@ test("a buyer finds their company, places the order with Two and sees the confir
   const twoId = twoOrderId(orderId);
   expect(twoId, "the shop order is linked to a Two order").not.toBe("");
   await expectState(twoId, "CONFIRMED");
-  expect(twoSetting("confirmed_status_id"), "the confirmed status starts on Processing").toBe(String(statusIdNamed("Processing")));
-  expect(orderStatusId(orderId), "the order is placed at the merchant's confirmed status").toBe(statusIdNamed("Processing"));
+  // A fresh install starts on Processing (admin-settings.spec.ts); an upgraded one that never saved a confirmed status keeps its default.
+  const confirmed = Number(twoSetting("confirmed_status_id") ?? "0");
+  expect(orderStatusId(orderId), "the order is placed at the confirmed status, else the shop's default").toBe(confirmed > 0 ? confirmed : shopDefaultStatusId());
 
   const created = await stubOrder(twoId);
   expect((created as any).buyer.company.organization_number, "the searched company's number is sent").toBe("12345678");

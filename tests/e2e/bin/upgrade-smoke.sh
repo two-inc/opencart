@@ -50,6 +50,11 @@ settings > "$upgrade/settings.after"
 
 # Every setting the release stored keeps its value; HEAD may add settings.
 lost=$(comm -23 <(sort "$upgrade/settings.before") <(sort "$upgrade/settings.after"))
+# A release with no confirmed status keeps placing at the shop's default: the upgrade must not name one.
+if ! grep -q '^payment_two_confirmed_status_id' "$upgrade/settings.before" \
+  && ! grep -qP '^payment_two_confirmed_status_id\t0$' "$upgrade/settings.after"; then
+  lost="${lost}${lost:+$'\n'}payment_two_confirmed_status_id was set by the upgrade: $(grep '^payment_two_confirmed_status_id' "$upgrade/settings.after")"
+fi
 rm -f "$upgrade/settings.before" "$upgrade/settings.after"
 if [ -n "$lost" ]; then
   echo "::error::upgrade smoke: settings changed or lost by the upgrade from ${tag}:"

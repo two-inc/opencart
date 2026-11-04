@@ -41,7 +41,11 @@ final class SettingsSave
     public const STATUS_VOID = 'status_void';
     /** The confirmed status is also a fulfil, cancel or refund status, so confirming an order would act on it at once. */
     public const STATUS_CONFLICT = 'status_conflict';
+    /** A fulfil, cancel or refund map names the confirmed status: the other side of STATUS_CONFLICT. */
+    public const STATUS_IS_CONFIRMED = 'status_is_confirmed';
     public const VENDOR_INVALID = 'vendor_invalid';
+    public const SUBTITLE_TOO_LONG = 'subtitle_too_long';
+    public const SUBTITLE_MAX = 255;
     public const SWITCH_INVALID = 'switch_invalid';
     public const MINIMUM_INVALID = 'minimum_invalid';
     public const BASIS_INVALID = 'basis_invalid';
@@ -56,11 +60,6 @@ final class SettingsSave
 
     /** Printable ASCII with no spaces: a key is sent as a header value, so nothing else may reach the wire. */
     private const KEY = '/^[\x21-\x7E]+\z/';
-
-    /** The vendor name is sent as a header value: printable ASCII, at most VENDOR_MAX characters. */
-    private const VENDOR = '/^[\x20-\x7E]+\z/';
-    public const VENDOR_MAX = 255;
-
     public function __construct(
         private readonly SettingsProvider $settings,
         private readonly Environment $environment,
@@ -129,23 +128,11 @@ final class SettingsSave
                 $write[$key] = $id;
             }
         }
-        if (isset($write['confirmed_status_id'])) {
-            // Placing an order at a status the lifecycle acts on would fulfil, cancel or refund it the moment
-            // Two confirms it. Judged against the maps as they will stand after this save.
-            $fulfil = isset($write['fulfil_status_ids']) ? (array) json_decode($write['fulfil_status_ids'], true) : $this->settings->fulfilStatusIds();
-            $acting = array_merge(array_map('intval', $fulfil), [
-                (int) ($write['cancel_status_id'] ?? $this->settings->cancelStatusId()),
-                (int) ($write['refund_status_id'] ?? $this->settings->refundStatusId()),
-            ]);
-            if (in_array((int) $write['confirmed_status_id'], $acting, true)) {
-                $errors['confirmed_status_id'] = self::STATUS_CONFLICT;
-                unset($write['confirmed_status_id']);
-            }
-        }
+        $this->refuseStatusConflicts($write, $errors);
 
         if (isset($submitted['vendor_name'])) {
             $vendor = trim($submitted['vendor_name']);
-            if ($vendor === '' || (preg_match(self::VENDOR, $vendor) === 1 && strlen($vendor) <= self::VENDOR_MAX)) {
+            if ($vendor === '' || SettingsProvider::isSendableVendorName($vendor)) {
                 $write['vendor_name'] = $vendor;
             } else {
                 $errors['vendor_name'] = self::VENDOR_INVALID;
@@ -154,7 +141,12 @@ final class SettingsSave
 
         if (isset($submitted['subtitle'])) {
             // Optional in every language: blank shows no subtitle.
-            $write['subtitle'] = (string) json_encode((object) array_map('trim', $submitted['subtitle']), JSON_UNESCAPED_UNICODE);
+            $subtitles = array_map('trim', $submitted['subtitle']);
+            if (array_filter($subtitles, static fn (string $subtitle): bool => mb_strlen($subtitle) > self::SUBTITLE_MAX) === []) {
+                $write['subtitle'] = (string) json_encode((object) $subtitles, JSON_UNESCAPED_UNICODE);
+            } else {
+                $errors['subtitle'] = self::SUBTITLE_TOO_LONG;
+            }
         }
 
         foreach (self::SWITCHES as $key) {
@@ -213,6 +205,44 @@ final class SettingsSave
         }
 
         return ['errors' => $errors, 'credentials' => $credentials, 'status' => $checked['status'], 'code' => $checked['code']];
+    }
+
+    /**
+     * A Two-confirmed order is placed at the confirmed status, so that status
+     * may not also fulfil, cancel or refund: the order would be acted on the
+     * moment it is placed. Judged on the settings as they will stand after
+     * this save, from either side: whichever of the clashing fields this save
+     * would write is refused (the confirmed status, a map, or both), so the
+     * stored settings never clash.
+     *
+     * @param array<string, string> $write
+     * @param array<string, string> $errors
+     */
+    private function refuseStatusConflicts(array &$write, array &$errors): void
+    {
+        $confirmed = isset($write['confirmed_status_id']) ? (int) $write['confirmed_status_id'] : $this->settings->confirmedStatusId();
+        if ($confirmed === null) {
+            return;
+        }
+        $maps = [
+            'fulfil_status_ids' => isset($write['fulfil_status_ids']) ? array_map('intval', (array) json_decode($write['fulfil_status_ids'], true)) : $this->settings->fulfilStatusIds(),
+            'cancel_status_id' => [(int) ($write['cancel_status_id'] ?? $this->settings->cancelStatusId())],
+            'refund_status_id' => [(int) ($write['refund_status_id'] ?? $this->settings->refundStatusId())],
+        ];
+        $clashing = array_keys(array_filter($maps, static fn (array $ids): bool => in_array($confirmed, $ids, true)));
+        if ($clashing === []) {
+            return;
+        }
+        if (isset($write['confirmed_status_id'])) {
+            $errors['confirmed_status_id'] = self::STATUS_CONFLICT;
+            unset($write['confirmed_status_id']);
+        }
+        foreach ($clashing as $key) {
+            if (isset($write[$key])) {
+                $errors[$key] = self::STATUS_IS_CONFIRMED;
+                unset($write[$key]);
+            }
+        }
     }
 
     /**

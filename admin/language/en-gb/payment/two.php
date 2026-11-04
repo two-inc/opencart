@@ -266,3 +266,7 @@ $_['text_fees_stale_rejected'] = 'The pricing service refused the request with H
 $_['text_fees_stale_rejected_bare'] = 'The pricing service refused the request with HTTP %s.';
 $_['text_fees_no_api_key'] = 'Fees cannot be shown until an API key is saved on the General tab.';
 $_['text_fees_no_figure'] = 'no figure';
+
+// TWO-27051 review: a map that names the confirmed status, and the subtitle's length.
+$_['error_status_is_confirmed'] = 'Orders are placed at this status when they are confirmed, so they would be acted on at once. Select another order status, or change the confirmed status.';
+$_['error_subtitle_too_long'] = 'Enter a subtitle of at most 255 characters.';

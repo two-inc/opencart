@@ -266,3 +266,7 @@ $_['text_fees_stale_rejected'] = 'De prijsservice heeft het verzoek geweigerd me
 $_['text_fees_stale_rejected_bare'] = 'De prijsservice heeft het verzoek geweigerd met HTTP %s.';
 $_['text_fees_no_api_key'] = 'Kosten kunnen niet worden weergegeven totdat er een API-sleutel is opgeslagen op het tabblad Algemeen.';
 $_['text_fees_no_figure'] = 'geen bedrag';
+
+// TWO-27051 review: a map that names the confirmed status, and the subtitle's length.
+$_['error_status_is_confirmed'] = 'Bestellingen krijgen deze status wanneer ze worden bevestigd, dus ze zouden meteen worden verwerkt. Kies een andere bestelstatus, of wijzig de status voor bevestigde bestellingen.';
+$_['error_subtitle_too_long'] = 'Voer een subtitel in van maximaal 255 tekens.';

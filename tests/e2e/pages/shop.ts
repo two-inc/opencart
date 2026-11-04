@@ -29,6 +29,11 @@ export function statusIdNamed(name: string): number {
   return Number(sql(`SELECT order_status_id FROM oc_order_status WHERE name = '${name}' AND language_id = 1`)[0][0]);
 }
 
+/** The shop's default order status (Settings > Option > Order Status). */
+export function shopDefaultStatusId(): number {
+  return Number(sql("SELECT value FROM oc_setting WHERE store_id = 0 AND `key` = 'config_order_status_id'")[0][0]);
+}
+
 /** One of the extension's stored settings (store 0), unprefixed, or null when none is stored. */
 export function twoSetting(key: string): string | null {
   const rows = sql(`SELECT value FROM oc_setting WHERE store_id = 0 AND \`key\` = 'payment_two_${key}'`);

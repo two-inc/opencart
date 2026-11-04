@@ -328,6 +328,7 @@ class Two extends \Opencart\System\Engine\Controller
         $decoded = json_decode(self::raw($this->request->post['terms'] ?? ''), true);
         $this->load->model('localisation/country');
         $country = $this->model_localisation_country->getCountry((int) $this->config->get('config_country_id'));
+        // The shop's own country; NL only when it has none, the reference plugin's own fallback.
         $iso = is_string($country['iso_code_2'] ?? null) && trim($country['iso_code_2']) !== '' ? $country['iso_code_2'] : 'NL';
         $result = (new Services($this->db, $this->log))->feeRates->fetch(is_array($decoded) ? $decoded : [], $iso);
         if (!empty($result['stale']) && ($result['fetched_at'] ?? 0) > 0) {

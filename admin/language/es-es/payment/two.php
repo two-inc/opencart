@@ -266,3 +266,7 @@ $_['text_fees_stale_rejected'] = 'El servicio de precios ha rechazado la solicit
 $_['text_fees_stale_rejected_bare'] = 'El servicio de precios ha rechazado la solicitud con HTTP %s.';
 $_['text_fees_no_api_key'] = 'No se pueden mostrar las comisiones hasta que se guarde una clave API en la pestaña General.';
 $_['text_fees_no_figure'] = 'sin cifra';
+
+// TWO-27051 review: a map that names the confirmed status, and the subtitle's length.
+$_['error_status_is_confirmed'] = 'Los pedidos reciben este estado cuando se confirman, por lo que se procesarían de inmediato. Selecciona otro estado de pedido o cambia el estado de los pedidos confirmados.';
+$_['error_subtitle_too_long'] = 'Introduce un subtítulo de 255 caracteres como máximo.';

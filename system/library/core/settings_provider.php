@@ -80,6 +80,8 @@ final class SettingsProvider
     public const DEFAULT_TITLE = 'Business invoice';
 
     /** The shop's own status names the maps start on: fulfil on Shipped, and so on. */
+    public const VENDOR_MAX = 255;
+
     public const DEFAULT_STATUS_NAMES = [
         'confirmed_status_id' => 'Processing',
         'fulfil_status_ids' => 'Shipped',
@@ -176,13 +178,35 @@ final class SettingsProvider
      */
     public function vendorName(): string
     {
-        return trim((string) $this->store->get('vendor_name'));
+        $vendor = trim((string) $this->store->get('vendor_name'));
+
+        // Checked again on read, as custom headers are: a value written past the admin never reaches the wire.
+        return self::isSendableVendorName($vendor) ? $vendor : '';
+    }
+
+    /** A vendor name goes as a header value: printable ASCII, at most VENDOR_MAX characters. */
+    public static function isSendableVendorName(string $vendor): bool
+    {
+        return preg_match('/^[\x20-\x7E]+\z/', $vendor) === 1 && strlen($vendor) <= self::VENDOR_MAX;
+    }
+
+    /**
+     * The status maps to start on the shop's own statuses, by name. An
+     * existing install keeps placing at its default order status until the
+     * merchant saves a confirmed status, so the confirmed status is named only
+     * on a fresh install.
+     *
+     * @return array<string, string>
+     */
+    public static function statusNamesToSeed(bool $existingInstall): array
+    {
+        return $existingInstall ? array_diff_key(self::DEFAULT_STATUS_NAMES, ['confirmed_status_id' => true]) : self::DEFAULT_STATUS_NAMES;
     }
 
     /**
      * The optional subtitle under the payment method title at checkout, in
      * one language, trimmed. Empty renders no subtitle: the brand declares no
-     * default tagline (Build Guide section 6.2).
+     * default tagline.
      */
     public function subtitle(int $languageId): string
     {

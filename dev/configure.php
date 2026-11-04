@@ -152,10 +152,13 @@ foreach (['status' => '1', 'sort_order' => Services::FEE_TOTAL_SORT_ORDER] as $k
 }
 
 // 4. Settings: defaults only where nothing is stored, then the given inputs.
-// The status maps start on the shop's own statuses, found by name in the default language.
+// The status maps start on the shop's own statuses, found by name in the default language. An existing
+// install (any setting of the extension already stored) gets no confirmed status: it keeps placing orders at
+// its default order status until the merchant saves one, as a package upgrade does.
 $statusDefaults = [];
 $language = query($db, "SELECT `value` FROM `{$p}setting` WHERE `store_id` = 0 AND `key` = 'config_language_id'");
-foreach (SettingsProvider::DEFAULT_STATUS_NAMES as $key => $name) {
+$existingInstall = query($db, "SELECT 1 FROM `{$p}setting` WHERE `store_id` = 0 AND `code` = ? LIMIT 1", [TWO_SETTING_CODE]) !== [];
+foreach (SettingsProvider::statusNamesToSeed($existingInstall) as $key => $name) {
     $found = query($db, "SELECT `order_status_id` FROM `{$p}order_status` WHERE `name` = ? AND `language_id` = ? ORDER BY `order_status_id` LIMIT 1", [$name, (string) ($language[0]['value'] ?? '1')]);
     if ($found !== []) {
         $id = (int) $found[0]['order_status_id'];

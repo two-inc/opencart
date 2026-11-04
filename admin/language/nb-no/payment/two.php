@@ -266,3 +266,7 @@ $_['text_fees_stale_rejected'] = 'Pristjenesten avviste forespørselen med HTTP 
 $_['text_fees_stale_rejected_bare'] = 'Pristjenesten avviste forespørselen med HTTP %s.';
 $_['text_fees_no_api_key'] = 'Gebyrer kan ikke vises før en API-nøkkel er lagret på fanen Generelt.';
 $_['text_fees_no_figure'] = 'ikke oppgitt';
+
+// TWO-27051 review: a map that names the confirmed status, and the subtitle's length.
+$_['error_status_is_confirmed'] = 'Ordrer får denne statusen når de bekreftes, så de ville bli behandlet med en gang. Velg en annen ordrestatus, eller endre statusen for bekreftede ordrer.';
+$_['error_subtitle_too_long'] = 'Skriv inn en undertittel på høyst 255 tegn.';
