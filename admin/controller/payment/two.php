@@ -393,6 +393,7 @@ class Two extends \Opencart\System\Engine\Controller
         $secrets = array_merge([$settings->apiKey()], array_map(static fn (array $row): string => $row['value'], $settings->customHeaderRows()));
         $brand = Brand::default()->productName;
         $token = 'user_token=' . $this->session->data['user_token'];
+        $this->document->setTitle(sprintf($this->language->get('heading_error_log'), $brand));
 
         $data = [
             'lines' => ErrorLog::view($this->errorLogTail(), $secrets),
@@ -403,7 +404,6 @@ class Two extends \Opencart\System\Engine\Controller
             'column_left' => $this->load->controller('common/column_left'),
             'footer' => $this->load->controller('common/footer'),
         ];
-        $this->document->setTitle($data['heading_error_log']);
         $this->response->setOutput($this->load->view(self::ROUTE . '_error_log', $data));
     }
 

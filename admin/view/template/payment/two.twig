@@ -466,13 +466,13 @@
               <div class="row mb-3">
                 <label class="col-sm-2 col-form-label">{{ entry_error_log|e }}</label>
                 <div class="col-sm-10">
-                  <a href="{{ error_log|e }}" target="_blank" rel="noopener" class="btn btn-outline-secondary" id="two-error-log-link">{{ button_error_log|e }}</a>
+                  <a href="{{ error_log }}" target="_blank" rel="noopener" class="btn btn-outline-secondary" id="two-error-log-link">{{ button_error_log|e }}</a>
                 </div>
               </div>
               <div class="row mb-3">
                 <label class="col-sm-2 col-form-label">{{ entry_refresh_profile|e }}</label>
                 <div class="col-sm-10">
-                  <button type="button" class="btn btn-outline-secondary" data-two-refresh="{{ refresh_profile|e }}" data-two-refresh-error="{{ error_profile_refresh|e }}"><i class="fa-solid fa-rotate"></i> {{ button_refresh_profile|e }}</button>
+                  <button type="button" class="btn btn-outline-secondary" data-two-refresh="{{ refresh_profile }}" data-two-refresh-error="{{ error_profile_refresh|e }}"><i class="fa-solid fa-rotate"></i> {{ button_refresh_profile|e }}</button>
                   <span class="ms-2 small" data-two-refresh-result role="status"></span>
                   <div class="form-text">{{ help_refresh_profile|e }}</div>
                 </div>
