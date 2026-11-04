@@ -194,7 +194,7 @@ final class SettingsSave
         }
 
         if (isset($submitted['custom_headers'])) {
-            $rows = array_values(array_map(static fn (array $row): array => ['name' => trim((string) ($row['name'] ?? '')), 'value' => trim((string) ($row['value'] ?? '')), 'send_from_browser' => (bool) ($row['send_from_browser'] ?? false)], $submitted['custom_headers']));
+            $rows = array_map(static fn (array $row): array => ['name' => trim((string) ($row['name'] ?? '')), 'value' => trim((string) ($row['value'] ?? '')), 'send_from_browser' => (bool) ($row['send_from_browser'] ?? false)], $submitted['custom_headers']);
             $refused = (new CustomHeaders())->validate($rows);
             if ($refused === []) {
                 // Blank rows are no rows; the browser flag is a JSON bool.
