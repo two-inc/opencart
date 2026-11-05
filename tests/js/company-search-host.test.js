@@ -511,3 +511,14 @@ describe('sole trader', () => {
         expect([calls.filter(([route]) => route === 'save').pop()[1], description]).toEqual([expect.objectContaining(saved), description]);
     });
 });
+
+// Custom request headers flagged "Also send from browser" (TWO-27051) reach the
+// component, whose sole-trader flow sends them on its one call to Two.
+test.each([
+    [{ 'X-Waf': 't1' }, { 'X-Waf': 't1' }, 'the flagged headers are handed over'],
+    [undefined, {}, 'none configured: an empty set'],
+])('browser headers %#', (published, expected, description) => {
+    document.body.innerHTML = ADDRESS('payment');
+    const { hosts } = start(config(published === undefined ? {} : { custom_headers: published }));
+    expect([hosts.payment.component.config().customHeaders, description]).toEqual([expected, description]);
+});

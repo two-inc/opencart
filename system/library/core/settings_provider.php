@@ -382,7 +382,9 @@ final class SettingsProvider
      * The stored custom request-header rows, shape-checked but otherwise
      * unvalidated (section 3.5): CustomHeaders decides what may be sent.
      *
-     * @return list<array{name: string, value: string}>
+     * Each row's browser flag is on only when stored as true.
+     *
+     * @return list<array{name: string, value: string, send_from_browser: bool}>
      */
     public function customHeaderRows(): array
     {
@@ -390,11 +392,23 @@ final class SettingsProvider
         $rows = [];
         foreach (is_array($decoded) ? $decoded : [] as $row) {
             if (is_array($row) && is_scalar($row['name'] ?? null) && is_scalar($row['value'] ?? null)) {
-                $rows[] = ['name' => (string) $row['name'], 'value' => (string) $row['value']];
+                $rows[] = ['name' => (string) $row['name'], 'value' => (string) $row['value'], 'send_from_browser' => ($row['send_from_browser'] ?? false) === true];
             }
         }
 
         return $rows;
+    }
+
+    /**
+     * The headers the buyer's browser also sends on its own calls to Two:
+     * the rows the merchant flagged, checked again on read as for the
+     * server's calls. Their values are published to the page.
+     *
+     * @return array<string, string>
+     */
+    public function browserCustomHeaders(): array
+    {
+        return (new CustomHeaders())->forRequest(array_values(array_filter($this->customHeaderRows(), static fn (array $row): bool => $row['send_from_browser'])));
     }
 
     /**

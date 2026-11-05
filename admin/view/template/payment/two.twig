@@ -392,11 +392,64 @@
 
             <div id="tab-diagnostics" class="tab-pane">
               <div class="row mb-3">
+                <label class="col-sm-2 col-form-label">{{ entry_debug_mode|e }}</label>
+                <div class="col-sm-10">
+                  <div class="form-check form-switch form-switch-lg">
+                    <input type="hidden" name="payment_two_debug_mode" value="0"/>
+                    <input type="checkbox" name="payment_two_debug_mode" value="1" id="input-debug-mode" class="form-check-input"{% if debug_mode %} checked{% endif %}/>
+                  </div>
+                  <div id="error-debug-mode" class="invalid-feedback"></div>
+                  <div class="form-text">{{ help_debug_mode|e }}</div>
+                </div>
+              </div>
+              <div class="row mb-3">
+                <label class="col-sm-2 col-form-label">{{ entry_disable_ssl_verify|e }}</label>
+                <div class="col-sm-10">
+                  <div class="form-check form-switch form-switch-lg">
+                    <input type="hidden" name="payment_two_disable_ssl_verify" value="0"/>
+                    <input type="checkbox" name="payment_two_disable_ssl_verify" value="1" id="input-disable-ssl-verify" class="form-check-input"{% if disable_ssl_verify %} checked{% endif %}/>
+                  </div>
+                  <div id="error-disable-ssl-verify" class="invalid-feedback"></div>
+                  <div class="form-text text-danger">{{ help_disable_ssl_verify|e }}</div>
+                </div>
+              </div>
+              <div class="row mb-3">
                 <label for="input-trusted-proxies" class="col-sm-2 col-form-label">{{ entry_trusted_proxies }}</label>
                 <div class="col-sm-10">
                   <textarea name="payment_two_trusted_proxies" rows="3" id="input-trusted-proxies" class="form-control">{{ trusted_proxies|e }}</textarea>
                   <div id="error-trusted-proxies" class="invalid-feedback"></div>
                   <div class="form-text">{{ help_trusted_proxies }}</div>
+                </div>
+              </div>
+              <div class="row mb-3">
+                <label class="col-sm-2 col-form-label">{{ entry_custom_headers|e }}</label>
+                <div class="col-sm-10" id="input-custom-headers" data-two-headers>
+                  {# The marker posts even with no rows, so removing every row saves an empty table. #}
+                  <input type="hidden" name="payment_two_custom_headers_posted" value="1"/>
+                  <table class="table table-sm w-auto mb-2">
+                    <thead><tr><th>{{ column_header_name|e }}</th><th>{{ column_header_value|e }}</th><th class="text-center">{{ column_header_browser|e }}</th><th></th></tr></thead>
+                    <tbody data-two-header-rows>
+                    {% for row in custom_headers %}
+                      <tr data-two-header-row>
+                        <td><input type="text" name="payment_two_custom_headers[{{ loop.index0 }}][name]" value="{{ row.name|e }}" class="form-control" autocomplete="off"/></td>
+                        <td><input type="text" name="payment_two_custom_headers[{{ loop.index0 }}][value]" value="{{ row.value|e }}" class="form-control" autocomplete="off"/></td>
+                        <td class="text-center align-middle"><input type="checkbox" name="payment_two_custom_headers[{{ loop.index0 }}][send_from_browser]" value="1" class="form-check-input"{% if row.send_from_browser %} checked{% endif %}/></td>
+                        <td class="align-middle"><button type="button" class="btn btn-outline-danger btn-sm" data-two-header-remove>{{ button_header_remove|e }}</button></td>
+                      </tr>
+                    {% endfor %}
+                    </tbody>
+                  </table>
+                  <template data-two-header-template>
+                    <tr data-two-header-row>
+                      <td><input type="text" name="payment_two_custom_headers[__i__][name]" value="" class="form-control" autocomplete="off"/></td>
+                      <td><input type="text" name="payment_two_custom_headers[__i__][value]" value="" class="form-control" autocomplete="off"/></td>
+                      <td class="text-center align-middle"><input type="checkbox" name="payment_two_custom_headers[__i__][send_from_browser]" value="1" class="form-check-input"/></td>
+                      <td class="align-middle"><button type="button" class="btn btn-outline-danger btn-sm" data-two-header-remove>{{ button_header_remove|e }}</button></td>
+                    </tr>
+                  </template>
+                  <button type="button" class="btn btn-outline-primary btn-sm" data-two-header-add>{{ button_header_add|e }}</button>
+                  <div id="error-custom-headers" class="invalid-feedback"></div>
+                  <div class="form-text">{{ help_custom_headers|e }}</div>
                 </div>
               </div>
               <div class="row mb-3">
@@ -410,7 +463,28 @@
                   <div class="form-text">{{ help_disable_rate_limit }}</div>
                 </div>
               </div>
-              <p class="text-muted">{{ text_coming_later }}</p>
+              <div class="row mb-3">
+                <label class="col-sm-2 col-form-label">{{ entry_error_log|e }}</label>
+                <div class="col-sm-10">
+                  <a href="{{ error_log }}" target="_blank" rel="noopener" class="btn btn-outline-secondary" id="two-error-log-link">{{ button_error_log|e }}</a>
+                </div>
+              </div>
+              <div class="row mb-3">
+                <label class="col-sm-2 col-form-label">{{ entry_refresh_profile|e }}</label>
+                <div class="col-sm-10">
+                  <button type="button" class="btn btn-outline-secondary" data-two-refresh="{{ refresh_profile }}" data-two-refresh-error="{{ error_profile_refresh|e }}"><i class="fa-solid fa-rotate"></i> {{ button_refresh_profile|e }}</button>
+                  <span class="ms-2 small" data-two-refresh-result role="status"></span>
+                  <div class="form-text">{{ help_refresh_profile|e }}</div>
+                </div>
+              </div>
+              <div class="row mb-3">
+                <label for="input-cron-url" class="col-sm-2 col-form-label">{{ entry_cron_url|e }}</label>
+                <div class="col-sm-10">
+                  <input type="text" id="input-cron-url" class="form-control" value="{{ cron_url|e }}" readonly/>
+                  <div class="form-text">{{ help_cron_url|e }}</div>
+                  <div class="form-text" id="two-cron-last-run">{{ cron_last_run|e }}</div>
+                </div>
+              </div>
             </div>
 
           </div>

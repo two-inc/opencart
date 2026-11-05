@@ -12,7 +12,9 @@ namespace Opencart\System\Library\Extension\Two\Core;
  *
  * The save path halts and shows: validate() names every bad row and the
  * adapter refuses the whole table, so a row the merchant saw saved is a row
- * that is sent. The table UI lands in a later phase.
+ * that is sent. The table is on the admin's Diagnostics tab; a row flagged
+ * send_from_browser is also handed to the buyer's browser for its own calls
+ * to Two (SettingsProvider::browserCustomHeaders).
  */
 final class CustomHeaders
 {

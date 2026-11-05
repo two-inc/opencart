@@ -12,6 +12,8 @@ if (PHP_SAPI !== 'cli') {
 // can type the code that reads them (dev/configure.php). Analysis only.
 define('DIR_EXTENSION', '/var/www/html/extension/');
 define('DIR_SYSTEM', '/var/www/html/system/');
+define('DIR_LOGS', '/var/www/storage/logs/');
+define('HTTP_CATALOG', 'http://localhost/');
 define('DB_DRIVER', 'mysqli');
 define('DB_HOSTNAME', 'localhost');
 define('DB_USERNAME', 'opencart');

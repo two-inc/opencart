@@ -43,7 +43,11 @@ admin() { local route="$1"; shift; curl -s -b "$jar" "$@" "$base/admin/index.php
 page=$(admin extension/two/payment/two)
 contains "settings page" "$page" 'Edit Two settings'
 contains "settings page version" "$page" "Version $(php -r 'echo json_decode(file_get_contents("install.json"), true)["version"];')"
-for tab in 'Checkout fields' 'Payment terms' 'Order management' 'Diagnostics' 'coming in a later release'; do contains "settings tab: ${tab}" "$page" "$tab"; done
+for tab in 'Checkout fields' 'Payment terms' 'Order management' 'Diagnostics' 'Scheduled refresh URL'; do contains "settings tab: ${tab}" "$page" "$tab"; done
+grep -qF 'coming in a later release' <<<"$page" && fail "settings page still says settings are coming in a later release"
+ok "no settings left for a later release"
+[ "$(status 'index.php?route=extension/two/cron/two&token=wrong')" = 403 ] || fail "the refresh URL took a wrong token"
+ok "refresh URL refuses a wrong token"
 [ "$(status extension/two/admin/view/javascript/two_admin.js)" = 200 ] || fail "the admin script is not served"
 ok "admin script served"
 # The environment dropdown: production and sandbox always, staging only on an internal shop.
@@ -252,8 +256,9 @@ printf 'localhost\tFALSE\t/\tFALSE\t0\tlanguage\tnb-no\n' >> "$nbjar"
 contains "the refund answer is in the admin user's language" "$(curl -s -b "$nbjar" -X POST -d "two_refund_net=10.00&two_refund_tax=2.50&two_refund_rate=0.25" "$base/admin/index.php?route=extension/two/payment/two.refund&order_id=9001&${user_token}")" 'Ikke refundert: ingen Two-ordre er knyttet til denne ordren.'
 nb_cleanup
 trap 'rm -f "$jar"' EXIT
-# The two refusals are expected in the log; anything else still fails the check below.
+# The two refusals and the wrong-token refresh are expected in the log; anything else still fails the check below.
 docker exec "$app" sed -i '/Two error: Order 9001: Not \(fulfilled\|cancelled\|refunded\): no Two order is linked/d' /var/www/html/system/storage/logs/error.log
+docker exec "$app" sed -i '/Two error: Two scheduled refresh rejected: bad or missing token/d' /var/www/html/system/storage/logs/error.log
 
 # The Installer's Uninstall deletes extension/two; the checkout mount must not allow it.
 if docker exec "$app" touch /var/www/html/extension/two/.smoke-probe 2> /dev/null; then fail "extension/two is writable from the shop"; fi

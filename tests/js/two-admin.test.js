@@ -98,3 +98,48 @@ test.each([
     await Promise.resolve();
     expect([global.fetch.mock.calls.length, description]).toEqual([calls, description]);
 });
+
+/**
+ * Diagnostics (TWO-27051): the custom request-header table's Add and Remove,
+ * and the "Refresh merchant profile" button.
+ */
+const ROW = (i) => '<tr data-two-header-row><td><input type="text" name="payment_two_custom_headers[' + i + '][name]"></td>'
+    + '<td><input type="text" name="payment_two_custom_headers[' + i + '][value]"></td>'
+    + '<td><input type="checkbox" name="payment_two_custom_headers[' + i + '][send_from_browser]"></td>'
+    + '<td><button type="button" data-two-header-remove>x</button></td></tr>';
+
+function headersPage(rows) {
+    document.body.innerHTML = '<div data-two-headers><table><tbody data-two-header-rows>' + rows.map(ROW).join('') + '</tbody></table>'
+        + '<template data-two-header-template>' + ROW('__i__') + '</template><button type="button" data-two-header-add>+</button></div>';
+    jest.isolateModules(() => require('../../admin/view/javascript/two_admin.js'));
+}
+
+const names = () => Array.from(document.querySelectorAll('[data-two-header-row] input[type="text"]')).map((input) => input.name);
+const click = (selector, index) => document.querySelectorAll(selector)[index || 0].click();
+
+test.each([
+    [[], ['add'], ['payment_two_custom_headers[0][name]', 'payment_two_custom_headers[0][value]'], 'Add on an empty table makes row 0'],
+    [[0, 1], ['add'], ['payment_two_custom_headers[0][name]', 'payment_two_custom_headers[0][value]', 'payment_two_custom_headers[1][name]', 'payment_two_custom_headers[1][value]', 'payment_two_custom_headers[2][name]', 'payment_two_custom_headers[2][value]'], 'Add after two rows makes row 2'],
+    [[0, 1], ['remove'], ['payment_two_custom_headers[1][name]', 'payment_two_custom_headers[1][value]'], 'Remove drops its own row'],
+    [[0, 1], ['remove', 'add'], ['payment_two_custom_headers[1][name]', 'payment_two_custom_headers[1][value]', 'payment_two_custom_headers[2][name]', 'payment_two_custom_headers[2][value]'], 'an index is never reused after a Remove'],
+])('header table %#', (rows, steps, expected, description) => {
+    headersPage(rows);
+    steps.forEach((step) => click(step === 'add' ? '[data-two-header-add]' : '[data-two-header-remove]'));
+    expect([names(), description]).toEqual([expected, description]);
+});
+
+test.each([
+    [() => Promise.resolve({ json: () => Promise.resolve({ success: true, message: 'Refreshed.' }) }), 'Refreshed.', 'ms-2 small text-success', 'a refresh says so'],
+    [() => Promise.resolve({ json: () => Promise.resolve({ success: false, message: 'Kept the old one.' }) }), 'Kept the old one.', 'ms-2 small text-danger', 'a failed refresh shows why'],
+    [() => Promise.reject(new Error('offline')), 'Could not refresh.', 'ms-2 small text-danger', 'no answer shows the failure text'],
+])('refresh merchant profile %#', async (answer, text, tone, description) => {
+    document.body.innerHTML = '<button data-two-refresh="/refresh?user_token=t" data-two-refresh-error="Could not refresh."></button><span data-two-refresh-result></span>';
+    global.fetch = jest.fn(answer);
+    jest.isolateModules(() => require('../../admin/view/javascript/two_admin.js'));
+    const button = document.querySelector('[data-two-refresh]');
+    button.click();
+    expect([button.disabled, description]).toEqual([true, description]);
+    await window.TwoAdmin.refreshed;
+    const result = document.querySelector('[data-two-refresh-result]');
+    expect([result.textContent, result.className, button.disabled, global.fetch.mock.calls[0][1].method, description]).toEqual([text, tone, false, 'POST', description]);
+});

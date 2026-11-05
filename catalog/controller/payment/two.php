@@ -476,6 +476,8 @@ class Two extends \Opencart\System\Engine\Controller
             'address_lookup' => $services->settings->addressLookup(),
             'checkout_api_url' => $companies->apiBaseUrl(),
             'checkout_page_url' => $companies->checkoutPageUrl(),
+            // Only the header rows the merchant flagged "Also send from browser": the sole-trader autofill call is the one call the browser makes to Two itself.
+            'custom_headers' => (object) $services->settings->browserCustomHeaders(),
             'urls' => ['search' => $link('search'), 'countries' => $link('countries'), 'sole_trader' => $link('soleTrader'), 'sole_trader_tokens' => $link('soleTraderTokens'), 'save_company' => $link('saveCompany'), 'intent' => $link('intent'), 'company_details' => $link('companyDetails'), 'confirm' => $link('confirm'), 'term' => $link('term'), 'fees' => $link('fees'), 'totals' => str_replace('&amp;', '&', $this->url->link('checkout/confirm.confirm', 'language=' . $this->config->get('config_language')))],
             'countries' => $isoById,
             'companies' => $this->state()['companies'] ?? (object) [],
