@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Opencart\System\Library\Extension\Two\Core;
 
 /**
- * The Diagnostics tab's error log view (Build Guide section 3.4): the
+ * The Diagnostics tab's error log view: the
  * extension's last LIMIT lines of the shop's error log, of any level. The
  * adapter reads the tail of the file; this picks the lines.
  *
