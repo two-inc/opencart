@@ -91,7 +91,7 @@ final class ProductPage
         if (isset($parts['button'])) {
             $button = $parts['button'];
             $html .= '<div class="two-product-button">'
-                . '<button type="button" class="btn btn-lg two-product-button__cta" data-two-buy-now'
+                . '<button type="button" class="btn two-product-button__cta" data-two-buy-now'
                 . ' data-two-add-url="' . $e($button['add_url']) . '"'
                 . ' data-two-checkout-url="' . $e($button['checkout_url']) . '"'
                 . ' data-two-unreachable="' . $e($button['unreachable']) . '">'
