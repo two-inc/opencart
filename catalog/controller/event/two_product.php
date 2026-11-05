@@ -13,6 +13,13 @@ use Opencart\System\Library\Extension\Two\Opencart\Services;
  * the rendered product page by the `catalog/view/product/product/after` event
  * (`Services::PRODUCT_EVENTS`), at the end of OpenCart's own add to cart form.
  * No core file is edited.
+ *
+ * @property-read \Opencart\System\Engine\Loader $load
+ * @property-read \Opencart\System\Engine\Config $config
+ * @property-read \Opencart\System\Library\DB $db
+ * @property-read \Opencart\System\Library\Log $log
+ * @property-read \Opencart\System\Library\Language $language
+ * @property-read \Opencart\System\Library\Url $url
  */
 class TwoProduct extends \Opencart\System\Engine\Controller
 {
@@ -23,6 +30,9 @@ class TwoProduct extends \Opencart\System\Engine\Controller
     /** Logged once per request at most, so a page of products writes one line. */
     private static bool $unplacedLogged = false;
 
+    private static bool $switchLogged = false;
+
+    /** @param array<int, mixed> $args the view's data */
     public function index(string &$route = '', array &$args = [], mixed &$output = null): void
     {
         if ($route !== 'product/product' || !is_string($output)) {
@@ -58,6 +68,7 @@ class TwoProduct extends \Opencart\System\Engine\Controller
         }
         $services = new Services($this->db, $this->log, (int) $this->config->get('config_store_id'));
         $page = new ProductPage($services->settings, $services->verdict);
+        $this->logUnrecognisedSwitches($services);
         $brand = Brand::default()->productName;
         $showsMessage = $page->showsMessage($methodEnabled);
         $showsButton = $page->showsButton($methodEnabled, $brand);
@@ -84,5 +95,24 @@ class TwoProduct extends \Opencart\System\Engine\Controller
         }
 
         return ProductPage::render($parts);
+    }
+
+    /**
+     * A switch stored as anything but 0 or 1 (an import, a hand edit) reads
+     * as off; say so once per request, so the merchant whose message or
+     * button vanished has something to read.
+     */
+    private function logUnrecognisedSwitches(Services $services): void
+    {
+        if (self::$switchLogged) {
+            return;
+        }
+        foreach (['product_message_enabled', 'product_button_enabled'] as $key) {
+            $stored = $services->settings->store()->get($key);
+            if ($stored !== null && !in_array($stored, ['', '0', '1'], true)) {
+                self::$switchLogged = true;
+                $this->log->write('Two: unrecognised ' . $key . ' value "' . $stored . '"; read as off');
+            }
+        }
     }
 }

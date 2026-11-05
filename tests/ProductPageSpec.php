@@ -66,7 +66,7 @@ final class ProductPageSpec
     /**
      * The rendered fragment: the parts, what it must contain and what it must not.
      *
-     * @var list<array{parts: array<string, mixed>, contains: list<string>, absent: list<string>, description: string}>
+     * @var list<array{parts: array{brand: string, message?: string, button?: array{label: string, add_url: string, checkout_url: string, unreachable: string, script: string}, stylesheet: string}, contains: list<string>, absent: list<string>, description: string}>
      */
     private const RENDERS = [
         [
@@ -124,9 +124,7 @@ final class ProductPageSpec
         }
 
         foreach (self::RENDERS as $case) {
-            /** @var array{brand: string, message?: string, button?: array{label: string, add_url: string, checkout_url: string, unreachable: string, script: string}, stylesheet: string} $parts */
-            $parts = $case['parts'];
-            $html = ProductPage::render($parts);
+            $html = ProductPage::render($case['parts']);
             foreach ($case['contains'] as $needle) {
                 TinyAssert::true(str_contains($html, $needle), 'render: ' . $case['description'] . ' (has ' . $needle . ')');
             }

@@ -302,3 +302,11 @@ $_['entry_cron_url'] = 'Scheduled refresh URL';
 $_['help_cron_url'] = 'Call this once a day from your server\'s crontab to refresh the merchant profile. The token may instead be sent as an X-Two-Cron-Token header or a POST field, which keeps it out of process listings and proxy logs. Keep it secret; anyone holding it can trigger the refresh. If your crontab already calls OpenCart\'s own cron URL (the Cron Jobs page), the refresh runs daily with it and this URL is not needed.';
 $_['text_cron_last_run'] = 'The scheduled refresh last ran at %s.';
 $_['text_cron_never'] = 'The scheduled refresh has not run yet.';
+
+// TWO-27055: the product page message and buy button (Checkout fields).
+$_['entry_product_message_enabled'] = 'Show message on product pages';
+$_['help_product_message_enabled'] = 'Shows a short promotional line on product pages, beneath the add to cart button. Off by default. Where exactly it lands depends on your theme.';
+$_['entry_product_button_enabled'] = 'Show buy button on product pages';
+$_['help_product_button_enabled'] = 'Adds a button beside add to cart that puts the item in the basket and takes the buyer to checkout with this payment method already chosen. Off by default. Where exactly it lands depends on your theme.';
+$_['entry_product_message'] = 'Product page message';
+$_['help_product_message'] = 'Optional. Leave empty to use the default wording. Avoid naming a number of days unless you are certain of the terms you offer: payment terms run from fulfilment, and the terms actually available come from your merchant record.';
