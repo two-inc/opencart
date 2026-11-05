@@ -113,3 +113,8 @@ $_['help_invoice_email'] = 'Waar %s de factuur voor deze bestelling naartoe moet
 $_['help_purchase_order_number'] = 'Je interne inkooporderreferentie voor deze bestelling.';
 $_['help_project'] = 'Het project dat aan deze aankoop moet worden gekoppeld, voor je eigen interne referentie.';
 $_['help_department'] = 'De afdeling die aan deze aankoop moet worden gekoppeld, voor je eigen interne referentie.';
+
+// Product page buy button (TWO-25800). %s is the brand's product name. The
+// product page message's default wording is text_about_strong, the tile's own sentence.
+$_['text_product_button'] = 'Kopen met %s';
+$_['error_product_button_unreachable'] = 'Sorry, we konden dit niet aan je winkelwagen toevoegen. Probeer het opnieuw.';

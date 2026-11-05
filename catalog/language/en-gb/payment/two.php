@@ -113,3 +113,8 @@ $_['help_invoice_email'] = 'Where %s should send the invoice for this order, if 
 $_['help_purchase_order_number'] = 'Your internal purchase order reference for this order.';
 $_['help_project'] = 'The project to associate with this purchase, for your own internal reference.';
 $_['help_department'] = 'The department to associate with this purchase, for your own internal reference.';
+
+// Product page buy button (TWO-25800). %s is the brand's product name. The
+// product page message's default wording is text_about_strong, the tile's own sentence.
+$_['text_product_button'] = 'Buy with %s';
+$_['error_product_button_unreachable'] = 'Sorry, we could not add this to your basket. Please try again.';

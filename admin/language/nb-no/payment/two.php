@@ -302,3 +302,11 @@ $_['entry_cron_url'] = 'URL for planlagt oppdatering';
 $_['help_cron_url'] = 'Kall denne én gang om dagen fra crontab på serveren din for å oppdatere merchantprofilen. Tokenet kan i stedet sendes som en X-Two-Cron-Token-header eller et POST-felt, som holder det utenfor prosesslister og proxy-logger. Hold det hemmelig; alle som har det, kan utløse oppdateringen. Hvis crontab allerede kaller OpenCarts egen cron-URL (siden Cron Jobs), kjører oppdateringen daglig med den, og denne URL-en trengs ikke.';
 $_['text_cron_last_run'] = 'Den planlagte oppdateringen kjørte sist %s.';
 $_['text_cron_never'] = 'Den planlagte oppdateringen har ikke kjørt ennå.';
+
+// TWO-27055: the product page message and buy button (Checkout fields).
+$_['entry_product_message_enabled'] = 'Vis melding på produktsider';
+$_['help_product_message_enabled'] = 'Viser en kort kampanjelinje på produktsider, under knappen for å legge i handlekurven. Av som standard. Nøyaktig hvor den havner avhenger av temaet ditt.';
+$_['entry_product_button_enabled'] = 'Vis kjøpsknapp på produktsider';
+$_['help_product_button_enabled'] = 'Legger til en knapp under legg i handlekurv som legger varen i kurven og tar kjøperen til kassen med denne betalingsmåten allerede valgt. Av som standard. Nøyaktig hvor den havner avhenger av temaet ditt.';
+$_['entry_product_message'] = 'Melding på produktsiden';
+$_['help_product_message'] = 'Valgfritt. La feltet stå tomt for å bruke standardteksten. Unngå å oppgi et antall dager med mindre du er sikker på betalingsbetingelsene du tilbyr: betalingsfrister løper fra utlevering, og betingelsene som faktisk er tilgjengelige kommer fra merchant-oppføringen din.';

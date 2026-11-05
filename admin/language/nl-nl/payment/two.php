@@ -302,3 +302,11 @@ $_['entry_cron_url'] = 'URL voor geplande vernieuwing';
 $_['help_cron_url'] = 'Roep dit eenmaal per dag aan vanuit de crontab van uw server om het merchantprofiel te vernieuwen. Het token kan ook worden verzonden als X-Two-Cron-Token-header of als POST-veld, waardoor het buiten proceslijsten en proxylogs blijft. Houd het geheim; iedereen die het heeft, kan de vernieuwing starten. Als uw crontab de eigen cron-URL van OpenCart al aanroept (de pagina Cron Jobs), loopt de vernieuwing daarmee dagelijks mee en is deze URL niet nodig.';
 $_['text_cron_last_run'] = 'De geplande vernieuwing is voor het laatst uitgevoerd op %s.';
 $_['text_cron_never'] = 'De geplande vernieuwing is nog niet uitgevoerd.';
+
+// TWO-27055: the product page message and buy button (Checkout fields).
+$_['entry_product_message_enabled'] = 'Bericht tonen op productpagina’s';
+$_['help_product_message_enabled'] = 'Toont een korte promotionele regel op productpagina’s, onder de knop om aan de winkelwagen toe te voegen. Standaard uitgeschakeld. Waar de regel precies terechtkomt, hangt af van je thema.';
+$_['entry_product_button_enabled'] = 'Koopknop tonen op productpagina’s';
+$_['help_product_button_enabled'] = 'Voegt onder in winkelwagen een knop toe die het artikel in de winkelwagen legt en de koper naar de kassa brengt met deze betaalmethode al gekozen. Standaard uit. Waar de knop precies terechtkomt hangt af van je thema.';
+$_['entry_product_message'] = 'Bericht op de productpagina';
+$_['help_product_message'] = 'Optioneel. Laat leeg om de standaardtekst te gebruiken. Vermeld geen aantal dagen tenzij je zeker bent van de termijnen die je aanbiedt: betaaltermijnen lopen vanaf de uitlevering, en de termijnen die echt beschikbaar zijn komen uit je merchant-record.';

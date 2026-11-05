@@ -117,6 +117,32 @@
                   <div class="form-text">{{ help_subtitle|e }}</div>
                 </div>
               </div>
+              {% for field in product_switches %}
+                <div class="row mb-3">
+                  <label class="col-sm-2 col-form-label">{{ field.label|e }}</label>
+                  <div class="col-sm-10">
+                    <div class="form-check form-switch form-switch-lg">
+                      <input type="hidden" name="payment_two_{{ field.key }}" value="0"/>
+                      <input type="checkbox" name="payment_two_{{ field.key }}" value="1" id="input-{{ field.key|replace({'_': '-'}) }}" class="form-check-input"{% if field.on %} checked{% endif %}/>
+                    </div>
+                    <div id="error-{{ field.key|replace({'_': '-'}) }}" class="invalid-feedback"></div>
+                    <div class="form-text">{{ field.help|e }}</div>
+                  </div>
+                </div>
+              {% endfor %}
+              <div class="row mb-3">
+                <label class="col-sm-2 col-form-label">{{ entry_product_message|e }}</label>
+                <div class="col-sm-10" id="input-product-message">
+                  {% for language in languages %}
+                    <div class="input-group mb-1">
+                      <div class="input-group-text"><img src="{{ language.image }}" title="{{ language.name }}"/></div>
+                      <input type="text" name="payment_two_product_message[{{ language.language_id }}]" value="{{ product_messages[language.language_id]|e }}" placeholder="{{ entry_product_message|e }}" id="input-product-message-{{ language.language_id }}" class="form-control"/>
+                    </div>
+                  {% endfor %}
+                  <div id="error-product-message" class="invalid-feedback"></div>
+                  <div class="form-text">{{ help_product_message|e }}</div>
+                </div>
+              </div>
               <div class="row mb-3">
                 <label class="col-sm-2 col-form-label">{{ entry_company_search_in_address }}</label>
                 <div class="col-sm-10">

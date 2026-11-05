@@ -36,6 +36,10 @@ The extension ships OpenCart language files for en-gb, nb-no, sv-se, nl-nl and e
 
 The buyer chooses from the payment terms your Two account offers; the Payment terms tab narrows them and sets the default, and shows beside each term the fee Two charges you for offering it. To pass Two's fee on to the buyer, set a surcharge per term there and select the tax class it is charged at: the fee is an order total (Extensions > Order Totals > Two payment terms fee), taxed by your shop's own tax rules like any other charge. Keep its sort order before Taxes.
 
+## Product page message and buy button
+
+Two optional extras on the Checkout fields tab, each off until you switch it on. Show message on product pages adds a short line naming Two under the add to cart button; leave its wording empty to use the default, or set your own per language (avoid naming a number of days: terms run from fulfilment and depend on your Two account). Show buy button on product pages adds a "Buy with Two" button there that puts the item in the basket with the quantity and options the buyer chose and opens checkout with Two already chosen in the payment method list. Neither promises the buyer will be offered Two: the minimum order, currency and buyer country are checked at checkout as usual, and where Two is not offered the buyer picks another method. Both sit inside the default theme's add to cart form; a theme that replaces that form shows neither, and where exactly they land beside other badges depends on your theme.
+
 ## Order lifecycle
 
 Map your order statuses in the extension's Order management tab: an order Two confirms is placed at the confirmed status (Processing on a fresh install), moving an order into the fulfilment status fulfils it with Two, the cancel status cancels it, and the refund status refunds whatever is left. Edits to an order before it is fulfilled are sent to Two. The Two tab on the admin order page refunds chosen lines or an amount, and downloads the invoice and the credit note.

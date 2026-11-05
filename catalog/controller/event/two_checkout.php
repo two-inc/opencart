@@ -37,6 +37,9 @@ class TwoCheckout extends \Opencart\System\Engine\Controller
 
     public const STYLESHEET = 'extension/two/catalog/view/stylesheet/two_checkout.css';
 
+    /** The product page buy button's hand-off: checks Two in the payment method list (section 20.8). */
+    public const PRESELECT = 'extension/two/catalog/view/javascript/two_preselect.js';
+
     /** @param array<int, mixed> $args the view's data */
     public function index(string &$route = '', array &$args = [], mixed &$output = null): void
     {
@@ -76,6 +79,9 @@ class TwoCheckout extends \Opencart\System\Engine\Controller
             $island .= '<script src="' . self::versioned('extension/two/catalog/view/javascript/two/' . $module . '.js', $version) . '"></script>';
         }
         $island .= '<script src="' . self::versioned(self::SCRIPT, $version) . '"></script>';
+        if ($pages[$route] === null) {
+            $island .= '<script src="' . self::versioned(self::PRESELECT, $version) . '"></script>';
+        }
         $at = strripos($output, '</body>');
         $output = $at === false ? $output . $island : substr($output, 0, $at) . $island . substr($output, $at);
     }
@@ -87,7 +93,7 @@ class TwoCheckout extends \Opencart\System\Engine\Controller
      * front of the shop keeps serving the old copy. is_file() first, as
      * OpenCart's error handler acts on a warning even under `@`.
      */
-    private static function versioned(string $path, string $version): string
+    public static function versioned(string $path, string $version): string
     {
         $file = DIR_EXTENSION . substr($path, strlen('extension/'));
         $modified = is_file($file) ? filemtime($file) : false;

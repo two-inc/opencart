@@ -211,8 +211,8 @@ if (query($db, "SELECT `event_id` FROM `{$p}event` WHERE `code` = ?", [Services:
     say('registered event ' . Services::CHECKOUT_EVENT_CODE);
 }
 
-// 6b. The saved-address capture events, as install() registers them.
-foreach (Services::ADDRESS_EVENTS as $code => [$trigger, $action, $description]) {
+// 6b. The saved-address capture and product page events, as install() registers them.
+foreach (Services::ADDRESS_EVENTS + Services::PRODUCT_EVENTS as $code => [$trigger, $action, $description]) {
     if (query($db, "SELECT `event_id` FROM `{$p}event` WHERE `code` = ?", [$code]) === []) {
         query($db, "INSERT INTO `{$p}event` SET `code` = ?, `description` = ?, `trigger` = ?, `action` = ?, `status` = 1, `sort_order` = 0", [$code, $description, $trigger, $action]);
         say('registered event ' . $code);

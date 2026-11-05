@@ -77,6 +77,16 @@ final class Services
         'two_address_admin_edit' => ['admin/model/customer/customer.editAddress/before', 'extension/two/event/two_address', 'Keeps the company captured by the Two company search when the admin edits a saved address.'],
     ];
 
+    /**
+     * The product page message and buy button (Build Guide section 20): added
+     * to the rendered product page, at the end of its add to cart form.
+     *
+     * @var array<string, array{0: string, 1: string, 2: string}>
+     */
+    public const PRODUCT_EVENTS = [
+        'two_product_page' => ['catalog/view/product/product/after', 'extension/two/event/two_product', 'Adds the Two product page message and buy button.'],
+    ];
+
     /** The payment terms fee order total, and its default sort order: before core's Taxes total (5), so its tax is listed and charged. */
     public const FEE_TOTAL_CODE = 'two_fee';
     public const FEE_TOTAL_SORT_ORDER = '4';

@@ -115,8 +115,10 @@ class Two extends \Opencart\System\Engine\Controller
         $data['languages'] = $this->model_localisation_language->getLanguages();
         $data['titles'] = [];
         $data['subtitles'] = [];
+        $data['product_messages'] = [];
         foreach ($data['languages'] as $language) {
             $data['subtitles'][$language['language_id']] = $settings->subtitle((int) $language['language_id']);
+            $data['product_messages'][$language['language_id']] = $settings->productMessage((int) $language['language_id']);
             // Each language's default title from its own language file, over en-gb's as OpenCart does for a
             // language this extension does not ship, prefixed so this page's keys stay.
             $this->load->language(self::ROUTE, 'two_title', 'en-gb');
@@ -137,6 +139,11 @@ class Two extends \Opencart\System\Engine\Controller
             $data['optional_fields'][] = ['key' => $key, 'on' => in_array($field, $settings->optionalFields(), true), 'label' => $this->language->get('entry_' . $key), 'help' => sprintf($this->language->get('help_' . $key), $brand)];
         }
         $data['optional_fields'][] = ['key' => 'display_tooltips', 'on' => $settings->displayTooltips(), 'label' => $this->language->get('entry_display_tooltips'), 'help' => $this->language->get('help_display_tooltips')];
+        // The product page message and buy button (section 20): two switches and the wording, as in the reference plugin.
+        $data['product_switches'] = [];
+        foreach (['product_message_enabled' => $settings->productMessageEnabled(), 'product_button_enabled' => $settings->productButtonEnabled()] as $key => $on) {
+            $data['product_switches'][] = ['key' => $key, 'on' => $on, 'label' => $this->language->get('entry_' . $key), 'help' => $this->language->get('help_' . $key)];
+        }
         $data['min_order_amount'] = trim((string) $settings->store()->get('min_order_amount'));
         $data['min_order_basis'] = $settings->merchantMinimumOrderBasis() ?? '';
         $data['trusted_proxies'] = trim((string) $settings->store()->get('trusted_proxies'));
@@ -463,7 +470,7 @@ class Two extends \Opencart\System\Engine\Controller
         $this->model_setting_event->addEvent(['code' => Services::EVENT_CODE, 'description' => Services::EVENT_DESCRIPTION, 'trigger' => Services::EVENT_TRIGGER, 'action' => Services::EVENT_ACTION, 'status' => true, 'sort_order' => 0]);
         $this->model_setting_event->deleteEventByCode(Services::CHECKOUT_EVENT_CODE);
         $this->model_setting_event->addEvent(['code' => Services::CHECKOUT_EVENT_CODE, 'description' => Services::CHECKOUT_EVENT_DESCRIPTION, 'trigger' => Services::CHECKOUT_EVENT_TRIGGER, 'action' => Services::CHECKOUT_EVENT_ACTION, 'status' => true, 'sort_order' => 0]);
-        foreach (Services::ADDRESS_EVENTS as $code => [$trigger, $action, $description]) {
+        foreach (Services::ADDRESS_EVENTS + Services::PRODUCT_EVENTS as $code => [$trigger, $action, $description]) {
             $this->model_setting_event->deleteEventByCode($code);
             $this->model_setting_event->addEvent(['code' => $code, 'description' => $description, 'trigger' => $trigger, 'action' => $action, 'status' => true, 'sort_order' => 0]);
         }
@@ -511,7 +518,7 @@ class Two extends \Opencart\System\Engine\Controller
         $this->load->model('setting/event');
         $this->model_setting_event->deleteEventByCode(Services::EVENT_CODE);
         $this->model_setting_event->deleteEventByCode(Services::CHECKOUT_EVENT_CODE);
-        foreach (array_keys(Services::ADDRESS_EVENTS) as $code) {
+        foreach (array_keys(Services::ADDRESS_EVENTS + Services::PRODUCT_EVENTS) as $code) {
             $this->model_setting_event->deleteEventByCode($code);
         }
 
@@ -827,7 +834,7 @@ class Two extends \Opencart\System\Engine\Controller
      * decoded here and escaped again when rendered.
      *
      * @param array<string, mixed> $post
-     * @return array{api_key?: string, environment?: string, vendor_name?: string, title?: array<int, string>, subtitle?: array<int, string>, fulfil_status_ids?: list<string>, confirmed_status_id?: string, enable_order_intent?: string, show_about_link?: string, display_tooltips?: string, enable_tax_subtotals?: string, cancel_status_id?: string, refund_status_id?: string, company_search_in_address?: string, address_lookup?: string, enable_invoice_email?: string, enable_po_number?: string, enable_project?: string, enable_department?: string, min_order_amount?: string, min_order_basis?: string, trusted_proxies?: string, disable_rate_limit?: string, debug_mode?: string, disable_ssl_verify?: string, custom_headers?: list<array{name: string, value: string, send_from_browser: bool}>}
+     * @return array{api_key?: string, environment?: string, vendor_name?: string, title?: array<int, string>, subtitle?: array<int, string>, product_message?: array<int, string>, fulfil_status_ids?: list<string>, confirmed_status_id?: string, enable_order_intent?: string, show_about_link?: string, display_tooltips?: string, enable_tax_subtotals?: string, cancel_status_id?: string, refund_status_id?: string, company_search_in_address?: string, address_lookup?: string, enable_invoice_email?: string, enable_po_number?: string, enable_project?: string, enable_department?: string, min_order_amount?: string, min_order_basis?: string, trusted_proxies?: string, disable_rate_limit?: string, product_message_enabled?: string, product_button_enabled?: string, debug_mode?: string, disable_ssl_verify?: string, custom_headers?: list<array{name: string, value: string, send_from_browser: bool}>}
      */
     private function submitted(array $post): array
     {
@@ -855,6 +862,14 @@ class Two extends \Opencart\System\Engine\Controller
                 $subtitles[(int) $language['language_id']] = self::raw($field('subtitle')[$language['language_id']] ?? '');
             }
             $submitted['subtitle'] = $subtitles;
+        }
+        if (is_array($field('product_message'))) {
+            $this->load->model('localisation/language');
+            $messages = [];
+            foreach ($this->model_localisation_language->getLanguages() as $language) {
+                $messages[(int) $language['language_id']] = self::raw($field('product_message')[$language['language_id']] ?? '');
+            }
+            $submitted['product_message'] = $messages;
         }
         if (is_array($field('payment_terms'))) {
             $submitted['payment_terms'] = array_values(array_map(static fn (mixed $days): string => self::raw($days), $field('payment_terms')));

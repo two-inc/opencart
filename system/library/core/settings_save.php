@@ -55,8 +55,8 @@ final class SettingsSave
     public const TERMS_UNKNOWN = 'terms_unknown';
     public const DEFAULT_TERM_UNKNOWN = 'default_term_unknown';
 
-    /** The on/off settings: the placement switch, the tile's switches and the optional field toggles (Checkout fields), Validate tax subtotals (Order management) and the rate-limit switch (Diagnostics). */
-    public const SWITCHES = ['company_search_in_address', 'address_lookup', 'enable_order_intent', 'show_about_link', 'display_tooltips', 'enable_invoice_email', 'enable_po_number', 'enable_project', 'enable_department', 'enable_tax_subtotals', 'debug_mode', 'disable_ssl_verify', 'disable_rate_limit'];
+    /** The on/off settings: the placement switch, the tile's switches, the optional field toggles and the product page switches (Checkout fields), Validate tax subtotals (Order management) and the rate-limit switch (Diagnostics). */
+    public const SWITCHES = ['company_search_in_address', 'address_lookup', 'enable_order_intent', 'show_about_link', 'display_tooltips', 'enable_invoice_email', 'enable_po_number', 'enable_project', 'enable_department', 'product_message_enabled', 'product_button_enabled', 'enable_tax_subtotals', 'debug_mode', 'disable_ssl_verify', 'disable_rate_limit'];
 
     /**
      * The Diagnostics tab's fields. An invalid custom header row refuses all
@@ -79,7 +79,7 @@ final class SettingsSave
      * Validates and writes the submitted settings in one write, then brings
      * the verdict (and, for new credentials, the merchant record) up to date.
      *
-     * @param array{api_key?: string, environment?: string, vendor_name?: string, title?: array<int, string>, subtitle?: array<int, string>, fulfil_status_ids?: list<string>, confirmed_status_id?: string, cancel_status_id?: string, refund_status_id?: string, enable_order_intent?: string, show_about_link?: string, display_tooltips?: string, company_search_in_address?: string, address_lookup?: string, enable_invoice_email?: string, enable_po_number?: string, enable_project?: string, enable_department?: string, min_order_amount?: string, min_order_basis?: string, trusted_proxies?: string, disable_rate_limit?: string, debug_mode?: string, disable_ssl_verify?: string, custom_headers?: list<array{name?: string, value?: string, send_from_browser?: bool}>, payment_term_type?: string, payment_terms?: list<string>, default_payment_term?: string, surcharge_type?: string, surcharge_differential?: string, surcharge_rounding_basis?: string, surcharge_rounding_step?: string, surcharge_line_description?: string, surcharge_tax_class_id?: string, surcharge_grid?: array<int|string, array<string, string>>} $submitted
+     * @param array{api_key?: string, environment?: string, vendor_name?: string, title?: array<int, string>, subtitle?: array<int, string>, product_message?: array<int, string>, fulfil_status_ids?: list<string>, confirmed_status_id?: string, cancel_status_id?: string, refund_status_id?: string, enable_order_intent?: string, show_about_link?: string, display_tooltips?: string, company_search_in_address?: string, address_lookup?: string, enable_invoice_email?: string, enable_po_number?: string, enable_project?: string, enable_department?: string, min_order_amount?: string, min_order_basis?: string, trusted_proxies?: string, disable_rate_limit?: string, product_message_enabled?: string, product_button_enabled?: string, debug_mode?: string, disable_ssl_verify?: string, custom_headers?: list<array{name?: string, value?: string, send_from_browser?: bool}>, payment_term_type?: string, payment_terms?: list<string>, default_payment_term?: string, surcharge_type?: string, surcharge_differential?: string, surcharge_rounding_basis?: string, surcharge_rounding_step?: string, surcharge_line_description?: string, surcharge_tax_class_id?: string, surcharge_grid?: array<int|string, array<string, string>>} $submitted
      * @param list<int> $orderStatusIds the shop's order statuses, which the maps may name
      * @param int       $voidStatusId   the shop's void status (0 for none), which no map may name
      * @param list<int> $taxClassIds    the shop's tax classes, which the surcharge's tax class must be one of
@@ -154,6 +154,11 @@ final class SettingsSave
             } else {
                 $errors['subtitle'] = self::SUBTITLE_TOO_LONG;
             }
+        }
+
+        if (isset($submitted['product_message'])) {
+            // Optional in every language: blank shows the default wording, never nothing.
+            $write['product_message'] = (string) json_encode((object) array_map('trim', $submitted['product_message']), JSON_UNESCAPED_UNICODE);
         }
 
         foreach (self::SWITCHES as $key) {
