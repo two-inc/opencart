@@ -235,6 +235,7 @@ $_['text_health_fee_quote'] = 'avgiftsberäkningen för betalningsvillkor har mi
 $_['text_health_fx'] = 'Valutakurserna från %s hämtades %s';
 $_['text_withheld_no_terms'] = 'inga betalningsvillkor erbjuds: ditt konto erbjuder inget av de villkor som är markerade på fliken Betalningsvillkor för den här villkorstypen.';
 $_['text_withheld_fee_total_off'] = 'en tilläggsavgift är inställd, men ordertotalen Two-avgift för betalningsvillkor är inte aktiverad. Aktivera den under Tillägg > Ordertotaler, eller sätt metoden för tilläggsavgift till Ingen tilläggsavgift appliceras.';
+$_['text_withheld_tax_code_map_unreadable'] = 'sparade skattekoder för rader med 0%% kan inte läsas. Markera Rensa sparade skattekoder i avsnittet Skattekoder för rader med 0%% (fliken Orderhantering) och spara.';
 $_['error_surcharge_percent_range'] = '%1$s för villkoret på %2$d dagar måste vara mellan 0 och 100: det är den andel av avgiften som förs vidare till köparen.';
 
 // TWO-27051: vendor name (General), subtitle and the tile switches (Checkout fields), the confirmed status and Validate tax subtotals (Order management), the merchant fee per term (Payment terms). %s is the brand's product name.
@@ -258,13 +259,14 @@ $_['text_tax_codes_none'] = '(ingen)';
 $_['text_tax_codes_unlisted'] = '%s (inte listad för rader utan skatt)';
 $_['text_tax_codes_record_error'] = 'Merchantuppgifterna kunde inte läsas från %s, så skattekoderna kan inte visas. Använd Uppdatera merchantprofil på fliken Diagnostik. Sparade skattekoder gäller fortfarande i kassan.';
 $_['text_tax_codes_list_error'] = 'Skattekoderna för %1$s kunde inte läsas från %2$s. Sparade skattekoder gäller fortfarande i kassan, och sidan frågar igen inom 5 minuter.';
-$_['text_tax_codes_unreadable'] = 'Sparade skattekoder kan inte läsas, så ordrar med en rad med 0% avvisas. Rensa dem för att åtgärda detta.';
+$_['text_tax_codes_stale'] = 'Skattekoderna för %1$s kunde inte uppdateras från %2$s: senaste försöket (%3$s) misslyckades med HTTP %4$d. Listan som visas lästes %5$s, och sidan frågar igen inom 5 minuter.';
+$_['text_tax_codes_unreadable'] = 'Sparade skattekoder kan inte läsas, så %s visas inte i kassan. Rensa dem för att åtgärda detta.';
 $_['text_tax_codes_saved_valid'] = 'Sparade skattekoder gäller fortfarande i kassan, trots att %1$s inte kräver dem för ditt land (%2$s).';
 $_['text_tax_codes_saved_invalid'] = 'Vissa sparade skattekoder är inte giltiga på rader utan skatt för ditt land (%1$s), så %2$s avvisar ordrar som använder dem. Rensa dem om du inte behöver dem.';
 $_['entry_tax_codes_clear'] = 'Rensa sparade skattekoder';
 $_['entry_buyer_vat_field'] = 'Köparens momsregistreringsnummer';
 $_['help_buyer_vat_field'] = 'Kundfältet som innehåller köparens momsregistreringsnummer, läst från betalningsadressen, annars från kontot. En spansk merchants order skickar det till %s, och det avgör raden för momsregistrerad köpare.';
-$_['error_tax_codes_truncated'] = 'Skattekoderna sparades inte: formuläret kortades av serverns gräns för skickade fält (max_input_vars). Höj gränsen och spara igen.';
+$_['error_form_truncated'] = 'Ingenting sparades: formuläret kortades av serverns gräns för skickade fält (max_input_vars). Höj gränsen och spara igen.';
 $_['error_tax_code_unlisted'] = 'Skattekoderna sparades inte: en vald kod är inte listad för rader med 0% i ditt land.';
 $_['error_vat_field_unknown'] = 'Välj ett av kundfälten i listan.';
 $_['entry_enable_tax_subtotals'] = 'Validera momsdelsummor';

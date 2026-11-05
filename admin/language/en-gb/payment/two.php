@@ -235,6 +235,7 @@ $_['text_health_fee_quote'] = 'payment terms fee quotes have failed since %s (%s
 $_['text_health_fx'] = '%s\'s FX rates fetched %s';
 $_['text_withheld_no_terms'] = 'no payment term is offered: your account offers none of the terms ticked on the Payment terms tab for this term type.';
 $_['text_withheld_fee_total_off'] = 'a surcharge is set but the Two payment terms fee order total is not enabled. Enable it in Extensions > Order Totals, or set the surcharge method to No surcharge applied.';
+$_['text_withheld_tax_code_map_unreadable'] = 'the saved tax codes for 0%% lines cannot be read. Tick Clear saved tax codes in the Tax codes for 0%% lines section (Order management tab) and save.';
 $_['error_surcharge_percent_range'] = '%1$s for the %2$d-day term must be between 0 and 100: it is the share of the fee passed to the buyer.';
 
 // TWO-27051: vendor name (General), subtitle and the tile switches (Checkout fields), the confirmed status and Validate tax subtotals (Order management), the merchant fee per term (Payment terms). %s is the brand's product name.
@@ -258,13 +259,14 @@ $_['text_tax_codes_none'] = '(none)';
 $_['text_tax_codes_unlisted'] = '%s (not listed for zero-rated lines)';
 $_['text_tax_codes_record_error'] = 'The merchant details could not be read from %s, so the tax codes cannot be shown. Use Refresh merchant profile on the Diagnostics tab. Saved tax codes keep applying at checkout.';
 $_['text_tax_codes_list_error'] = 'The tax codes for %1$s could not be read from %2$s. Saved tax codes keep applying at checkout, and this page asks again within 5 minutes.';
-$_['text_tax_codes_unreadable'] = 'Saved tax codes cannot be read, so orders with a 0% line are refused. Clear them to fix this.';
+$_['text_tax_codes_stale'] = 'The tax codes for %1$s could not be refreshed from %2$s: the last attempt (%3$s) failed with HTTP %4$d. The list shown was read %5$s, and this page asks again within 5 minutes.';
+$_['text_tax_codes_unreadable'] = 'Saved tax codes cannot be read, so %s is not shown at checkout. Clear them to fix this.';
 $_['text_tax_codes_saved_valid'] = 'Saved tax codes still apply at checkout, though %1$s does not require them for your country (%2$s).';
 $_['text_tax_codes_saved_invalid'] = 'Some saved tax codes are not valid on zero-rated lines for your country (%1$s), so %2$s refuses orders that use them. Clear them unless you need them.';
 $_['entry_tax_codes_clear'] = 'Clear saved tax codes';
 $_['entry_buyer_vat_field'] = 'Buyer\'s VAT number';
 $_['help_buyer_vat_field'] = 'The customer field that holds the buyer\'s VAT number, read from the payment address, else from the account. A Spanish merchant\'s order sends it to %s, and it decides the VAT-registered buyer row.';
-$_['error_tax_codes_truncated'] = 'The tax codes were not saved: the form was cut short by the server\'s limit on posted fields (max_input_vars). Raise the limit and save again.';
+$_['error_form_truncated'] = 'Nothing was saved: the form was cut short by the server\'s limit on posted fields (max_input_vars). Raise the limit and save again.';
 $_['error_tax_code_unlisted'] = 'The tax codes were not saved: a chosen code is not listed for 0% lines in your country.';
 $_['error_vat_field_unknown'] = 'Choose one of the listed customer fields.';
 $_['entry_enable_tax_subtotals'] = 'Validate tax subtotals';

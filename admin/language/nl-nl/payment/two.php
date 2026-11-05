@@ -235,6 +235,7 @@ $_['text_health_fee_quote'] = 'de berekening van de toeslag voor betaaltermijnen
 $_['text_health_fx'] = 'Wisselkoersen van %s opgehaald %s';
 $_['text_withheld_no_terms'] = 'er wordt geen betaaltermijn aangeboden: je account biedt geen van de termijnen die op het tabblad Betaaltermijnen zijn aangevinkt voor dit type termijn.';
 $_['text_withheld_fee_total_off'] = 'er is een toeslag ingesteld, maar het besteltotaal Two-toeslag betaaltermijnen is niet ingeschakeld. Schakel het in onder Extensies > Besteltotalen, of zet de toeslagmethode op Geen toeslag.';
+$_['text_withheld_tax_code_map_unreadable'] = 'opgeslagen belastingcodes voor regels met 0%% kunnen niet worden gelezen. Vink Opgeslagen belastingcodes wissen aan in de sectie Belastingcodes voor regels met 0%% (tabblad Orderbeheer) en sla op.';
 $_['error_surcharge_percent_range'] = '%1$s voor de termijn van %2$d dagen moet tussen 0 en 100 liggen: het is het deel van de toeslag dat aan de koper wordt doorberekend.';
 
 // TWO-27051: vendor name (General), subtitle and the tile switches (Checkout fields), the confirmed status and Validate tax subtotals (Order management), the merchant fee per term (Payment terms). %s is the brand's product name.
@@ -258,13 +259,14 @@ $_['text_tax_codes_none'] = '(geen)';
 $_['text_tax_codes_unlisted'] = '%s (niet vermeld voor regels zonder belasting)';
 $_['text_tax_codes_record_error'] = 'De merchantgegevens konden niet worden gelezen bij %s, dus de belastingcodes kunnen niet worden getoond. Gebruik Merchantprofiel vernieuwen op het tabblad Diagnostiek. Opgeslagen belastingcodes blijven gelden bij het afrekenen.';
 $_['text_tax_codes_list_error'] = 'De belastingcodes voor %1$s konden niet worden gelezen bij %2$s. Opgeslagen belastingcodes blijven gelden bij het afrekenen, en deze pagina vraagt ze binnen 5 minuten opnieuw op.';
-$_['text_tax_codes_unreadable'] = 'Opgeslagen belastingcodes kunnen niet worden gelezen, dus bestellingen met een regel met 0% worden geweigerd. Wis ze om dit op te lossen.';
+$_['text_tax_codes_stale'] = 'De belastingcodes voor %1$s konden niet worden vernieuwd bij %2$s: de laatste poging (%3$s) mislukte met HTTP %4$d. De getoonde lijst is gelezen op %5$s, en deze pagina vraagt ze binnen 5 minuten opnieuw op.';
+$_['text_tax_codes_unreadable'] = 'Opgeslagen belastingcodes kunnen niet worden gelezen, dus %s wordt niet getoond bij het afrekenen. Wis ze om dit op te lossen.';
 $_['text_tax_codes_saved_valid'] = 'Opgeslagen belastingcodes blijven gelden bij het afrekenen, hoewel %1$s ze niet vereist voor uw land (%2$s).';
 $_['text_tax_codes_saved_invalid'] = 'Sommige opgeslagen belastingcodes zijn niet geldig op regels zonder belasting voor uw land (%1$s), dus %2$s weigert bestellingen die ze gebruiken. Wis ze, tenzij u ze nodig hebt.';
 $_['entry_tax_codes_clear'] = 'Opgeslagen belastingcodes wissen';
 $_['entry_buyer_vat_field'] = 'Btw-nummer van de koper';
 $_['help_buyer_vat_field'] = 'Het klantveld met het btw-nummer van de koper, gelezen uit het betaaladres en anders uit het account. De bestelling van een Spaanse merchant stuurt het naar %s, en het bepaalt de rij voor een btw-geregistreerde koper.';
-$_['error_tax_codes_truncated'] = 'De belastingcodes zijn niet opgeslagen: het formulier is afgekapt door de serverlimiet op verzonden velden (max_input_vars). Verhoog de limiet en sla opnieuw op.';
+$_['error_form_truncated'] = 'Er is niets opgeslagen: het formulier is afgekapt door de serverlimiet op verzonden velden (max_input_vars). Verhoog de limiet en sla opnieuw op.';
 $_['error_tax_code_unlisted'] = 'De belastingcodes zijn niet opgeslagen: een gekozen code is niet vermeld voor regels met 0% in uw land.';
 $_['error_vat_field_unknown'] = 'Kies een van de vermelde klantvelden.';
 $_['entry_enable_tax_subtotals'] = 'Btw-subtotalen valideren';

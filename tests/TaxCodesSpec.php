@@ -160,22 +160,25 @@ final class TaxCodesSpec
         }
     }
 
-    /** The save through SettingsSave: rows only whole and only while shown, Clear, and the VAT field. */
+    /** The save through SettingsSave: rows only whole and only while shown, a cut-short form not at all, Clear, and the VAT field. */
     private static function testSave(): void
     {
         $context = ['rows' => ['9|none'], 'zero' => ['ES_IVA_EXPORT'], 'vat_fields' => ['3']];
         $before = '{"9|none":"ES_IVA_EXPORT"}';
         $cases = [
-            [['tax_code_map' => ['9|none' => ''], 'tax_code_map_end' => '1'], $context, '{}', null, 'the rows as posted, (none) clearing a row'],
-            [['tax_code_map' => ['9|none' => ''], 'tax_code_map_end' => ''], $context, $before, 'tax_codes_truncated', 'a post cut short by max_input_vars is refused'],
-            [['tax_code_map' => ['9|none' => 'ES_IVA_STANDARD'], 'tax_code_map_end' => '1'], $context, $before, 'tax_code_unlisted', 'an unlisted code is refused'],
-            [['tax_code_map' => ['9|none' => ''], 'tax_code_map_end' => '1'], ['rows' => null] + $context, $before, null, 'rows posted while the section shows none are ignored'],
+            [['tax_code_map' => ['9|none' => ''], 'debug_mode' => '1', 'form_end' => '1'], $context, '{}', null, 'the rows as posted, (none) clearing a row, with the rest of the form'],
+            [['tax_code_map' => ['9|none' => ''], 'debug_mode' => '1', 'form_end' => ''], $context, $before, 'form_truncated', 'a post cut short by max_input_vars saves nothing, a Diagnostics switch after the rows included'],
+            [['tax_code_map' => ['9|none' => 'ES_IVA_STANDARD'], 'form_end' => '1'], $context, $before, 'tax_code_unlisted', 'an unlisted code is refused'],
+            [['tax_code_map' => ['9|none' => ''], 'form_end' => '1'], ['rows' => null] + $context, $before, null, 'rows posted while the section shows none are ignored'],
             [['tax_codes_clear' => '1', 'tax_code_map' => ['9|none' => 'ES_IVA_STANDARD']], $context, '{}', null, 'Clear stores an empty mapping, whatever the rows say'],
         ];
         foreach ($cases as [$submitted, $taxContext, $stored, $error, $description]) {
             [$save, $store] = self::save($before);
             $result = $save->save($submitted, [], 0, [], $taxContext);
-            TinyAssert::same([$stored, $error], [$store->get(TaxCodes::MAP_KEY), $result['errors']['tax_code_map'] ?? null], 'save: ' . $description);
+            TinyAssert::same([$stored, $error], [$store->get(TaxCodes::MAP_KEY), $result['errors']['tax_code_map'] ?? $result['errors']['form_end'] ?? null], 'save: ' . $description);
+            if (isset($submitted['debug_mode'])) {
+                TinyAssert::same($error === null ? '1' : null, $store->get('debug_mode'), 'save: ' . $description . ': the Diagnostics switch');
+            }
         }
         $vat = [['3', '3', null, 'a listed custom field'], ['', '', null, 'none'], ['99', '7', 'vat_field_unknown', 'a field that is not a text field of the account or address']];
         foreach ($vat as [$posted, $stored, $error, $description]) {
@@ -235,6 +238,31 @@ final class TaxCodesSpec
             }
             TinyAssert::same($expected, $got === null ? null : [array_column($got['codes'], 'code'), $got['mandatory']], 'code list: ' . $description);
             TinyAssert::same($calls, count($transport->calls), 'code list calls: ' . $description);
+        }
+
+        // While the last good list is served after a failure, it names when it was read and the last failure: [answers, ask offsets, expected [fetched_at offset, failure]].
+        $failed = new HttpResponse(503, '');
+        $stale = [
+            [[$good], [0], [0, null], 'a fresh list names no failure'],
+            [[$good, $failed], [0, 90_000], [0, ['at' => 90_000, 'status' => 503]], 'a failed refresh names itself and the held list\'s age'],
+            [[$good, $failed], [0, 90_000, 90_060], [0, ['at' => 90_000, 'status' => 503]], 'and still does inside the retry floor'],
+            [[$good, $failed, $good], [0, 90_000, 90_301], [90_301, null], 'a good refresh clears it'],
+        ];
+        foreach ($stale as [$answers, $offsets, [$fetched, $failure], $description]) {
+            $now = self::NOW;
+            $store = new MemoryStore(['api_key' => 'k']);
+            $logger = new RecordingLogger();
+            $client = new Client(new Environment(false), new SettingsProvider($store), new CustomHeaders(), new ScriptedTransport($answers), $logger, '1.0.0');
+            $list = new TaxCodeList($client, $store, $logger, static function () use (&$now): int {
+                return $now;
+            });
+            $got = null;
+            foreach ($offsets as $offset) {
+                $now = self::NOW + $offset;
+                $got = $list->forCountry('ES');
+            }
+            $expected = [self::NOW + $fetched, $failure === null ? null : ['at' => self::NOW + $failure['at'], 'status' => $failure['status']]];
+            TinyAssert::same($expected, [$got['fetched_at'] ?? null, $got['failure'] ?? null], 'code list age and failure: ' . $description);
         }
     }
 

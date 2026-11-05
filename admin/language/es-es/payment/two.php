@@ -235,6 +235,7 @@ $_['text_health_fee_quote'] = 'el cálculo de la comisión por plazos de pago fa
 $_['text_health_fx'] = 'Tipos de cambio de %s obtenidos %s';
 $_['text_withheld_no_terms'] = 'no se ofrece ningún plazo de pago: tu cuenta no ofrece ninguno de los plazos marcados en la pestaña Plazos de pago para este tipo de plazo.';
 $_['text_withheld_fee_total_off'] = 'hay un recargo configurado, pero el total de pedido Comisión por plazos de pago de Two no está activado. Actívalo en Extensiones > Totales de pedido, o establece el método de recargo en No se aplica ningún recargo.';
+$_['text_withheld_tax_code_map_unreadable'] = 'los códigos de impuesto guardados para líneas al 0%% no se pueden leer. Marca Borrar los códigos de impuesto guardados en la sección Códigos de impuesto para líneas al 0%% (pestaña Gestión de pedidos) y guarda.';
 $_['error_surcharge_percent_range'] = '%1$s para el plazo de %2$d días debe estar entre 0 y 100: es la parte de la comisión que se repercute al comprador.';
 
 // TWO-27051: vendor name (General), subtitle and the tile switches (Checkout fields), the confirmed status and Validate tax subtotals (Order management), the merchant fee per term (Payment terms). %s is the brand's product name.
@@ -258,13 +259,14 @@ $_['text_tax_codes_none'] = '(ninguno)';
 $_['text_tax_codes_unlisted'] = '%s (no figura para líneas sin impuesto)';
 $_['text_tax_codes_record_error'] = 'No se pudieron leer los datos del comercio desde %s, así que no se pueden mostrar los códigos de impuesto. Use Actualizar el perfil del comercio en la pestaña Diagnóstico. Los códigos guardados se siguen aplicando en el pago.';
 $_['text_tax_codes_list_error'] = 'No se pudieron leer los códigos de impuesto para %1$s desde %2$s. Los códigos guardados se siguen aplicando en el pago, y esta página vuelve a consultarlos en 5 minutos.';
-$_['text_tax_codes_unreadable'] = 'Los códigos de impuesto guardados no se pueden leer, así que se rechazan los pedidos con una línea al 0%. Bórrelos para solucionarlo.';
+$_['text_tax_codes_stale'] = 'No se pudieron actualizar los códigos de impuesto para %1$s desde %2$s: el último intento (%3$s) falló con HTTP %4$d. La lista mostrada se leyó el %5$s, y esta página vuelve a consultarlos en 5 minutos.';
+$_['text_tax_codes_unreadable'] = 'Los códigos de impuesto guardados no se pueden leer, así que %s no se muestra en la caja. Bórrelos para solucionarlo.';
 $_['text_tax_codes_saved_valid'] = 'Los códigos de impuesto guardados se siguen aplicando en el pago, aunque %1$s no los exige para su país (%2$s).';
 $_['text_tax_codes_saved_invalid'] = 'Algunos códigos de impuesto guardados no son válidos en líneas sin impuesto para su país (%1$s), así que %2$s rechaza los pedidos que los usan. Bórrelos salvo que los necesite.';
 $_['entry_tax_codes_clear'] = 'Borrar los códigos de impuesto guardados';
 $_['entry_buyer_vat_field'] = 'NIF-IVA del comprador';
 $_['help_buyer_vat_field'] = 'El campo del cliente que contiene el NIF-IVA del comprador, leído de la dirección de pago o, si no, de la cuenta. El pedido de un comercio español lo envía a %s, y decide la fila de comprador registrado a efectos de IVA.';
-$_['error_tax_codes_truncated'] = 'Los códigos de impuesto no se guardaron: el formulario se cortó por el límite del servidor de campos enviados (max_input_vars). Aumente el límite y guarde de nuevo.';
+$_['error_form_truncated'] = 'No se guardó nada: el formulario se cortó por el límite del servidor de campos enviados (max_input_vars). Aumente el límite y guarde de nuevo.';
 $_['error_tax_code_unlisted'] = 'Los códigos de impuesto no se guardaron: un código elegido no figura para líneas al 0% en su país.';
 $_['error_vat_field_unknown'] = 'Elija uno de los campos de cliente de la lista.';
 $_['entry_enable_tax_subtotals'] = 'Validar subtotales de impuestos';

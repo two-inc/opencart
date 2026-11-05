@@ -235,6 +235,7 @@ $_['text_health_fee_quote'] = 'gebyrberegningen for betalingsvilkår har feilet 
 $_['text_health_fx'] = 'Valutakursene fra %s ble hentet %s';
 $_['text_withheld_no_terms'] = 'ingen betalingsvilkår tilbys: kontoen din tilbyr ingen av vilkårene som er krysset av på fanen Betalingsvilkår for denne vilkårstypen.';
 $_['text_withheld_fee_total_off'] = 'et tillegg er satt, men ordretotalen Two-gebyr for betalingsvilkår er ikke aktivert. Aktiver den under Utvidelser > Ordretotaler, eller sett metoden for tillegg til Ingen tillegg.';
+$_['text_withheld_tax_code_map_unreadable'] = 'lagrede avgiftskoder for linjer med 0%% kan ikke leses. Kryss av for Tøm lagrede avgiftskoder i delen Avgiftskoder for linjer med 0%% (fanen Ordrehåndtering) og lagre.';
 $_['error_surcharge_percent_range'] = '%1$s for vilkåret på %2$d dager må være mellom 0 og 100: det er andelen av gebyret som videreføres til kjøperen.';
 
 // TWO-27051: vendor name (General), subtitle and the tile switches (Checkout fields), the confirmed status and Validate tax subtotals (Order management), the merchant fee per term (Payment terms). %s is the brand's product name.
@@ -258,13 +259,14 @@ $_['text_tax_codes_none'] = '(ingen)';
 $_['text_tax_codes_unlisted'] = '%s (ikke oppført for linjer uten avgift)';
 $_['text_tax_codes_record_error'] = 'Merchantopplysningene kunne ikke leses fra %s, så avgiftskodene kan ikke vises. Bruk Oppdater merchantprofil på fanen Diagnostikk. Lagrede avgiftskoder gjelder fortsatt i kassen.';
 $_['text_tax_codes_list_error'] = 'Avgiftskodene for %1$s kunne ikke leses fra %2$s. Lagrede avgiftskoder gjelder fortsatt i kassen, og denne siden spør igjen innen 5 minutter.';
-$_['text_tax_codes_unreadable'] = 'Lagrede avgiftskoder kan ikke leses, så ordrer med en linje med 0% avvises. Tøm dem for å rette dette.';
+$_['text_tax_codes_stale'] = 'Avgiftskodene for %1$s kunne ikke oppdateres fra %2$s: siste forsøk (%3$s) feilet med HTTP %4$d. Listen som vises ble lest %5$s, og denne siden spør igjen innen 5 minutter.';
+$_['text_tax_codes_unreadable'] = 'Lagrede avgiftskoder kan ikke leses, så %s vises ikke i kassen. Tøm dem for å rette dette.';
 $_['text_tax_codes_saved_valid'] = 'Lagrede avgiftskoder gjelder fortsatt i kassen, selv om %1$s ikke krever dem for landet ditt (%2$s).';
 $_['text_tax_codes_saved_invalid'] = 'Noen lagrede avgiftskoder er ikke gyldige på linjer uten avgift for landet ditt (%1$s), så %2$s avviser ordrer som bruker dem. Tøm dem med mindre du trenger dem.';
 $_['entry_tax_codes_clear'] = 'Tøm lagrede avgiftskoder';
 $_['entry_buyer_vat_field'] = 'Kjøperens MVA-nummer';
 $_['help_buyer_vat_field'] = 'Kundefeltet som inneholder kjøperens MVA-nummer, lest fra betalingsadressen, ellers fra kontoen. Ordren til en spansk merchant sender det til %s, og det avgjør raden for MVA-registrert kjøper.';
-$_['error_tax_codes_truncated'] = 'Avgiftskodene ble ikke lagret: skjemaet ble kuttet av serverens grense for innsendte felt (max_input_vars). Øk grensen og lagre på nytt.';
+$_['error_form_truncated'] = 'Ingenting ble lagret: skjemaet ble kuttet av serverens grense for innsendte felt (max_input_vars). Øk grensen og lagre på nytt.';
 $_['error_tax_code_unlisted'] = 'Avgiftskodene ble ikke lagret: en valgt kode er ikke oppført for linjer med 0% i landet ditt.';
 $_['error_vat_field_unknown'] = 'Velg et av kundefeltene i listen.';
 $_['entry_enable_tax_subtotals'] = 'Valider avgiftsdelsummer';

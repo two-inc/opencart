@@ -54,7 +54,8 @@ final class SettingsSave
     public const TERMS_NONE = 'terms_none';
     public const TERMS_UNKNOWN = 'terms_unknown';
     public const DEFAULT_TERM_UNKNOWN = 'default_term_unknown';
-    public const TAX_CODES_TRUNCATED = 'tax_codes_truncated';
+    /** The post lacks the field that ends the form: PHP's max_input_vars cut it short, so nothing is saved. */
+    public const FORM_TRUNCATED = 'form_truncated';
     public const TAX_CODE_UNLISTED = 'tax_code_unlisted';
     public const VAT_FIELD_UNKNOWN = 'vat_field_unknown';
 
@@ -82,7 +83,7 @@ final class SettingsSave
      * Validates and writes the submitted settings in one write, then brings
      * the verdict (and, for new credentials, the merchant record) up to date.
      *
-     * @param array{api_key?: string, environment?: string, vendor_name?: string, title?: array<int, string>, subtitle?: array<int, string>, product_message?: array<int, string>, fulfil_status_ids?: list<string>, confirmed_status_id?: string, cancel_status_id?: string, refund_status_id?: string, enable_order_intent?: string, show_about_link?: string, display_tooltips?: string, company_search_in_address?: string, address_lookup?: string, enable_invoice_email?: string, enable_po_number?: string, enable_project?: string, enable_department?: string, min_order_amount?: string, min_order_basis?: string, trusted_proxies?: string, disable_rate_limit?: string, product_message_enabled?: string, product_button_enabled?: string, debug_mode?: string, disable_ssl_verify?: string, custom_headers?: list<array{name?: string, value?: string, send_from_browser?: bool}>, payment_term_type?: string, payment_terms?: list<string>, default_payment_term?: string, surcharge_type?: string, surcharge_differential?: string, surcharge_rounding_basis?: string, surcharge_rounding_step?: string, surcharge_line_description?: string, surcharge_tax_class_id?: string, surcharge_grid?: array<int|string, array<string, string>>, tax_code_map?: array<string, string>, tax_code_map_end?: string, tax_codes_clear?: string, buyer_vat_field?: string} $submitted
+     * @param array{api_key?: string, environment?: string, vendor_name?: string, title?: array<int, string>, subtitle?: array<int, string>, product_message?: array<int, string>, fulfil_status_ids?: list<string>, confirmed_status_id?: string, cancel_status_id?: string, refund_status_id?: string, enable_order_intent?: string, show_about_link?: string, display_tooltips?: string, company_search_in_address?: string, address_lookup?: string, enable_invoice_email?: string, enable_po_number?: string, enable_project?: string, enable_department?: string, min_order_amount?: string, min_order_basis?: string, trusted_proxies?: string, disable_rate_limit?: string, product_message_enabled?: string, product_button_enabled?: string, debug_mode?: string, disable_ssl_verify?: string, custom_headers?: list<array{name?: string, value?: string, send_from_browser?: bool}>, payment_term_type?: string, payment_terms?: list<string>, default_payment_term?: string, surcharge_type?: string, surcharge_differential?: string, surcharge_rounding_basis?: string, surcharge_rounding_step?: string, surcharge_line_description?: string, surcharge_tax_class_id?: string, surcharge_grid?: array<int|string, array<string, string>>, tax_code_map?: array<string, string>, form_end?: string, tax_codes_clear?: string, buyer_vat_field?: string} $submitted
      * @param list<int> $orderStatusIds the shop's order statuses, which the maps may name
      * @param int       $voidStatusId   the shop's void status (0 for none), which no map may name
      * @param list<int> $taxClassIds    the shop's tax classes, which the surcharge's tax class must be one of
@@ -91,6 +92,9 @@ final class SettingsSave
      */
     public function save(array $submitted, array $orderStatusIds, int $voidStatusId, array $taxClassIds = [], array $taxCodes = []): array
     {
+        if (self::cutShort($submitted)) {
+            return ['errors' => ['form_end' => self::FORM_TRUNCATED], 'credentials' => null, 'status' => null, 'code' => null];
+        }
         $write = [];
         $errors = [];
 
@@ -243,12 +247,24 @@ final class SettingsSave
     }
 
     /**
+     * Whether a form post was cut short by PHP's max_input_vars: the field
+     * that ends the form (form_end) was given but did not arrive as 1. A
+     * partial save would store a switch's hidden 0 without its checkbox, or
+     * some of a table's rows, so such a post saves nothing.
+     *
+     * @param array<string, mixed> $submitted
+     */
+    public static function cutShort(array $submitted): bool
+    {
+        return array_key_exists('form_end', $submitted) && $submitted['form_end'] !== '1';
+    }
+
+    /**
      * The tax code section (section 22.5). Clear stores an empty mapping and
      * ignores the rows. Otherwise the rows are saved only while the form
-     * shows them, and only whole: a post without the field that ends the
-     * form was cut short by PHP's max_input_vars, and a code not listed at 0%
-     * for the merchant's country (unless the row already holds it) refuses
-     * the mapping; either way the stored mapping is kept.
+     * shows them, and only whole: a code not listed at 0% for the merchant's
+     * country (unless the row already holds it) refuses the mapping, and the
+     * stored mapping is kept.
      *
      * @param array<string, mixed>                                                       $submitted
      * @param array{rows?: list<string>|null, zero?: list<string>, vat_fields?: list<string>} $context
@@ -261,11 +277,9 @@ final class SettingsSave
         if (($submitted['tax_codes_clear'] ?? '') === '1') {
             $write[TaxCodes::MAP_KEY] = '{}';
         } elseif (is_array($submitted['tax_code_map'] ?? null) && is_array($context['rows'] ?? null)) {
-            $map = ($submitted['tax_code_map_end'] ?? '') === '1'
-                ? TaxCodes::posted($submitted['tax_code_map'], $context['rows'], $context['zero'] ?? [], TaxCodes::parse($this->settings->store()->get(TaxCodes::MAP_KEY)) ?? [])
-                : null;
+            $map = TaxCodes::posted($submitted['tax_code_map'], $context['rows'], $context['zero'] ?? [], TaxCodes::parse($this->settings->store()->get(TaxCodes::MAP_KEY)) ?? []);
             if ($map === null) {
-                $errors['tax_code_map'] = ($submitted['tax_code_map_end'] ?? '') === '1' ? self::TAX_CODE_UNLISTED : self::TAX_CODES_TRUNCATED;
+                $errors['tax_code_map'] = self::TAX_CODE_UNLISTED;
             } else {
                 $write[TaxCodes::MAP_KEY] = $map === [] ? '{}' : (string) json_encode($map);
             }

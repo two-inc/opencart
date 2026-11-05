@@ -31,6 +31,7 @@ final class Availability
     public const FEE_QUOTE = 'fee_quote';
     public const NO_TERMS = 'no_terms';
     public const FEE_TOTAL_OFF = 'fee_total_off';
+    public const TAX_CODE_MAP = 'tax_code_map_unreadable';
 
     /** The last fee-quote withhold, for the health row. */
     public const FEE_FAILURE_KEY = 'fee_quote_failure';
@@ -158,6 +159,10 @@ final class Availability
         $surcharge = Surcharge::from($this->settings);
         if (!$feeTotalEnabled && (!$surcharge->isKnown() || $surcharge->enabled())) {
             return self::FEE_TOTAL_OFF;
+        }
+        if (TaxCodes::parse($this->settings->store()->get(TaxCodes::MAP_KEY)) === null) {
+            // A mapping the form could not have written: the order build would refuse a 0% line, so withhold Two before the buyer starts.
+            return self::TAX_CODE_MAP;
         }
 
         return null;

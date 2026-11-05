@@ -261,6 +261,13 @@ class Two extends \Opencart\System\Engine\Controller
         }
 
         $post = $this->request->post;
+        if (SettingsSave::cutShort($this->submitted($post))) {
+            // Before anything is written, the platform settings included.
+            $json['error']['warning'] = $this->language->get('error_form_truncated');
+            $this->json($json);
+
+            return;
+        }
         $platform = [];
         foreach (array_keys(self::PLATFORM_DEFAULTS) as $key) {
             if (isset($post[self::CODE . '_' . $key]) && is_scalar($post[self::CODE . '_' . $key])) {
@@ -850,7 +857,7 @@ class Two extends \Opencart\System\Engine\Controller
      * decoded here and escaped again when rendered.
      *
      * @param array<string, mixed> $post
-     * @return array{api_key?: string, environment?: string, vendor_name?: string, title?: array<int, string>, subtitle?: array<int, string>, product_message?: array<int, string>, fulfil_status_ids?: list<string>, confirmed_status_id?: string, enable_order_intent?: string, show_about_link?: string, display_tooltips?: string, enable_tax_subtotals?: string, cancel_status_id?: string, refund_status_id?: string, company_search_in_address?: string, address_lookup?: string, enable_invoice_email?: string, enable_po_number?: string, enable_project?: string, enable_department?: string, min_order_amount?: string, min_order_basis?: string, trusted_proxies?: string, disable_rate_limit?: string, product_message_enabled?: string, product_button_enabled?: string, debug_mode?: string, disable_ssl_verify?: string, custom_headers?: list<array{name: string, value: string, send_from_browser: bool}>, tax_code_map?: array<string, string>, tax_code_map_end?: string, tax_codes_clear?: string, buyer_vat_field?: string}
+     * @return array{api_key?: string, environment?: string, vendor_name?: string, title?: array<int, string>, subtitle?: array<int, string>, product_message?: array<int, string>, fulfil_status_ids?: list<string>, confirmed_status_id?: string, enable_order_intent?: string, show_about_link?: string, display_tooltips?: string, enable_tax_subtotals?: string, cancel_status_id?: string, refund_status_id?: string, company_search_in_address?: string, address_lookup?: string, enable_invoice_email?: string, enable_po_number?: string, enable_project?: string, enable_department?: string, min_order_amount?: string, min_order_basis?: string, trusted_proxies?: string, disable_rate_limit?: string, product_message_enabled?: string, product_button_enabled?: string, debug_mode?: string, disable_ssl_verify?: string, custom_headers?: list<array{name: string, value: string, send_from_browser: bool}>, tax_code_map?: array<string, string>, form_end?: string, tax_codes_clear?: string, buyer_vat_field?: string}
      */
     private function submitted(array $post): array
     {
@@ -861,11 +868,13 @@ class Two extends \Opencart\System\Engine\Controller
                 $submitted[$key] = self::raw($field($key));
             }
         }
-        foreach (['buyer_vat_field', 'tax_code_map_end', 'tax_codes_clear'] as $key) {
+        foreach (['buyer_vat_field', 'tax_codes_clear'] as $key) {
             if (is_scalar($field($key))) {
                 $submitted[$key] = self::raw($field($key));
             }
         }
+        // Always given: a post without the form's last field was cut short (SettingsSave::cutShort).
+        $submitted['form_end'] = is_scalar($field('form_end')) ? self::raw($field('form_end')) : '';
         if (is_array($field('tax_code_map'))) {
             $map = [];
             foreach ($field('tax_code_map') as $row => $code) {
@@ -935,17 +944,18 @@ class Two extends \Opencart\System\Engine\Controller
      * merchant's country is the merchant record's, read for the credentials
      * in force.
      *
-     * @return array{state: array{view: string, notices: list<string>, clear: bool, country: string, codes: list<array{code: string, display_name: string, rate: float}>}, blocks: list<array{title: string, rows: list<array{0: string, 1: string}>}>, rows: list<string>}
+     * @return array{state: array{view: string, notices: list<string>, clear: bool, country: string, codes: list<array{code: string, display_name: string, rate: float}>}, blocks: list<array{title: string, rows: list<array{0: string, 1: string}>}>, rows: list<string>, list: array{fetched_at: int, failure: array{at: int, status: int}|null}|null}
      */
     private function taxCodeSection(Services $services): array
     {
         $hasKey = $services->settings->apiKey() !== '';
         $country = $hasKey ? TaxCodes::merchantCountry($services->records->record()) : '';
+        $list = $country === '' ? null : $services->taxCodes->forCountry($country);
         $state = TaxCodes::sectionState([
             'has_key' => $hasKey,
             'raw' => $services->settings->store()->get(TaxCodes::MAP_KEY),
             'country' => $country,
-            'list' => $country === '' ? null : $services->taxCodes->forCountry($country),
+            'list' => $list,
         ]);
         $blocks = [];
         $rows = [];
@@ -971,7 +981,7 @@ class Two extends \Opencart\System\Engine\Controller
             }
         }
 
-        return ['state' => $state, 'blocks' => $blocks, 'rows' => $rows];
+        return ['state' => $state, 'blocks' => $blocks, 'rows' => $rows, 'list' => $list];
     }
 
     /**
@@ -990,9 +1000,12 @@ class Two extends \Opencart\System\Engine\Controller
             $notices[] = ['level' => 'warning', 'text' => sprintf($this->language->get('text_tax_codes_record_error'), $brand)];
         } elseif ($state['view'] === TaxCodes::VIEW_LIST_ERROR) {
             $notices[] = ['level' => 'warning', 'text' => sprintf($this->language->get('text_tax_codes_list_error'), $state['country'], $brand)];
+        } elseif (($failure = $section['list']['failure'] ?? null) !== null) {
+            // A failed refresh while an older list is held: name the failure and the list's age.
+            $notices[] = ['level' => 'warning', 'text' => sprintf($this->language->get('text_tax_codes_stale'), $state['country'], $brand, gmdate('Y-m-d H:i', $failure['at']) . 'Z', $failure['status'], gmdate('Y-m-d H:i', $section['list']['fetched_at']) . 'Z')];
         }
         $wording = [
-            TaxCodes::NOTICE_UNREADABLE => ['danger', $this->language->get('text_tax_codes_unreadable')],
+            TaxCodes::NOTICE_UNREADABLE => ['danger', sprintf($this->language->get('text_tax_codes_unreadable'), $brand)],
             TaxCodes::NOTICE_SAVED_VALID => ['info', sprintf($this->language->get('text_tax_codes_saved_valid'), $brand, $state['country'])],
             TaxCodes::NOTICE_SAVED_INVALID => ['warning', sprintf($this->language->get('text_tax_codes_saved_invalid'), $state['country'], $brand)],
         ];

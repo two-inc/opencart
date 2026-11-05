@@ -41,7 +41,7 @@ final class TaxCodes
     public const VIEW_ROWS = 'rows';
     public const VIEW_NOTICE = 'notice';
 
-    /** The saved mapping cannot be read, so an order with a 0% line is refused. */
+    /** The saved mapping cannot be read, so Two is withheld at checkout (Availability::TAX_CODE_MAP). */
     public const NOTICE_UNREADABLE = 'unreadable';
     /** Every saved code is listed at 0% for the country, which does not require them. */
     public const NOTICE_SAVED_VALID = 'saved_valid';
@@ -137,7 +137,7 @@ final class TaxCodes
      * @param array{map?: string|null, exempt?: bool}|null                                 $facts the stored mapping and whether the buyer is exempt (step 1)
      * @return list<array<string, mixed>>
      *
-     * @throws OrderRefused when a 0% line needs a mapping the plugin's form could not have written
+     * @throws OrderRefused when a 0% line needs a mapping the plugin's form could not have written (the last guard: checkout withholds Two first)
      */
     public static function apply(array $items, array $keys, ?array $facts): array
     {

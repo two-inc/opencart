@@ -12,12 +12,16 @@ namespace Opencart\System\Library\Extension\Two\Core;
  * Held a day per country. A failed fetch keeps the last good list and is
  * retried at most every RETRY seconds, the floor stamped before the call so
  * an outage costs one attempt per floor. A country Two does not support
- * (400 COUNTRY_NOT_SUPPORTED) is an empty list, never a failure.
+ * (400 COUNTRY_NOT_SUPPORTED) is an empty list, never a failure. While
+ * the last good list is served after a failure, the list carries when it
+ * was read and the last failure, for the section to name.
  */
 final class TaxCodeList
 {
     public const CACHE_KEY = 'tax_codes';
     public const TRIED_KEY = 'tax_codes_tried';
+    /** The last failed fetch: its country, time and HTTP status; cleared by the next good one. */
+    public const FAILED_KEY = 'tax_codes_failed';
     public const TTL = 86_400;
     public const RETRY = 300;
     public const TIMEOUT_SECONDS = 10;
@@ -36,9 +40,10 @@ final class TaxCodeList
     }
 
     /**
-     * The list for a country, or null when none was ever read for it.
+     * The list for a country, or null when none was ever read for it, with
+     * when it was read and the last fetch for the country that failed since.
      *
-     * @return array{codes: list<array{code: string, display_name: string, rate: float}>, mandatory: bool}|null
+     * @return array{codes: list<array{code: string, display_name: string, rate: float}>, mandatory: bool, fetched_at: int, failure: array{at: int, status: int}|null}|null
      */
     public function forCountry(string $country): ?array
     {
@@ -48,10 +53,11 @@ final class TaxCodeList
         }
         $now = ($this->clock)();
         $cached = json_decode((string) $this->store->get(self::CACHE_KEY), true);
+        $fetchedAt = (int) ($cached['fetched_at'] ?? 0);
         $held = is_array($cached) && ($cached['country'] ?? null) === $country && is_array($cached['codes'] ?? null)
-            ? ['codes' => $cached['codes'], 'mandatory' => (bool) ($cached['mandatory'] ?? false)]
+            ? ['codes' => $cached['codes'], 'mandatory' => (bool) ($cached['mandatory'] ?? false), 'fetched_at' => $fetchedAt, 'failure' => $this->failure($country, $fetchedAt)]
             : null;
-        if ($held !== null && (int) ($cached['fetched_at'] ?? 0) + self::TTL > $now) {
+        if ($held !== null && $fetchedAt + self::TTL > $now) {
             return $held;
         }
         // The floor holds only for the country it was stamped for, so a merchant whose country changed is asked at once.
@@ -71,12 +77,28 @@ final class TaxCodeList
             $list = ['codes' => [], 'mandatory' => false];
         }
         if ($list !== null) {
-            $this->store->setMany([self::CACHE_KEY => (string) json_encode(['country' => $country, 'fetched_at' => $now] + $list, JSON_UNESCAPED_UNICODE)]);
+            $this->store->setMany([self::CACHE_KEY => (string) json_encode(['country' => $country, 'fetched_at' => $now] + $list, JSON_UNESCAPED_UNICODE), self::FAILED_KEY => '']);
 
-            return $list;
+            return $list + ['fetched_at' => $now, 'failure' => null];
         }
+        $this->store->setMany([self::FAILED_KEY => (string) json_encode(['country' => $country, 'at' => $now, 'status' => $response->status])]);
         $this->logger->error('Two tax codes: GET /v1/tax_codes/' . $country . ' failed (HTTP ' . $response->status . '). ' . ($held === null ? 'The tax code section shows a notice.' : 'The last list read stays in use.'));
 
-        return $held;
+        return $held === null ? null : ['failure' => ['at' => $now, 'status' => $response->status]] + $held;
+    }
+
+    /**
+     * The last failed fetch for the country after the list was read.
+     *
+     * @return array{at: int, status: int}|null
+     */
+    private function failure(string $country, int $fetchedAt): ?array
+    {
+        $failed = json_decode((string) $this->store->get(self::FAILED_KEY), true);
+        if (!is_array($failed) || ($failed['country'] ?? null) !== $country || !is_int($failed['at'] ?? null) || $failed['at'] < $fetchedAt) {
+            return null;
+        }
+
+        return ['at' => $failed['at'], 'status' => (int) ($failed['status'] ?? 0)];
     }
 }

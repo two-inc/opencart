@@ -396,7 +396,7 @@ final class OrderRefunds
                 throw OrderRefused::because('refund_amount_zero', Message::of('refusal_refund_amount_zero'));
             }
             $name = 'Refund on order ' . $orderId;
-            $lines[] = self::checkedLine($name, 1, $net, Postprocessing::cents($taxTyped === '' ? '0' : $taxTyped), $rate, 'item');
+            $lines[] = self::coded(self::checkedLine($name, 1, $net, Postprocessing::cents($taxTyped === '' ? '0' : $taxTyped), $rate, 'item'), $rate, $two);
         }
         if ($lines === []) {
             throw OrderRefused::because('refund_empty', Message::of('refusal_refund_empty'));
@@ -417,6 +417,32 @@ final class OrderRefunds
         }
 
         return OrderBuilder::line($name, 'PHYSICAL', $quantity, intdiv($net, max(1, $quantity)), $net, $tax, (float) $rate, $unit);
+    }
+
+    /**
+     * A refund line that references no order line, at 0%, takes the one tax
+     * code Two holds on the order's 0% lines (TWO-27058): updates and refunds
+     * send the recorded codes. None when those lines carry none or disagree.
+     * Lines referenced by id are coded by the order line they name.
+     *
+     * @param array<string, mixed> $line
+     * @param array<string, mixed> $two
+     * @return array<string, mixed>
+     */
+    private static function coded(array $line, string $rate, array $two): array
+    {
+        if ((float) $rate != 0.0) {
+            return $line;
+        }
+        $codes = [];
+        foreach (self::list($two['line_items'] ?? null) as $held) {
+            if ((float) ($held['tax_rate'] ?? 0) == 0.0 && TaxCodes::isCode($held['tax_code'] ?? null)) {
+                $codes[] = $held['tax_code'];
+            }
+        }
+        $code = TaxCodes::shared($codes);
+
+        return $code === null ? $line : $line + ['tax_code' => $code];
     }
 
     /**
@@ -470,7 +496,7 @@ final class OrderRefunds
             if ($bucket['net'] < 0 || $bucket['tax'] < 0 || self::untaxed($bucket['net'], $bucket['tax'], (string) $rate)) {
                 return null;
             }
-            $lines[] = OrderBuilder::line('Refund of the rest of order ' . $orderId, 'PHYSICAL', 1, $bucket['net'], $bucket['net'], $bucket['tax'], (float) $rate, 'item');
+            $lines[] = self::coded(OrderBuilder::line('Refund of the rest of order ' . $orderId, 'PHYSICAL', 1, $bucket['net'], $bucket['net'], $bucket['tax'], (float) $rate, 'item'), (string) $rate, $two);
         }
         if ($lines === []) {
             return null;
