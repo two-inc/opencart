@@ -72,7 +72,7 @@ Every string the admin or the buyer sees comes from the language files: `admin/l
 
 ## Admin settings
 
-The settings page has PrestaShop's five tabs: status, environment, API key, sort order and vendor name (General), the per-language title and subtitle, the product page message and buy button switches and the per-language message wording, the placement switch, the minimum order, the tile's switches and the checkout fields (Checkout fields), the payment terms and the surcharge (Payment terms), the confirmed, fulfilment, cancel and refund status maps Validate tax subtotals, the buyer's VAT number field and the tax codes for 0% lines (Order management) and Diagnostics. Every tab is complete.
+The settings page has PrestaShop's five tabs: status, environment, API key, sort order and vendor name (General), the per-language title and subtitle, the product page message and buy button switches and the per-language message wording, the placement switch, the minimum order, the tile's switches and the checkout fields (Checkout fields), the payment terms and the surcharge (Payment terms), the confirmed, fulfilment, cancel and refund status maps, Validate tax subtotals, the buyer's VAT number field and the tax codes for 0% lines (Order management) and Diagnostics. Every tab is complete.
 
 - Vendor name: sent as `X-Vendor-Name` beside the API key on every keyed request (never on the order intent, which goes without the key); printable ASCII, at most 255 characters, since it is a header value, checked on save and again on read. Empty sends nothing.
 - Subtitle: plain text under the method title in the tile, per language, at most 255 characters; blank shows none (the brand has no default tagline).
