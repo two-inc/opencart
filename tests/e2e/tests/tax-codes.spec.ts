@@ -29,10 +29,10 @@ function setMap(value: string | null): void {
 test.beforeAll(() => {
   productClass = sql(`SELECT tax_class_id FROM oc_product WHERE product_id = ${PRODUCT_ID}`)[0][0];
   const zone = sql("SELECT geo_zone_id FROM oc_zone_to_geo_zone WHERE country_id = (SELECT value FROM oc_setting WHERE store_id = 0 AND `key` = 'config_country_id') ORDER BY geo_zone_id LIMIT 1")[0][0];
-  sql(`INSERT INTO oc_tax_rate SET geo_zone_id = ${zone}, name = 'E2E zero rate', rate = 0, type = 'P', date_added = NOW(), date_modified = NOW()`);
+  sql(`INSERT INTO oc_tax_rate SET geo_zone_id = ${zone}, name = 'E2E zero rate', rate = 0, type = 'P'`);
   rateId = Number(sql("SELECT MAX(tax_rate_id) FROM oc_tax_rate WHERE name = 'E2E zero rate'")[0][0]);
   sql(`INSERT INTO oc_tax_rate_to_customer_group SELECT ${rateId}, customer_group_id FROM oc_customer_group`);
-  sql("INSERT INTO oc_tax_class SET title = 'E2E zero rated', description = 'E2E zero rated', date_added = NOW(), date_modified = NOW()");
+  sql("INSERT INTO oc_tax_class SET title = 'E2E zero rated', description = 'E2E zero rated'");
   classId = Number(sql("SELECT MAX(tax_class_id) FROM oc_tax_class WHERE title = 'E2E zero rated'")[0][0]);
   sql(`INSERT INTO oc_tax_rule SET tax_class_id = ${classId}, tax_rate_id = ${rateId}, based = 'store', priority = 1`);
   sql(`UPDATE oc_product SET tax_class_id = ${classId} WHERE product_id = ${PRODUCT_ID}`);
