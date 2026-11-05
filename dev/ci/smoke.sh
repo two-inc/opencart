@@ -65,14 +65,18 @@ fi
 contains "payments list heading" "$(admin extension/payment)" '<td>Two</td>'
 # Drop the sort_order row first: a save must insert a key that has no row (upgraded installs), not only update.
 docker exec "$db" mariadb -uroot -padmin opencart -e "DELETE FROM oc_setting WHERE store_id = 0 AND code = 'payment_two' AND \`key\` = 'payment_two_sort_order'"
-contains "save" "$(admin extension/two/payment/two.save -X POST -d payment_two_status=1 -d payment_two_sort_order=2)" '"success"'
+# Every save posts the form's last field, as the form does: a post without it was cut short by max_input_vars.
+contains "save" "$(admin extension/two/payment/two.save -X POST -d payment_two_status=1 -d payment_two_sort_order=2 -d payment_two_form_end=1)" '"success"'
 [ "$(setting sort_order)" = 2 ] || fail "save did not insert the missing sort_order row"
 ok "save inserted a key that had no row"
+contains "a post cut short saves nothing" "$(admin extension/two/payment/two.save -X POST -d payment_two_sort_order=9)" 'max_input_vars'
+[ "$(setting sort_order)" = 2 ] || fail "a post cut short saved the sort order (got '$(setting sort_order)')"
+ok "a post cut short left the platform settings as stored"
 
 # Selective save: a malformed key is refused and the stored key kept, while the other fields save.
 # The key never reaches Two (it is refused before the wire), so this needs no network.
 store api_key smoke-good-key-1234
-saved=$(admin extension/two/payment/two.save -X POST -d payment_two_sort_order=5 -d payment_two_environment=sandbox --data-urlencode 'payment_two_api_key=bad key')
+saved=$(admin extension/two/payment/two.save -X POST -d payment_two_sort_order=5 -d payment_two_environment=sandbox --data-urlencode 'payment_two_api_key=bad key' -d payment_two_form_end=1)
 contains "save refuses a malformed key" "$saved" 'not a valid API key'
 contains "save reports the other fields saved" "$saved" 'The other settings were saved.'
 [ "$(setting api_key)" = smoke-good-key-1234 ] || fail "a refused key overwrote the stored key (got '$(setting api_key)')"
@@ -80,10 +84,10 @@ contains "save reports the other fields saved" "$saved" 'The other settings were
 ok "refused key kept the stored key, other fields saved"
 store api_key ''
 # OpenCart escapes every posted value; the core stores the title as typed.
-admin extension/two/payment/two.save -X POST --data-urlencode 'payment_two_title[1]=Pay & go <now>' > /dev/null
+admin extension/two/payment/two.save -X POST --data-urlencode 'payment_two_title[1]=Pay & go <now>' -d payment_two_form_end=1 > /dev/null
 [ "$(setting title)" = '{"1":"Pay & go <now>"}' ] || fail "the title was not stored as typed (got '$(setting title)')"
 ok "title stored as typed"
-contains "a bad environment is named on its field" "$(admin extension/two/payment/two.save -X POST -d payment_two_environment=bogus)" '"environment":"Select a valid environment."'
+contains "a bad environment is named on its field" "$(admin extension/two/payment/two.save -X POST -d payment_two_environment=bogus -d payment_two_form_end=1)" '"environment":"Select a valid environment."'
 
 # Extensions > Payments: uninstall, then install (runs install(), which loads the core in the admin).
 contains "payments uninstall" "$(admin 'extension/payment.uninstall&extension=two&code=two')" '"success"'
