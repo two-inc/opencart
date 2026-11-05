@@ -1,66 +1,76 @@
 # Two for OpenCart
 
-The Two payment extension for OpenCart 4.1: pay by invoice for business buyers.
+The Two payment extension for OpenCart: pay by invoice for business buyers. The buyer finds their company at checkout, Two checks their credit and pays you, and the buyer pays Two on the payment terms you offer.
 
-**Status: being rewritten.** This branch holds the new OpenCart 4.1 foundation. It installs, appears under Extensions > Payments and offers Two at checkout with company search, payment terms and the payment terms fee, in English, Norwegian (Bokmål), Swedish, Dutch and Spanish. The 1.x releases for OpenCart 3 call API hosts that no longer exist, so they cannot reach Two.
+Version 2.x is for OpenCart 4.1. Shops on OpenCart 3 stay on version 1.1.3.
 
 ## Requirements
 
-- OpenCart 4.1.0.0 or later
-- PHP 8.1 or later
+- OpenCart 4.1.x. Each release is tested on 4.1.0.0 and 4.1.0.4.
+- PHP 8.1 or later. Each release is tested on PHP 8.1 and 8.4.
+- A Two merchant account and its API key.
 
 ## Install
 
-Upload `two.ocmod.zip` in Extensions > Installer, install it, then install and enable Two in Extensions > Extensions > Payments.
+1. Download `two.ocmod.zip` from the latest release on this repository's [Releases](../../releases) page. Keep the file name: OpenCart takes the extension's code from it.
+2. In the OpenCart admin, open Extensions > Installer, upload `two.ocmod.zip`, then click Install beside it.
+3. Open Extensions > Extensions, choose Payments, and install Two. Then click Edit to configure it.
 
-## Development
+To upgrade, replace the package in Extensions > Installer with the new release's `two.ocmod.zip`; your settings are kept. Do not uninstall Two under Extensions > Payments to upgrade: that deletes its settings.
 
-Needs Docker and PHP 8.1+ on the host.
+## Configure
 
-```sh
-cp .env.example .env   # optional: API key and environment
-make install           # OpenCart 4.1.0.4 on http://localhost:1238/ with the extension enabled
-make test              # offline test suite
-make phpstan           # static analysis
-make e2e               # Playwright against a second shop and a Two API stub
-make archive           # dist/two.ocmod.zip
-```
+The settings page has five tabs, saved together. A setting that is not valid is named beside its field.
 
-`make help` lists every target. See [AGENTS.md](AGENTS.md) for the layout and conventions.
+### General
 
-## Languages
+Switch the payment method on, choose Sandbox or Production, and paste the API key from your Two merchant account; the key is checked as you type. Sort order places Two among your other payment methods. The top of the tab says whether Two can be offered at checkout right now, and why not when it cannot.
 
-The extension ships OpenCart language files for en-gb, nb-no, sv-se, nl-nl and es-es, in the admin and at checkout. A shop language is matched by its OpenCart language code, so install the matching OpenCart language pack. The payment method title and an optional subtitle are set per language on the Checkout fields tab; a language with no title set shows that language's default, and one with no subtitle shows none.
+### Checkout fields
 
-## Payment terms and the fee
+What the buyer sees at checkout:
 
-The buyer chooses from the payment terms your Two account offers; the Payment terms tab narrows them and sets the default, and shows beside each term the fee Two charges you for offering it. To pass Two's fee on to the buyer, set a surcharge per term there and select the tax class it is charged at: the fee is an order total (Extensions > Order Totals > Two payment terms fee), taxed by your shop's own tax rules like any other charge. Keep its sort order before Taxes.
+- The payment method title and an optional subtitle, per language. The extension ships English, Norwegian (Bokmål), Swedish, Dutch and Spanish, in the admin and at checkout; install the matching OpenCart language pack for each.
+- Company search in the address form, and autofill of the company address.
+- Optional invoice email, PO number, project and department fields.
+- The minimum order value, and whether it is measured with or without tax.
+- The order intent pre-approval check, the "What is Two" link and the field tooltips.
+- Two optional extras on product pages, each off until you switch it on: a short message naming Two under the add to cart button, and a "Buy with Two" button that adds the item to the basket and opens checkout with Two chosen. Neither promises that Two will be offered: the minimum order, currency and buyer country are checked at checkout as usual. Both sit in the default theme's add to cart form, so a theme that replaces that form shows neither.
 
-## Product page message and buy button
+### Payment terms
 
-Two optional extras on the Checkout fields tab, each off until you switch it on. Show message on product pages adds a short line naming Two under the add to cart button; leave its wording empty to use the default, or set your own per language (avoid naming a number of days: terms run from fulfilment and depend on your Two account). Show buy button on product pages adds a "Buy with Two" button there that puts the item in the basket with the quantity and options the buyer chose and opens checkout with Two already chosen in the payment method list. Neither promises the buyer will be offered Two: the minimum order, currency and buyer country are checked at checkout as usual, and where Two is not offered the buyer picks another method. Both sit inside the default theme's add to cart form; a theme that replaces that form shows neither, and where exactly they land beside other badges depends on your theme.
+The buyer chooses from the payment terms your Two account offers. This tab narrows them, sets the default, and shows the fee Two charges you for each term. To pass that fee on to the buyer, set a surcharge per term and choose the tax class it is charged at. The surcharge is an order total (Extensions > Order Totals > Two payment terms fee), taxed by your shop's own tax rules; keep its sort order before Taxes.
 
-## Tax codes for 0% lines
+### Order management
 
-Where Two requires a tax code on every 0% line for your country (today Spain), the Order management tab's Tax section shows "Tax codes for 0% lines": one table per tax class, with a row for a VAT-registered buyer in another EU state, a row for each 0% tax rate the class's rules use, and a row for a buyer address no rate covers (for example an export). Pick the code Two should receive for each case. A 0% line takes a code only from these rows: a row left on (none) sends none, and the extension never picks one itself. A line with no tax class of its own (a discount, store credit, a voucher) takes the code your coded 0% lines share, and none when they differ. Set your shop's tax rates correctly: the line falls on the row your own tax setup puts it on.
+- **Order statuses.** An order Two confirms is placed at the confirmed status (Processing on a fresh install). Moving an order into a fulfilment status fulfils it with Two, the cancel status cancels it, and the refund status refunds whatever is left. Edits to an order before it is fulfilled are sent to Two. To fulfil part of an order, use the Two merchant portal.
+- **Order page.** The Two tab on an order (Sales > Orders) refunds chosen lines or an amount, and downloads the invoice and the credit note.
+- **Tax codes for 0% lines.** Shown where Two requires a tax code on every 0% line for your country (today Spain). Each tax class has a row for a VAT-registered buyer in another EU state, a row for each 0% tax rate its rules use, and a row for an address no rate covers (for example an export). Pick the code Two should receive for each. A row left on (none) sends no code, and the extension never picks one itself. Set your shop's tax rates correctly: a line falls on the row your own tax setup puts it on.
+- **Buyer's VAT number.** OpenCart has no VAT number field, so choose the text custom field (on the address or the account) that holds it.
+- **Validate tax subtotals.** Sends a per-rate tax breakdown with each order and refund, for Two to check against the lines. Leave it on unless your developer asks otherwise (see order postprocessing below).
 
-The buyer's VAT number is read from the customer field you choose in the same section (a text custom field on the address or the account; OpenCart has no VAT number field of its own). It decides the VAT-registered buyer row, and a Spanish merchant's order sends it to Two, except for a Spanish buyer. Saved codes keep applying at checkout even when the section is hidden; it then says so and offers Clear saved tax codes.
+### Diagnostics
 
-## Order lifecycle
+Debug logging, the SSL verification bypass (off unless you switch it on, and a security risk whenever it is on), trusted proxies, the checkout rate limit, and custom request headers for when your IT administrator asks for one. A header ticked "Also send from browser" is visible to buyers.
 
-Map your order statuses in the extension's Order management tab: an order Two confirms is placed at the confirmed status (Processing on a fresh install), moving an order into the fulfilment status fulfils it with Two, the cancel status cancels it, and the refund status refunds whatever is left. Edits to an order before it is fulfilled are sent to Two. The Two tab on the admin order page refunds chosen lines or an amount, and downloads the invoice and the credit note.
+The tab also shows the extension's last 100 error log lines (with the API key and header values hidden), refreshes your Two merchant profile on demand, and shows the scheduled refresh URL. OpenCart's own cron runs that refresh daily; if your shop does not run OpenCart's cron, call the URL once a day from your crontab. The URL carries a random token, not your API key: keep it secret.
 
-Partial fulfilment is not offered from the shop: to fulfil part of an order, use the Two merchant portal.
+## Uninstall
 
-## Diagnostics
+Uninstalling Two in Extensions > Extensions > Payments deletes all of its settings, including the API key, the status mapping and the tax codes, and removes the payment terms fee order total. Note your settings first if you plan to reinstall. The extension's record of orders and refunds placed with Two stays in the shop's database.
 
-The Diagnostics tab holds the operational settings: debug logging, the SSL verification bypass (off unless you switch it on, and a security risk whenever it is on), trusted proxies and the checkout rate limit, and custom request headers. Add a header row when your IT administrator asks for one: each is sent on every call the shop makes to Two, and a row ticked "Also send from browser" is also sent by the buyer's browser on the sole-trader autofill call, so its value is public. While any row is invalid nothing on the tab is saved, and each bad row is named.
+To remove the files as well, uninstall the extension in Extensions > Installer.
 
-The tab also links to the extension's last 100 error log lines (the API key and header values redacted), refreshes the cached merchant profile on demand, and shows the scheduled refresh URL. Call that URL once a day from your crontab, or rely on OpenCart's own cron URL, which runs the same refresh daily. The URL carries a random token, not your API key: keep it secret. The token can also be sent as an `X-Two-Cron-Token` header or a POST field.
+## Support
+
+- Setup help, onboarding and bug reports: support@two.inc
+- Two documentation: [docs.two.inc](https://docs.two.inc/)
+
+When reporting a problem, include the extension version (shown in Extensions > Installer) and, if you can, the error log lines from the Diagnostics tab.
 
 ## Stable extension contract: order postprocessing
 
-Every order request the extension sends to Two (order create, update, confirm, cancel, capture, that is fulfil, and refund today; intent as it lands) passes through one OpenCart event just before it is sent, so your code can change the payload. Subscribe the way any OpenCart extension subscribes to an event: an `event` row (Extensions > Events) with the trigger `catalog/extension/two/order_postprocessing` and an action whose method takes the payload by reference:
+For developers who need to change what is sent to Two. Every order request the extension sends to Two (order create, update, confirm, cancel, capture, that is fulfil, and refund today; intent as it lands) passes through one OpenCart event just before it is sent, so your code can change the payload. Subscribe the way any OpenCart extension subscribes to an event: an `event` row (Extensions > Events) with the trigger `catalog/extension/two/order_postprocessing` and an action whose method takes the payload by reference:
 
 ```php
 public function handle(array &$payload, array $context): void
@@ -77,3 +87,22 @@ Your subscriber runs for requests sent from the admin too (the refund form on th
 - The extension makes no determination about how tax is levied: it sends the nets, taxes and rates your shop recorded. If your shop records an amount differently from your books (for example untaxed shipping with VAT inside it), this event is where you correct it.
 
 This contract is permanent: the event name, the v1 context keys and request types, and the totals helper are never removed or renamed. Changes are additive only.
+
+## Development
+
+Needs Docker and PHP 8.1+ on the host.
+
+```sh
+cp .env.example .env   # optional: API key and environment
+make install           # OpenCart 4.1.0.4 on http://localhost:1238/ with the extension enabled
+make test              # offline test suite
+make phpstan           # static analysis
+make e2e               # Playwright against a second shop and a Two API stub
+make archive           # dist/two.ocmod.zip, the package a release attaches
+```
+
+`make help` lists every target, and [AGENTS.md](AGENTS.md) covers the layout and conventions. See [CHANGELOG.md](CHANGELOG.md) for what changed in each version.
+
+### Releasing
+
+The version lives in `install.json` (and `bumpver.toml`); bump it on a pull request into staging with `make patch`, `make minor` or `make major`. When a commit reaches main and the Tests workflow passes on it, the Release workflow tags that version, builds `two.ocmod.zip` with `dev/package.sh` and attaches it to a GitHub release whose notes are the version's CHANGELOG entry. A version already released is skipped.
