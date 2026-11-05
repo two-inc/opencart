@@ -113,3 +113,8 @@ $_['help_invoice_email'] = 'Vart %s ska skicka fakturan för denna order, om den
 $_['help_purchase_order_number'] = 'Din interna inköpsorderreferens för denna order.';
 $_['help_project'] = 'Projektet som ska kopplas till detta köp, för din egen interna referens.';
 $_['help_department'] = 'Avdelningen som ska kopplas till detta köp, för din egen interna referens.';
+
+// Product page buy button (TWO-25800). %s is the brand's product name. The
+// product page message's default wording is text_about_strong, the tile's own sentence.
+$_['text_product_button'] = 'Köp med %s';
+$_['error_product_button_unreachable'] = 'Tyvärr, vi kunde inte lägga detta i varukorgen. Försök igen.';

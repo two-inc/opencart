@@ -60,6 +60,9 @@ final class SettingsProvider
         'surcharge_rounding_step' => '',
         'surcharge_line_description' => '',
         'surcharge_tax_class_id' => '',
+        'product_message_enabled' => '0',
+        'product_message' => '{}',
+        'product_button_enabled' => '0',
     ];
 
     /**
@@ -214,6 +217,36 @@ final class SettingsProvider
         $subtitles = json_decode((string) $this->store->get('subtitle'), true);
 
         return is_array($subtitles) && is_scalar($subtitles[(string) $languageId] ?? null) ? trim((string) $subtitles[(string) $languageId]) : '';
+    }
+
+    /**
+     * Show message on product pages (Checkout fields, section 20). Only a
+     * stored "1" is on, so a corrupt row reads as off rather than publishing
+     * the message. Off by default, so an upgrade never starts advertising.
+     */
+    public function productMessageEnabled(): bool
+    {
+        return $this->store->get('product_message_enabled') === '1';
+    }
+
+    /** Show buy button on product pages (section 20.8): strictly "1", off by default. */
+    public function productButtonEnabled(): bool
+    {
+        return $this->store->get('product_button_enabled') === '1';
+    }
+
+    /**
+     * The product page message's wording in one language, or '' for the
+     * default copy. Empty is inert, never an off switch. A non-scalar value
+     * reads as absent rather than being cast, and Unicode whitespace is
+     * trimmed, so nonbreaking spaces are empty too.
+     */
+    public function productMessage(int $languageId): string
+    {
+        $messages = json_decode((string) $this->store->get('product_message'), true);
+        $message = is_array($messages) ? ($messages[(string) $languageId] ?? null) : null;
+
+        return is_scalar($message) ? ProductPage::trimmed((string) $message) : '';
     }
 
     /**

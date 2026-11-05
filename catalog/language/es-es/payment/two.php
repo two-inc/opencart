@@ -113,3 +113,8 @@ $_['help_invoice_email'] = 'Dónde debe %s enviar la factura de este pedido, si 
 $_['help_purchase_order_number'] = 'Tu referencia interna de orden de compra para este pedido.';
 $_['help_project'] = 'El proyecto que se asociará a esta compra, para tu propia referencia interna.';
 $_['help_department'] = 'El departamento que se asociará a esta compra, para tu propia referencia interna.';
+
+// Product page buy button (TWO-25800). %s is the brand's product name. The
+// product page message's default wording is text_about_strong, the tile's own sentence.
+$_['text_product_button'] = 'Comprar con %s';
+$_['error_product_button_unreachable'] = 'Lo sentimos, no hemos podido añadir esto a tu cesta. Inténtalo de nuevo.';
