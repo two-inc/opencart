@@ -2,7 +2,7 @@
 
 The Two payment extension for OpenCart: pay by invoice for business buyers. The buyer finds their company at checkout, Two checks their credit and pays you, and the buyer pays Two on the payment terms you offer.
 
-Version 2.x is for OpenCart 4.1. Shops on OpenCart 3 stay on version 1.1.3.
+Version 2.x is for OpenCart 4.1. OpenCart 3 is not supported: the 1.x extension for OpenCart 3 can no longer reach Two, so a shop on OpenCart 3 needs to move to OpenCart 4.1 to offer Two.
 
 ## Requirements
 

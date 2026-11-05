@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.0.0] - Unreleased
 
-A rewrite of the extension for OpenCart 4.1. It does not run on OpenCart 3: shops on OpenCart 3 stay on 1.1.3, whose API hosts no longer exist, so moving to OpenCart 4.1 and this version is the way to keep offering Two.
+A rewrite of the extension for OpenCart 4.1. It does not run on OpenCart 3, and the 1.x extension for OpenCart 3 can no longer reach Two, so moving to OpenCart 4.1 and this version is the way to keep offering Two.
 
 ### Added
 - **OpenCart 4.1 support** (TWO-26647). Installs through Extensions > Installer from `two.ocmod.zip` and appears under Extensions > Payments. Tested on OpenCart 4.1.0.0 and 4.1.0.4, on PHP 8.1 and 8.4.
@@ -28,4 +28,4 @@ A rewrite of the extension for OpenCart 4.1. It does not run on OpenCart 3: shop
 - **Two API connection** (TWO-26648). Calls Two's current API hosts, for both Sandbox and Production.
 
 ### Removed
-- **OpenCart 3 support.** Use 1.1.3 on OpenCart 3.
+- **OpenCart 3 support.** The 1.x extension for OpenCart 3 can no longer reach Two; move to OpenCart 4.1.
