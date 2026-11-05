@@ -1,0 +1,128 @@
+name: Release
+
+# Releases the version already in the tree once Tests has passed on a push to
+# main, the same pattern as the other plugin repos: the version is bumped on
+# the PR into staging (bumpver, `make patch`), and main only tags it and cuts
+# the GitHub release. The release carries two.ocmod.zip, built by
+# dev/package.sh (the same script as `make archive` and the Tests package
+# job), and its notes are the version's CHANGELOG.md entry.
+#
+# On a pull request that touches the release path, and on a manual run, the
+# package job runs as a dry run: it builds the zip, lists its top level and
+# checks the CHANGELOG entry, and nothing is tagged or released.
+on:
+  workflow_run:
+    workflows: [Tests]
+    types: [completed]
+    branches: [main]
+  pull_request:
+    paths:
+      - .github/workflows/release.yml
+      - dev/package.sh
+      - install.json
+      - CHANGELOG.md
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  package:
+    name: Build two.ocmod.zip
+    runs-on: ubuntu-latest
+    # On main, only after Tests passed on a push (not on a PR into main).
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # On main, the commit Tests passed on, not whatever main is now.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Build the package
+        run: dev/package.sh
+
+      - name: Read the version and its CHANGELOG entry
+        id: meta
+        run: |
+          set -euo pipefail
+          version=$(jq -r '.version // empty' install.json)
+          [ -n "$version" ] || { echo "::error::no version in install.json"; exit 1; }
+          awk -v head="## [${version}]" 'index($0, head) == 1 { found = 1; next } found && /^## / { exit } found' CHANGELOG.md > dist/release-notes.md
+          if ! grep -q '[^[:space:]]' dist/release-notes.md; then
+            echo "::error::CHANGELOG.md has no entry for ${version}"
+            exit 1
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+      - name: List the package's top level
+        run: |
+          set -euo pipefail
+          {
+            echo "### two.ocmod.zip"
+            echo
+            echo "Version $(jq -r .version install.json), $(unzip -Z1 dist/two.ocmod.zip | grep -vc '/$') files. Top level:"
+            echo
+            unzip -Z1 dist/two.ocmod.zip | cut -d/ -f1 | sort -u | sed 's/^/- /'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the package
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-package
+          path: |
+            dist/two.ocmod.zip
+            dist/release-notes.md
+          if-no-files-found: error
+
+  release:
+    name: Tag and release
+    needs: package
+    if: github.event_name == 'workflow_run'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download the package
+        uses: actions/download-artifact@v4
+        with:
+          name: release-package
+          path: dist
+
+      - name: Decide whether there is anything to release
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+          VERSION: ${{ needs.package.outputs.version }}
+        run: |
+          set -euo pipefail
+          tip=$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)
+          if [ "$tip" != "$SHA" ]; then
+            echo "::warning::main moved past ${SHA}; the Tests run on the new tip will release."
+            exit 0
+          fi
+          if gh release view "$VERSION" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release ${VERSION} already exists; nothing to release."
+            exit 0
+          fi
+          echo "go=true" >> "$GITHUB_OUTPUT"
+
+      - name: Tag and create the GitHub release
+        if: steps.gate.outputs.go == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+          VERSION: ${{ needs.package.outputs.version }}
+        run: |
+          gh release create "$VERSION" dist/two.ocmod.zip \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$SHA" \
+            --title "$VERSION" \
+            --notes-file dist/release-notes.md

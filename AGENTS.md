@@ -143,6 +143,7 @@ Once placed, the order's Two order follows the merchant's status maps. One catal
 ## Conventions
 
 - Branches go into `staging`; `main` is the release branch.
+- A merchant-visible change adds a line to `CHANGELOG.md`, in merchant language. A version bump (bumpver, `make patch|minor|major`) happens on a PR into staging; `.github/workflows/release.yml` tags that version on main after Tests pass and attaches `two.ocmod.zip` from `dev/package.sh`, with the version's CHANGELOG entry as the notes. A release fails without a CHANGELOG entry for its version.
 - Commit subjects: `<TICKET>/<type>: <description>`.
 - Tests are parameterised tables with a description per case, used in the assertion message.
 - The PR template carries the Parity checklist. Fill it in.
