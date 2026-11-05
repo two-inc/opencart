@@ -122,7 +122,7 @@ final class TaxCodes
      */
     public static function shared(array $codes): ?string
     {
-        $distinct = array_values(array_unique(array_filter(array_map('strval', $codes), 'strlen')));
+        $distinct = array_values(array_unique(array_filter(array_map('strval', $codes), static fn (string $code): bool => $code !== '')));
 
         return count($distinct) === 1 ? $distinct[0] : null;
     }
