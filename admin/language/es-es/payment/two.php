@@ -307,6 +307,6 @@ $_['text_cron_never'] = 'La actualización programada aún no se ha ejecutado.';
 $_['entry_product_message_enabled'] = 'Mostrar mensaje en las páginas de producto';
 $_['help_product_message_enabled'] = 'Muestra una breve línea promocional en las páginas de producto, debajo del botón de añadir a la cesta. Desactivado de forma predeterminada. El lugar exacto donde aparece depende de tu plantilla.';
 $_['entry_product_button_enabled'] = 'Mostrar botón de compra en las páginas de producto';
-$_['help_product_button_enabled'] = 'Añade un botón junto a añadir al carrito que pone el artículo en la cesta y lleva al comprador al pago con este método ya seleccionado. Desactivado por defecto. Dónde aparece exactamente depende de tu plantilla.';
+$_['help_product_button_enabled'] = 'Añade un botón debajo de añadir al carrito que pone el artículo en la cesta y lleva al comprador al pago con este método ya seleccionado. Desactivado por defecto. Dónde aparece exactamente depende de tu plantilla.';
 $_['entry_product_message'] = 'Mensaje de la página de producto';
 $_['help_product_message'] = 'Opcional. Déjalo vacío para usar el texto predeterminado. Evita indicar un número de días salvo que tengas la certeza de los plazos que ofreces: los plazos de pago cuentan desde la preparación del pedido, y los plazos realmente disponibles proceden de tu registro de comerciante.';

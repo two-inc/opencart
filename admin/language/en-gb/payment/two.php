@@ -307,6 +307,6 @@ $_['text_cron_never'] = 'The scheduled refresh has not run yet.';
 $_['entry_product_message_enabled'] = 'Show message on product pages';
 $_['help_product_message_enabled'] = 'Shows a short promotional line on product pages, beneath the add to cart button. Off by default. Where exactly it lands depends on your theme.';
 $_['entry_product_button_enabled'] = 'Show buy button on product pages';
-$_['help_product_button_enabled'] = 'Adds a button beside add to cart that puts the item in the basket and takes the buyer to checkout with this payment method already chosen. Off by default. Where exactly it lands depends on your theme.';
+$_['help_product_button_enabled'] = 'Adds a button under add to cart that puts the item in the basket and takes the buyer to checkout with this payment method already chosen. Off by default. Where exactly it lands depends on your theme.';
 $_['entry_product_message'] = 'Product page message';
 $_['help_product_message'] = 'Optional. Leave empty to use the default wording. Avoid naming a number of days unless you are certain of the terms you offer: payment terms run from fulfilment, and the terms actually available come from your merchant record.';

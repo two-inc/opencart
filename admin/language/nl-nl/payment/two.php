@@ -307,6 +307,6 @@ $_['text_cron_never'] = 'De geplande vernieuwing is nog niet uitgevoerd.';
 $_['entry_product_message_enabled'] = 'Bericht tonen op productpagina’s';
 $_['help_product_message_enabled'] = 'Toont een korte promotionele regel op productpagina’s, onder de knop om aan de winkelwagen toe te voegen. Standaard uitgeschakeld. Waar de regel precies terechtkomt, hangt af van je thema.';
 $_['entry_product_button_enabled'] = 'Koopknop tonen op productpagina’s';
-$_['help_product_button_enabled'] = 'Voegt naast in winkelwagen een knop toe die het artikel in de winkelwagen legt en de koper naar de kassa brengt met deze betaalmethode al gekozen. Standaard uit. Waar de knop precies terechtkomt hangt af van je thema.';
+$_['help_product_button_enabled'] = 'Voegt onder in winkelwagen een knop toe die het artikel in de winkelwagen legt en de koper naar de kassa brengt met deze betaalmethode al gekozen. Standaard uit. Waar de knop precies terechtkomt hangt af van je thema.';
 $_['entry_product_message'] = 'Bericht op de productpagina';
 $_['help_product_message'] = 'Optioneel. Laat leeg om de standaardtekst te gebruiken. Vermeld geen aantal dagen tenzij je zeker bent van de termijnen die je aanbiedt: betaaltermijnen lopen vanaf de uitlevering, en de termijnen die echt beschikbaar zijn komen uit je merchant-record.';

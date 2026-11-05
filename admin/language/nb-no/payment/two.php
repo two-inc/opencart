@@ -307,6 +307,6 @@ $_['text_cron_never'] = 'Den planlagte oppdateringen har ikke kjørt ennå.';
 $_['entry_product_message_enabled'] = 'Vis melding på produktsider';
 $_['help_product_message_enabled'] = 'Viser en kort kampanjelinje på produktsider, under knappen for å legge i handlekurven. Av som standard. Nøyaktig hvor den havner avhenger av temaet ditt.';
 $_['entry_product_button_enabled'] = 'Vis kjøpsknapp på produktsider';
-$_['help_product_button_enabled'] = 'Legger til en knapp ved siden av legg i handlekurv som legger varen i kurven og tar kjøperen til kassen med denne betalingsmåten allerede valgt. Av som standard. Nøyaktig hvor den havner avhenger av temaet ditt.';
+$_['help_product_button_enabled'] = 'Legger til en knapp under legg i handlekurv som legger varen i kurven og tar kjøperen til kassen med denne betalingsmåten allerede valgt. Av som standard. Nøyaktig hvor den havner avhenger av temaet ditt.';
 $_['entry_product_message'] = 'Melding på produktsiden';
 $_['help_product_message'] = 'Valgfritt. La feltet stå tomt for å bruke standardteksten. Unngå å oppgi et antall dager med mindre du er sikker på betalingsbetingelsene du tilbyr: betalingsfrister løper fra utlevering, og betingelsene som faktisk er tilgjengelige kommer fra merchant-oppføringen din.';
