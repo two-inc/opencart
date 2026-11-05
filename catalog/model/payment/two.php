@@ -7,6 +7,7 @@ namespace Opencart\Catalog\Model\Extension\Two\Payment;
 use Opencart\System\Library\Extension\Two\Core\FeeQuote;
 use Opencart\System\Library\Extension\Two\Core\Message;
 use Opencart\System\Library\Extension\Two\Core\PaymentTerms;
+use Opencart\System\Library\Extension\Two\Core\TaxCodes;
 use Opencart\System\Library\Extension\Two\Opencart\OrderTax;
 use Opencart\System\Library\Extension\Two\Opencart\Services;
 
@@ -501,6 +502,7 @@ class Two extends \Opencart\System\Engine\Model
                 'total' => (float) $row['total'],
                 'tax' => (float) $row['tax'],
                 'type' => !isset($product['shipping']) || $product['shipping'] ? 'PHYSICAL' : 'DIGITAL',
+                'tax_key' => OrderTax::codeKey($tax, (float) $row['price'], (int) ($product['tax_class_id'] ?? 0)),
             ] + OrderTax::rateOf($tax, (float) $row['price'], (int) ($product['tax_class_id'] ?? 0));
         }
 
@@ -527,6 +529,9 @@ class Two extends \Opencart\System\Engine\Model
                     }
                 }
             }
+            if ($class !== null) {
+                $total['tax_key'] = OrderTax::codeKey($tax, $total['value'], $class);
+            }
             $totals[] = $total;
         }
 
@@ -536,6 +541,21 @@ class Two extends \Opencart\System\Engine\Model
         // tax class) applies at the order's addresses, whether or not the line was taxed.
         $shippingClass = (int) ($method['tax_class_id'] ?? 0);
         $shippingRate = $shippingClass > 0 ? OrderTax::rateOf($tax, (float) ($method['cost'] ?? 0), $shippingClass)['rate'] : null;
+
+        // Section 22: the merchant's tax code rows, and the buyer's VAT number for step 1 and the create.
+        $billing = $this->address($order, 'payment');
+        $taxAddress = $shipping ?? $billing;
+        $merchantCountry = TaxCodes::merchantCountry($this->services()->records->record());
+        $vatNumber = $this->buyerVatNumber($order);
+        $taxCodes = [
+            'map' => $this->services()->settings->store()->get(TaxCodes::MAP_KEY),
+            'exempt' => TaxCodes::isExemptBuyer(
+                ['country' => $billing['country'], 'postcode' => $billing['postal_code']],
+                ['country' => $taxAddress['country'], 'postcode' => $taxAddress['postal_code']],
+                $vatNumber,
+                $merchantCountry
+            ),
+        ];
 
         return [
             'order' => [
@@ -554,18 +574,44 @@ class Two extends \Opencart\System\Engine\Model
                     'last_name' => (string) $order['lastname'],
                     'phone_number' => (string) $order['telephone'],
                 ],
-                'billing_address' => $this->address($order, 'payment'),
+                'billing_address' => $billing,
                 'shipping_address' => $shipping,
                 'merchant_urls' => $urls,
                 'buyer_fields' => $buyerFields,
                 'terms' => $terms ?? $this->termsBlock(),
                 'fee_refusal' => $terms === null ? null : $this->feeRefusal($orderId, $totals),
                 'currency_refusal' => $terms === null ? null : FeeQuote::currencyChange($record, (string) $order['currency_code']),
+                'tax_codes' => $taxCodes,
+                'buyer_vat_number' => TaxCodes::buyerVatNumber($vatNumber, $merchantCountry, (string) $company['country_code']),
             ],
             'lines' => $lines,
             'totals' => $totals,
             'context' => ['order' => $order, 'shipping_tax_rate' => $shippingRate],
         ];
+    }
+
+    /**
+     * The buyer's VAT number (section 22.4): the custom field the merchant
+     * named on the Order management tab, from the order's payment address,
+     * else from the customer's account, as entered and trimmed. '' when no
+     * field is named or it holds nothing.
+     *
+     * @param array<string, mixed> $order
+     */
+    private function buyerVatNumber(array $order): string
+    {
+        $field = (string) $this->services()->settings->store()->get(TaxCodes::VAT_FIELD_KEY);
+        if ($field === '') {
+            return '';
+        }
+        foreach (['payment_custom_field', 'custom_field'] as $source) {
+            $values = is_array($order[$source] ?? null) ? $order[$source] : [];
+            if (is_scalar($values[$field] ?? null) && trim((string) $values[$field]) !== '') {
+                return trim((string) $values[$field]);
+            }
+        }
+
+        return '';
     }
 
     /**

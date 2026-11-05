@@ -12,6 +12,7 @@ use Opencart\System\Library\Extension\Two\Core\HttpResponse;
 use Opencart\System\Library\Extension\Two\Core\MinimumOrder;
 use Opencart\System\Library\Extension\Two\Core\RecordProvider;
 use Opencart\System\Library\Extension\Two\Core\SettingsProvider;
+use Opencart\System\Library\Extension\Two\Core\TaxCodes;
 
 /**
  * The availability chain (Build Guide section 18), the buyer-country
@@ -53,6 +54,10 @@ final class AvailabilitySpec
             [[], ['surcharge_type' => 'percentage'], [$ok], ['fee_total' => false], Availability::FEE_TOTAL_OFF, 'a surcharge the disabled fee total would not charge'],
             [[], ['surcharge_type' => 'tiered'], [$ok], ['fee_total' => false], Availability::FEE_TOTAL_OFF, 'an unknown surcharge method with the fee total off'],
             [[], ['surcharge_type' => 'none'], [$ok], ['fee_total' => false], null, 'no surcharge needs no fee total'],
+            [[], [TaxCodes::MAP_KEY => '{"3|none":"e"}'], [$ok], [], Availability::TAX_CODE_MAP, 'a tax code mapping the form could not have written'],
+            [[], [TaxCodes::MAP_KEY => '[1'], [$ok], [], Availability::TAX_CODE_MAP, 'a tax code mapping that is not JSON'],
+            [[], [TaxCodes::MAP_KEY => '{"3|none":"E"}'], [$ok], [], null, 'a readable tax code mapping'],
+            [[], [TaxCodes::MAP_KEY => ''], [$ok], [], null, 'no tax code mapping'],
             [$floor, [], [$ok], [], Availability::BELOW_MINIMUM, 'net 100 below a net platform floor of 110'],
             [$floor, [], [$ok], ['net' => 110.0], null, 'net exactly at the platform floor'],
             [['min_order_basis' => 'gross'] + $floor, [], [$ok], [], null, 'gross 120 above a gross platform floor of 110'],
@@ -147,6 +152,7 @@ final class AvailabilitySpec
             ],
             [[], [Availability::FEE_FAILURE_KEY => '{"at":1800000000,"detail":"the fee quote failed (HTTP 503)"}'], ['GBP'], ['shown' => true, 'reason' => null, 'floors' => [], 'buyer_countries' => [], 'refused_currencies' => [], 'fee_quote_failure' => ['at' => 1_800_000_000, 'detail' => 'the fee quote failed (HTTP 503)']], 'the last fee-quote withhold is named'],
             [['available_terms' => []], [], ['GBP'], ['shown' => false, 'reason' => Availability::NO_TERMS, 'floors' => [], 'buyer_countries' => [], 'refused_currencies' => [], 'fee_quote_failure' => null], 'no offered term names the reason'],
+            [[], [TaxCodes::MAP_KEY => '{"x":"E"}'], ['GBP'], ['shown' => false, 'reason' => Availability::TAX_CODE_MAP, 'floors' => [], 'buyer_countries' => [], 'refused_currencies' => [], 'fee_quote_failure' => null], 'an unreadable tax code mapping names the reason'],
             [[], [Availability::FEE_FAILURE_KEY => ''], ['GBP'], ['shown' => true, 'reason' => null, 'floors' => [], 'buyer_countries' => [], 'refused_currencies' => [], 'fee_quote_failure' => null], 'a cleared fee-quote failure is not'],
         ];
         foreach ($cases as [$record, $settings, $currencies, $expected, $description]) {

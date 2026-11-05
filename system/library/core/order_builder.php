@@ -62,10 +62,12 @@ final class OrderBuilder
      *     buyer_fields?: array<string, string>,
      *     terms?: array<string, mixed>|null,
      *     fee_refusal?: Message|null,
-     *     currency_refusal?: Message|null
+     *     currency_refusal?: Message|null,
+     *     tax_codes?: array{map?: string|null, exempt?: bool}|null,
+     *     buyer_vat_number?: string|null
      * } $order
-     * @param list<array{name: string, quantity: int|string, price: float|string, total: float|string, tax: float|string, rate: float|null, fixed_tax?: bool, type: string}> $lines
-     * @param list<array{code: string, title: string, value: float|string, tax?: float|string|null, rate?: float|null, fixed_tax?: bool}> $totals
+     * @param list<array{name: string, quantity: int|string, price: float|string, total: float|string, tax: float|string, rate: float|null, fixed_tax?: bool, type: string, tax_key?: array{class: int, rates: list<array{id: int, rate: float, type: string}>}|null}> $lines
+     * @param list<array{code: string, title: string, value: float|string, tax?: float|string|null, rate?: float|null, fixed_tax?: bool, tax_key?: array{class: int, rates: list<array{id: int, rate: float, type: string}>}|null}> $totals
      * @return array<string, mixed>
      *
      * @throws OrderRefused when the order cannot be built from what the shop stored
@@ -85,8 +87,11 @@ final class OrderBuilder
         }
 
         $items = [];
+        // Section 22: each line's tax class and the rates applied, null for a line with none (step 4).
+        $keys = [];
         foreach ($lines as $line) {
             $items[] = self::productLine($line, $fx);
+            $keys[] = $line['tax_key'] ?? null;
         }
         $discounts = [];
         $postTax = [];
@@ -98,6 +103,7 @@ final class OrderBuilder
             }
             if (isset(self::CHARGE_CODES[$code])) {
                 $items[] = self::chargeLine($total, self::CHARGE_CODES[$code], $fx);
+                $keys[] = $total['tax_key'] ?? null;
             } elseif (in_array($code, self::DISCOUNT_CODES, true)) {
                 $discounts[] = $total;
             } elseif (in_array($code, self::POST_TAX_CODES, true)) {
@@ -117,6 +123,8 @@ final class OrderBuilder
             $gross = self::cents($total['value'], $fx);
             $items[] = self::line($total['title'], 'DIGITAL', 1, $gross, $gross, 0, 0.0, 'item');
         }
+        // Codes come only from the merchant's rows, set before the hook so a subscriber sees them.
+        $items = TaxCodes::apply($items, $keys, $order['tax_codes'] ?? null);
 
         $company = $order['company'];
         $billing = $order['billing_address'];
@@ -165,6 +173,12 @@ final class OrderBuilder
         }
         if (trim((string) ($fields['invoice_email'] ?? '')) !== '') {
             $payload['invoice_details'] = ['invoice_emails' => [trim((string) $fields['invoice_email'])]];
+        }
+        // Section 22.4: a Spanish merchant's order tells Two the buyer's VAT number. The adapter
+        // passes it only where it is sent; absent rather than empty, so other payloads are unchanged.
+        // The order edit drops it, since Two keeps the number given at create.
+        if (($order['buyer_vat_number'] ?? null) !== null) {
+            $payload['buyer_vat_number'] = $order['buyer_vat_number'];
         }
 
         return Postprocessing::recomputeTotals($payload);

@@ -101,6 +101,7 @@ $_['note_refund_blocked'] = 'Inte återbetald: återbetalningen på %1$s som ski
 $_['refusal_currency_value'] = 'Ordern har inget användbart valutavärde.';
 $_['refusal_currency_changed'] = 'ordern lades hos Two i %1$s och dess valuta är nu %2$s. Two behåller en order i den valuta den lades i.';
 $_['refusal_empty_order'] = 'Ordern har inga produktrader.';
+$_['refusal_tax_code_map'] = 'De sparade skattekoderna för rader med 0% kan inte läsas. Rensa dem på fliken Orderhantering.';
 $_['refusal_unsupported_total'] = 'Ordersumman "%s" är inte en som tillägget kan skicka.';
 $_['refusal_fee_missing'] = 'ordern lades med en avgift för betalningsvillkor men har inte längre någon (är ordertotalen Two-avgift för betalningsvillkor aktiverad?)';
 $_['refusal_negative_line'] = 'Raden "%s" har ett negativt eller tomt antal eller belopp.';

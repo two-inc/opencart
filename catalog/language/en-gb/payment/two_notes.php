@@ -101,6 +101,7 @@ $_['note_refund_blocked'] = 'Not refunded: the refund of %1$s sent on %2$s has a
 $_['refusal_currency_value'] = 'The order has no usable currency value.';
 $_['refusal_currency_changed'] = 'the order was placed with Two in %1$s and its currency is now %2$s. Two keeps an order in the currency it was placed in.';
 $_['refusal_empty_order'] = 'The order has no product lines.';
+$_['refusal_tax_code_map'] = 'The saved tax codes for 0% lines cannot be read. Clear them on the Order management tab.';
 $_['refusal_unsupported_total'] = 'The order total "%s" is not one the plugin can send.';
 $_['refusal_fee_missing'] = 'the order was placed with a payment terms fee but no longer carries one (is the Two payment terms fee order total enabled?)';
 $_['refusal_negative_line'] = 'The line "%s" has a negative or empty quantity or amount.';

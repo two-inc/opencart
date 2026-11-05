@@ -101,6 +101,7 @@ $_['note_refund_blocked'] = 'Ikke refundert: refusjonen på %1$s sendt %2$s har 
 $_['refusal_currency_value'] = 'Ordren har ingen brukbar valutaverdi.';
 $_['refusal_currency_changed'] = 'ordren ble lagt inn hos Two i %1$s, og valutaen er nå %2$s. Two beholder en ordre i valutaen den ble lagt inn i.';
 $_['refusal_empty_order'] = 'Ordren har ingen produktlinjer.';
+$_['refusal_tax_code_map'] = 'De lagrede avgiftskodene for linjer med 0% kan ikke leses. Tøm dem på fanen Ordrehåndtering.';
 $_['refusal_unsupported_total'] = 'Ordretotalen «%s» er ikke en som utvidelsen kan sende.';
 $_['refusal_fee_missing'] = 'ordren ble lagt inn med et gebyr for betalingsvilkår, men har ikke lenger noe (er ordretotalen Two-gebyr for betalingsvilkår aktivert?)';
 $_['refusal_negative_line'] = 'Linjen «%s» har negativt eller tomt antall eller beløp.';

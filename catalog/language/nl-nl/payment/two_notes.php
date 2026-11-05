@@ -101,6 +101,7 @@ $_['note_refund_blocked'] = 'Niet terugbetaald: de terugbetaling van %1$s die op
 $_['refusal_currency_value'] = 'De bestelling heeft geen bruikbare valutawaarde.';
 $_['refusal_currency_changed'] = 'de bestelling is bij Two geplaatst in %1$s en de valuta is nu %2$s. Two houdt een bestelling in de valuta waarin die is geplaatst.';
 $_['refusal_empty_order'] = 'De bestelling heeft geen productregels.';
+$_['refusal_tax_code_map'] = 'De opgeslagen belastingcodes voor regels met 0% kunnen niet worden gelezen. Wis ze op het tabblad Orderbeheer.';
 $_['refusal_unsupported_total'] = 'Het ordertotaal "%s" kan de extensie niet verzenden.';
 $_['refusal_fee_missing'] = 'de bestelling is geplaatst met een vergoeding voor de betaaltermijn, maar heeft die niet meer (is het besteltotaal Two-toeslag betaaltermijnen ingeschakeld?)';
 $_['refusal_negative_line'] = 'De regel "%s" heeft een negatief of leeg aantal of bedrag.';

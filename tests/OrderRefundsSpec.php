@@ -34,6 +34,50 @@ final class OrderRefundsSpec
         self::testRetry();
         self::testCreditNote();
         self::testPanel();
+        self::testZeroRateCodes();
+    }
+
+    /**
+     * A refund line that references no order line (the typed amount, the
+     * rest after a partial refund) at 0% takes the code Two holds on the
+     * order's 0% lines when they share one (TWO-27058). The order here adds
+     * an export line at 0% (100.00 net) to the Widgets.
+     */
+    private static function testZeroRateCodes(): void
+    {
+        $order = static fn (array $codes, array $refunds = []): HttpResponse => self::json(200, [
+            'id' => self::ID, 'state' => $refunds === [] ? 'FULFILLED' : 'REFUNDED', 'status' => 'APPROVED', 'currency' => 'NOK', 'gross_amount' => '350.00',
+            'line_items' => [
+                ['id' => self::LINE, 'name' => 'Widget', 'quantity' => 2, 'unit_price' => '100.00', 'net_amount' => '200.00', 'tax_amount' => '50.00', 'tax_rate' => '0.25'],
+                ...array_map(static fn (?string $code, int $i): array => ['id' => 'x' . $i, 'name' => 'Export', 'quantity' => 1, 'unit_price' => '50.00', 'net_amount' => '50.00', 'tax_amount' => '0.00', 'tax_rate' => '0'] + ($code === null ? [] : ['tax_code' => $code]), $codes, array_keys($codes)),
+            ],
+            'refunds' => $refunds,
+            'tax_subtotals' => [['tax_rate' => '0.25', 'taxable_amount' => '200.00', 'tax_amount' => '50.00'], ['tax_rate' => '0', 'taxable_amount' => '100.00', 'tax_amount' => '0.00']],
+        ]);
+        $partly = [self::refund('r1', '100.00', '80.00', '20.00')];
+        $done = static fn (string $gross): array => [['id' => 'r9', 'total_amount' => '-' . $gross]];
+        $cases = [
+            ['amount', ['net' => '10.00', 'tax' => '0', 'rate' => '0'], ['E', 'E'], ['E'], 'an amount at 0%: the code the order\'s 0% lines share'],
+            ['amount', ['net' => '10.00', 'tax' => '0', 'rate' => '0'], ['E', null], ['E'], 'an amount at 0%: an uncoded 0% line does not break the share'],
+            ['amount', ['net' => '10.00', 'tax' => '0', 'rate' => '0'], ['E', 'Z'], [], 'an amount at 0%: no code when the order\'s 0% lines disagree'],
+            ['amount', ['net' => '10.00', 'tax' => '0', 'rate' => '0'], [null], [], 'an amount at 0%: no code when the order\'s 0% lines carry none'],
+            ['amount', ['net' => '10.00', 'tax' => '2.50', 'rate' => '0.25'], ['E'], [], 'an amount at 25%: never coded'],
+            ['rest', [], ['E', 'E'], ['E'], 'the rest after a partial refund: its 0% line takes the shared code'],
+            ['rest', [], ['E', 'Z'], [], 'the rest after a partial refund: no code when the 0% lines disagree'],
+        ];
+        foreach ($cases as [$kind, $request, $codes, $expected, $description]) {
+            $d = 'refund codes: ' . $description;
+            if ($kind === 'amount') {
+                $shop = self::shop([$order($codes), self::json(201, ['id' => 'r9']), $order($codes, $done('100.00'))], 'FULFILLED');
+                $shop['refunds']->partial(42, $request);
+            } else {
+                $shop = self::shop([$order($codes, $partly), self::json(201, ['id' => 'r9']), $order($codes, [...$partly, ...$done('250.00')])], 'REFUNDED');
+                $shop['refunds']->remainder(42);
+            }
+            $lines = json_decode((string) ($shop['transport']->calls[1]['body'] ?? '{}'), true)['line_items'] ?? [];
+            TinyAssert::true($lines !== [], $d . ': lines sent');
+            TinyAssert::same($expected, array_column($lines, 'tax_code'), $d . ': the codes sent, only ever on the 0% line');
+        }
     }
 
     private static function testUntaxed(): void

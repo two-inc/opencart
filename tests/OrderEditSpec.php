@@ -31,6 +31,7 @@ final class OrderEditSpec
 
     public static function runAll(): void
     {
+        self::testVatNumberCreateOnly();
         self::testBuyerFields();
         self::testSync();
         self::testKeyChain();
@@ -98,6 +99,16 @@ final class OrderEditSpec
                 TinyAssert::same(IdempotencyKey::edit(self::ID, IdempotencyKey::orderCreate(42, self::TOKEN_HASH), OrderFlow::payloadHash($body)), $transport->calls[1]['headers']['Idempotency-Key'] ?? null, $d . ': the first edit chains on the create key');
             }
         }
+    }
+
+    /** Two keeps the buyer's VAT number given at create (TWO-27058): an edit of a Spanish merchant's order with one never sends it. */
+    private static function testVatNumberCreateOnly(): void
+    {
+        [$edit, $transport] = self::edit([self::get('CONFIRMED'), self::get('CONFIRMED')], 'CONFIRMED');
+        $edit->sync(42, self::rows(3), static fn (array $record): array => array_replace_recursive(self::input(3), ['order' => ['buyer_vat_number' => 'FR40303265045']]));
+        TinyAssert::same(['GET /v1/order/' . self::ID, 'PUT /v1/order/' . self::ID], self::calls($transport), 'edit with a VAT number: sent');
+        $body = json_decode((string) ($transport->calls[1]['body'] ?? '{}'), true);
+        TinyAssert::same(false, array_key_exists('buyer_vat_number', $body), 'edit with a VAT number: the body carries no buyer_vat_number');
     }
 
     /**
