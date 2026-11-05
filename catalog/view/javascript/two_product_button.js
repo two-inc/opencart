@@ -111,7 +111,8 @@
                 }
                 if (handoffReaches(button)) {
                     try {
-                        win.sessionStorage.setItem(MARKER, '1');
+                        // This page, as checkout's referrer will name it.
+                        win.sessionStorage.setItem(MARKER, win.location.href.split('#')[0]);
                     } catch (e) {
                         // Storage refused (private mode): the item is in the
                         // basket, only the preselection is lost.

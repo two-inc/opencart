@@ -49,7 +49,7 @@ function shopWindow(answer) {
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 const CASES = [
-    { answer: { success: 'Added' }, checkout: CHECKOUT, marker: '1', navigates: true, error: '', description: 'a confirmed add records the marker and goes to checkout' },
+    { answer: { success: 'Added' }, checkout: CHECKOUT, marker: 'https://shop.test/index.php?route=product/product&product_id=42', navigates: true, error: '', description: 'a confirmed add records the marker and goes to checkout' },
     { answer: { success: 'Added' }, checkout: 'http://shop.test/index.php?route=checkout/checkout', marker: null, navigates: true, error: '', description: 'checkout on another origin: still added and sent on, but no marker it could never read' },
     { answer: { error: { option_226: 'Colour required!', quantity: 'Too many' }, redirect: 'x' }, checkout: CHECKOUT, marker: null, navigates: false, error: 'Colour required!', description: 'a refused add stays on the page with the shop\'s first reason' },
     { answer: { error: { warning: 'Product not found!' } }, checkout: CHECKOUT, marker: null, navigates: false, error: 'Product not found!', description: 'an unknown product is the shop\'s reason too' },

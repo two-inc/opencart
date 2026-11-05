@@ -1,8 +1,8 @@
-import { expect, test } from "@playwright/test";
+import { Page, expect, test } from "@playwright/test";
 
 import { PRODUCT_ID } from "../config";
 import { sql } from "../pages/shop";
-import { confirmAndReturn, guestDetails } from "../pages/storefront";
+import { addToCart, confirmAndReturn, guestDetails } from "../pages/storefront";
 
 // The product page message and the "Buy with Two" button (Build Guide
 // section 20, TWO-25799 and TWO-25800). The button adds the item through
@@ -15,11 +15,31 @@ function setSetting(key: string, value: string): void {
 }
 
 const PRODUCT = `/index.php?route=product/product&product_id=${PRODUCT_ID}`;
+const TWO = '.modal.show input[name="payment_method"][value="two.two"]';
+const COD = '.modal.show input[name="payment_method"][value="cod.cod"]';
+
+// Two sorts after Cash On Delivery (5) here, so OpenCart's own list checks
+// COD first and only the preselection can check Two.
+test.beforeEach(() => {
+  setSetting("sort_order", "9");
+});
 
 test.afterEach(() => {
   setSetting("product_message_enabled", "0");
   setSetting("product_button_enabled", "0");
+  setSetting("sort_order", "0");
 });
+
+/** Checkout (opened unless already there): guest details, the shipping method, then the payment method list opened. */
+async function openPaymentMethods(page: Page, open: boolean): Promise<string> {
+  const company = await guestDetails(page, "E2E Trad", true, false, open);
+  await page.click("#button-shipping-methods");
+  await page.locator(".modal.show #button-shipping-method").click();
+  await expect(page.locator(".modal.show")).toHaveCount(0);
+  await page.click("#button-payment-methods");
+  await expect(page.locator(TWO), "Two is offered").toBeVisible();
+  return company;
+}
 
 test("both switched off, the product page carries neither", async ({ page }) => {
   await page.goto(PRODUCT);
@@ -45,15 +65,19 @@ test("Buy with Two adds the item and opens checkout with Two preselected", async
   await button.click();
   await page.waitForURL(/route=checkout\/checkout/);
 
-  const company = await guestDetails(page, "E2E Trad");
-  await page.click("#button-shipping-methods");
-  await page.locator(".modal.show #button-shipping-method").click();
-  await expect(page.locator(".modal.show")).toHaveCount(0);
-  await page.click("#button-payment-methods");
-  await expect(page.locator('.modal.show input[name="payment_method"][value="two.two"]'), "Two is preselected").toBeChecked();
+  const company = await openPaymentMethods(page, false);
+  await expect(page.locator(TWO), "Two is preselected").toBeChecked();
   await page.locator(".modal.show #button-payment-method").click();
   await expect(page.locator("#checkout-confirm")).toContainText(`Buying for ${company}`);
 
   const orderId = await confirmAndReturn(page);
   expect(sql(`SELECT quantity FROM oc_order_product WHERE order_id = ${orderId} AND product_id = ${PRODUCT_ID}`), "the quantity the buyer chose").toEqual([["2"]]);
+});
+
+test("an ordinary add to cart leaves OpenCart's own first method checked", async ({ page }) => {
+  setSetting("product_button_enabled", "1");
+  await addToCart(page, 1);
+  await openPaymentMethods(page, true);
+  await expect(page.locator(COD), "OpenCart's first method").toBeChecked();
+  await expect(page.locator(TWO)).not.toBeChecked();
 });

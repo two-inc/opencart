@@ -13,9 +13,12 @@ export async function addToCart(page: Page, quantity: number): Promise<void> {
   await expect(page.locator("#alert")).toContainText("Success");
 }
 
-/** Fills the guest form (or registers an account with it), finding the company with Two's shared company search. */
-export async function guestDetails(page: Page, search: string, stubbed = true, register = false): Promise<string> {
-  await page.goto("/index.php?route=checkout/checkout");
+/**
+ * Fills the guest form (or registers an account with it), finding the company with Two's shared company search.
+ * With `open` false the page is already on checkout and stays there (the buy button's hop is not replaced).
+ */
+export async function guestDetails(page: Page, search: string, stubbed = true, register = false, open = true): Promise<string> {
+  if (open) await page.goto("/index.php?route=checkout/checkout");
   await page.check(register ? "#input-register" : "#input-guest");
   if (register) {
     await page.fill("#input-password", "E2e-pass-12345");

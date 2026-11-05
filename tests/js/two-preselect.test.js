@@ -11,14 +11,20 @@ function modal(codes) {
     return '<div id="modal-payment"><form id="form-payment-method">' + radios + '</form></div>';
 }
 
-function checkout(saved) {
+const PRODUCT = 'https://shop.test/index.php?route=product/product&product_id=42';
+const CART = 'https://shop.test/index.php?route=checkout/cart';
+
+/** The checkout page, reached from `referrer` (the button's own hop comes from the product page). */
+function checkout(saved, referrer = PRODUCT) {
     const doc = document.implementation.createHTMLDocument('checkout');
+    Object.defineProperty(doc, 'referrer', { value: referrer });
     doc.body.innerHTML = '<input type="hidden" id="input-payment-code" value="' + saved + '">';
     return doc;
 }
 
+/** The button stores the product page it was pressed on. */
 function win(marker) {
-    const storage = new Map(marker ? [[MARKER, '1']] : []);
+    const storage = new Map(marker ? [[MARKER, PRODUCT]] : []);
     return {
         storage,
         MutationObserver,
@@ -33,12 +39,13 @@ const CASES = [
     { marker: true, saved: '', codes: ['cod.cod', 'two.two'], later: false, checked: 'two.two', spent: true, description: 'a list already open checks Two at once' },
     { marker: false, saved: '', codes: ['cod.cod', 'two.two'], later: true, checked: 'cod.cod', spent: false, description: 'without the button nothing changes' },
     { marker: true, saved: 'cod.cod', codes: ['cod.cod', 'two.two'], later: true, checked: 'cod.cod', spent: true, description: 'a method the buyer saved is never overridden, and the marker is spent' },
-    { marker: true, saved: '', codes: ['cod.cod', 'bank_transfer.bank_transfer'], later: true, checked: 'cod.cod', spent: true, description: 'Two not offered for this basket: OpenCart\'s default stands and the marker is spent' }
+    { marker: true, saved: '', codes: ['cod.cod', 'bank_transfer.bank_transfer'], later: true, checked: 'cod.cod', spent: true, description: 'Two not offered for this basket: OpenCart\'s default stands and the marker is spent' },
+    { marker: true, saved: '', codes: ['cod.cod', 'two.two'], later: true, from: CART, checked: 'cod.cod', spent: true, description: 'checkout bounced to the cart (minimum or stock), a later checkout from there: OpenCart\'s default stands and the marker is spent' }
 ];
 
 describe('checkout preselection', () => {
     test.each(CASES)('$description', async (c) => {
-        const doc = checkout(c.saved);
+        const doc = checkout(c.saved, c.from);
         const w = win(c.marker);
         if (!c.later) {
             doc.body.insertAdjacentHTML('beforeend', modal(c.codes));
@@ -47,7 +54,7 @@ describe('checkout preselection', () => {
         if (c.later) {
             doc.body.insertAdjacentHTML('beforeend', '<p>shipping methods</p>');
             await flush();
-            expect(w.storage.has(MARKER)).toBe(c.marker);
+            expect(w.storage.has(MARKER)).toBe(c.marker && !c.from);
             doc.body.insertAdjacentHTML('beforeend', modal(c.codes));
             await flush();
         }

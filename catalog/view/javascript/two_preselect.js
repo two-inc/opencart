@@ -3,8 +3,9 @@
  *
  * OpenCart 4.1 lists the payment methods in a modal the buyer opens with
  * Choose, and checks the method saved in the session (`#input-payment-code`),
- * else the first. When the buyer came from the buy button (the
- * sessionStorage marker), the first time that list is built Two's option is
+ * else the first. When the buyer came straight from the buy button (the
+ * sessionStorage marker names this page's referrer), the first time that
+ * list is built Two's option is
  * checked instead of the first, and the marker is spent, whether or not Two
  * is on the list: a basket Two does not qualify for simply opens with
  * OpenCart's own default. A method the buyer already saved is never
@@ -20,12 +21,26 @@
     function start(doc, win) {
         let observer = null;
 
+        // The marker is the product page the button was pressed on, and holds
+        // only on the hop from that page. Checkout that bounces to the cart
+        // (a quantity under the minimum, out of stock) never runs this
+        // script, so a later checkout, reached from anywhere else, spends it
+        // unused.
         function wanted() {
+            let marker = null;
             try {
-                return win.sessionStorage.getItem(MARKER) === '1';
+                marker = win.sessionStorage.getItem(MARKER);
             } catch (e) {
                 return false;
             }
+            if (marker === null) {
+                return false;
+            }
+            if (marker !== '' && marker === doc.referrer) {
+                return true;
+            }
+            spend();
+            return false;
         }
 
         function spend() {
