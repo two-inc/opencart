@@ -129,4 +129,24 @@ final class OrderTax
 
         return ['rate' => $percent, 'fixed_tax' => $fixed];
     }
+
+    /**
+     * A line's tax-code key (section 22): its tax class and each rate the
+     * class applies at the scope, as the shop's tax engine picks them. Null
+     * for a line with no tax class, which takes the order's shared code.
+     *
+     * @return array{class: int, rates: list<array{id: int, rate: float, type: string}>}|null
+     */
+    public static function codeKey(\Opencart\System\Library\Cart\Tax $tax, float $value, int $class): ?array
+    {
+        if ($class <= 0) {
+            return null;
+        }
+        $rates = [];
+        foreach ($tax->getRates($value, $class) as $id => $rate) {
+            $rates[] = ['id' => (int) ($rate['tax_rate_id'] ?? $id), 'rate' => (float) $rate['rate'], 'type' => (string) $rate['type']];
+        }
+
+        return ['class' => $class, 'rates' => $rates];
+    }
 }

@@ -413,6 +413,58 @@
                     <div class="form-text">{{ help_enable_tax_subtotals|e }}</div>
                   </div>
                 </div>
+                <div class="row mb-3">
+                  <label for="input-buyer-vat-field" class="col-sm-2 col-form-label">{{ entry_buyer_vat_field|e }}</label>
+                  <div class="col-sm-10">
+                    <select name="payment_two_buyer_vat_field" id="input-buyer-vat-field" class="form-select">
+                      <option value="">{{ text_tax_codes_none|e }}</option>
+                      {% for field in buyer_vat_fields %}
+                        <option value="{{ field.id|e }}"{% if field.id == buyer_vat_field %} selected{% endif %}>{{ field.name|e }}</option>
+                      {% endfor %}
+                    </select>
+                    <div id="error-buyer-vat-field" class="invalid-feedback"></div>
+                    <div class="form-text">{{ help_buyer_vat_field|e }}</div>
+                  </div>
+                </div>
+                {% if tax_codes.view != 'hidden' %}
+                  <div id="two-tax-codes" class="mb-3">
+                    <h5>{{ legend_tax_codes|e }}</h5>
+                    {% for notice in tax_codes.notices %}
+                      <div class="alert alert-{{ notice.level|e }}">{{ notice.text|e }}</div>
+                    {% endfor %}
+                    {% if tax_codes.clear %}
+                      <div class="form-check mb-3">
+                        <input type="checkbox" name="payment_two_tax_codes_clear" value="1" id="input-tax-codes-clear" class="form-check-input"/>
+                        <label for="input-tax-codes-clear" class="form-check-label">{{ entry_tax_codes_clear|e }}</label>
+                      </div>
+                    {% endif %}
+                    {% if tax_codes.view == 'rows' %}
+                      <p class="form-text">{{ text_tax_codes_intro|e }}</p>
+                      <div id="error-tax-code-map" class="invalid-feedback d-block"></div>
+                      {% for block in tax_codes.blocks %}
+                        <div class="table-responsive">
+                          <table class="table table-bordered table-sm">
+                            <thead><tr><th colspan="2">{{ block.title|e }}</th></tr></thead>
+                            <tbody>
+                              {% for row in block.rows %}
+                                <tr>
+                                  <td>{{ row.label|e }}</td>
+                                  <td style="min-width: 16rem;">
+                                    <select name="payment_two_tax_code_map[{{ row.key|e }}]" class="form-select form-select-sm" aria-label="{{ block.title|e }}: {{ row.label|e }}">
+                                      {% for option in row.options %}
+                                        <option value="{{ option.value|e }}"{% if option.value == row.selected %} selected{% endif %}>{{ option.label|e }}</option>
+                                      {% endfor %}
+                                    </select>
+                                  </td>
+                                </tr>
+                              {% endfor %}
+                            </tbody>
+                          </table>
+                        </div>
+                      {% endfor %}
+                    {% endif %}
+                  </div>
+                {% endif %}
               </fieldset>
             </div>
 
@@ -514,6 +566,8 @@
             </div>
 
           </div>
+          {# Last field of the form: a save without it was cut short by max_input_vars, and its tax code rows are refused. #}
+          <input type="hidden" name="payment_two_tax_code_map_end" value="1"/>
         </form>
       </div>
       <div class="card-footer text-end text-muted small">{{ brand_name }} {{ text_version }} {{ version }}</div>

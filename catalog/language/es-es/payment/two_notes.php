@@ -101,6 +101,7 @@ $_['note_refund_blocked'] = 'No reembolsado: el reembolso de %1$s enviado el %2$
 $_['refusal_currency_value'] = 'El pedido no tiene un valor de moneda utilizable.';
 $_['refusal_currency_changed'] = 'el pedido se realizó con Two en %1$s y su moneda es ahora %2$s. Two mantiene un pedido en la moneda en que se realizó.';
 $_['refusal_empty_order'] = 'El pedido no tiene líneas de producto.';
+$_['refusal_tax_code_map'] = 'Los códigos de impuesto guardados para las líneas al 0% no se pueden leer. Bórrelos en la pestaña Gestión de pedidos.';
 $_['refusal_unsupported_total'] = 'El total del pedido «%s» no es uno que la extensión pueda enviar.';
 $_['refusal_fee_missing'] = 'el pedido se realizó con un recargo por plazo de pago, pero ya no lo lleva (¿está activado el total de pedido Comisión por plazos de pago de Two?)';
 $_['refusal_negative_line'] = 'La línea «%s» tiene una cantidad o un importe negativo o vacío.';

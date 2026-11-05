@@ -24,6 +24,7 @@ use Opencart\System\Library\Extension\Two\Core\Postprocessing;
 use Opencart\System\Library\Extension\Two\Core\RecordProvider;
 use Opencart\System\Library\Extension\Two\Core\SettingsProvider;
 use Opencart\System\Library\Extension\Two\Core\SettingsSave;
+use Opencart\System\Library\Extension\Two\Core\TaxCodeList;
 use Opencart\System\Library\Extension\Two\Core\Surcharge;
 
 /**
@@ -105,6 +106,7 @@ final class Services
     public readonly FeeQuote $fees;
     /** The merchant's own fee per term, for the Payment terms tab. */
     public readonly MerchantFeeRates $feeRates;
+    public readonly TaxCodeList $taxCodes;
     private readonly LogLogger $logger;
 
     public function __construct(private readonly \Opencart\System\Library\DB $db, \Opencart\System\Library\Log $log, int $storeId = 0)
@@ -123,6 +125,7 @@ final class Services
         $this->fx = new FxRates($this->client, $this->settings, $logger);
         $this->fees = new FeeQuote($this->client, $this->fx, $logger);
         $this->feeRates = new MerchantFeeRates($this->client, $this->settings, $logger);
+        $this->taxCodes = new TaxCodeList($this->client, $this->settings->store(), $logger);
     }
 
     /** The payment terms offered now: the merchant record's, narrowed by the merchant's settings. */

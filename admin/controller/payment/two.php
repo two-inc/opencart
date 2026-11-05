@@ -17,6 +17,7 @@ use Opencart\System\Library\Extension\Two\Core\RecordProvider;
 use Opencart\System\Library\Extension\Two\Core\SettingsProvider;
 use Opencart\System\Library\Extension\Two\Core\SettingsSave;
 use Opencart\System\Library\Extension\Two\Core\Surcharge;
+use Opencart\System\Library\Extension\Two\Core\TaxCodes;
 use Opencart\System\Library\Extension\Two\Opencart\DbOrderRecords;
 use Opencart\System\Library\Extension\Two\Opencart\DbRateLimits;
 use Opencart\System\Library\Extension\Two\Opencart\DbRefundRecords;
@@ -221,6 +222,11 @@ class Two extends \Opencart\System\Engine\Controller
         // A shop that predates the setting shows the status its orders are placed at today.
         $data['confirmed_status_id'] = $settings->placedStatusId((int) $this->config->get('config_order_status_id'));
         $data['enable_tax_subtotals'] = $settings->taxSubtotals();
+        $data['tax_codes'] = $this->taxCodeView($services, $brand);
+        $data['buyer_vat_fields'] = $this->buyerVatFields();
+        $data['buyer_vat_field'] = (string) $settings->store()->get(TaxCodes::VAT_FIELD_KEY);
+        $data['text_tax_codes_intro'] = sprintf($this->language->get('text_tax_codes_intro'), $brand);
+        $data['help_buyer_vat_field'] = sprintf($this->language->get('help_buyer_vat_field'), $brand);
 
         foreach (['help_debug_mode', 'help_refresh_profile', 'error_profile_refresh', 'help_custom_headers', 'help_company_search_in_address', 'help_address_lookup', 'help_api_key', 'help_vendor_name', 'help_fulfil', 'help_cancel', 'help_refund', 'help_confirmed', 'entry_fulfil', 'entry_cancel', 'entry_refund', 'entry_confirmed', 'text_status_mapping_intro', 'text_default_confirmed', 'text_default_fulfil', 'text_default_cancel', 'text_default_refund'] as $key) {
             $data[$key] = sprintf($this->language->get($key), $brand);
@@ -269,7 +275,17 @@ class Two extends \Opencart\System\Engine\Controller
         $services = new Services($this->db, $this->log);
         $this->load->model('localisation/tax_class');
         $taxClassIds = array_map(static fn (array $row): int => (int) $row['tax_class_id'], $this->model_localisation_tax_class->getTaxClasses());
-        $result = $services->save->save($this->submitted($post), $this->orderStatusIds(), (int) $this->config->get('config_void_status_id'), $taxClassIds);
+        $submitted = $this->submitted($post);
+        $taxCodes = ['vat_fields' => array_column($this->buyerVatFields(), 'id')];
+        if (isset($submitted['tax_code_map'])) {
+            // The rows are saved against the section as it would render now: its rows and the codes listed at 0%.
+            $section = $this->taxCodeSection($services);
+            $taxCodes += [
+                'rows' => $section['state']['view'] === TaxCodes::VIEW_ROWS ? $section['rows'] : null,
+                'zero' => array_column(TaxCodes::zeroRated($section['state']['codes']), 'code'),
+            ];
+        }
+        $result = $services->save->save($submitted, $this->orderStatusIds(), (int) $this->config->get('config_void_status_id'), $taxClassIds, $taxCodes);
 
         foreach ($result['errors'] as $field => $code) {
             $json['error'][$field] = $field === 'surcharge_grid' ? $this->gridMessage($code) : $this->language->get('error_' . $code);
@@ -845,6 +861,18 @@ class Two extends \Opencart\System\Engine\Controller
                 $submitted[$key] = self::raw($field($key));
             }
         }
+        foreach (['buyer_vat_field', 'tax_code_map_end', 'tax_codes_clear'] as $key) {
+            if (is_scalar($field($key))) {
+                $submitted[$key] = self::raw($field($key));
+            }
+        }
+        if (is_array($field('tax_code_map'))) {
+            $map = [];
+            foreach ($field('tax_code_map') as $row => $code) {
+                $map[(string) $row] = is_scalar($code) ? self::raw($code) : '';
+            }
+            $submitted['tax_code_map'] = $map;
+        }
         if (is_array($field('title'))) {
             // One title per shop language: a language the form left out reads as blank, which is refused.
             $this->load->model('localisation/language');
@@ -898,6 +926,113 @@ class Two extends \Opencart\System\Engine\Controller
         }
 
         return $submitted;
+    }
+
+    /**
+     * The "Tax codes for 0% lines" section's state (section 22.5) and, when
+     * it shows the rows, one block per tax class: the exempt row, a row per
+     * 0% percentage rate the class's rules use, and the no-rate row. The
+     * merchant's country is the merchant record's, read for the credentials
+     * in force.
+     *
+     * @return array{state: array{view: string, notices: list<string>, clear: bool, country: string, codes: list<array{code: string, display_name: string, rate: float}>}, blocks: list<array{title: string, rows: list<array{0: string, 1: string}>}>, rows: list<string>}
+     */
+    private function taxCodeSection(Services $services): array
+    {
+        $hasKey = $services->settings->apiKey() !== '';
+        $country = $hasKey ? TaxCodes::merchantCountry($services->records->record()) : '';
+        $state = TaxCodes::sectionState([
+            'has_key' => $hasKey,
+            'raw' => $services->settings->store()->get(TaxCodes::MAP_KEY),
+            'country' => $country,
+            'list' => $country === '' ? null : $services->taxCodes->forCountry($country),
+        ]);
+        $blocks = [];
+        $rows = [];
+        if ($state['view'] === TaxCodes::VIEW_ROWS) {
+            $zeroRates = [];
+            $query = $this->db->query('SELECT tr.`tax_class_id`, r.`tax_rate_id`, r.`name`, gz.`name` AS `geo_zone` FROM `' . DB_PREFIX . 'tax_rule` tr JOIN `' . DB_PREFIX . 'tax_rate` r ON (r.`tax_rate_id` = tr.`tax_rate_id`) LEFT JOIN `' . DB_PREFIX . "geo_zone` gz ON (gz.`geo_zone_id` = r.`geo_zone_id`) WHERE r.`type` = 'P' AND r.`rate` = 0 ORDER BY tr.`priority`, r.`name`");
+            foreach ($query->rows as $row) {
+                // OpenCart stores names escaped; the template escapes them again.
+                $name = html_entity_decode((string) $row['name'], ENT_QUOTES, 'UTF-8');
+                $zone = html_entity_decode((string) ($row['geo_zone'] ?? ''), ENT_QUOTES, 'UTF-8');
+                $zeroRates[(int) $row['tax_class_id']][(int) $row['tax_rate_id']] = $zone === '' ? $name : $name . ' (' . $zone . ')';
+            }
+            $this->load->model('localisation/tax_class');
+            foreach ($this->model_localisation_tax_class->getTaxClasses() as $class) {
+                $id = (int) $class['tax_class_id'];
+                $block = [[TaxCodes::exemptKey($id), $this->language->get('text_tax_codes_exempt_row')]];
+                foreach ($zeroRates[$id] ?? [] as $rateId => $label) {
+                    $block[] = [TaxCodes::rateKey($id, $rateId), $label];
+                }
+                $block[] = [TaxCodes::noRuleKey($id), $this->language->get('text_tax_codes_none_row')];
+                $blocks[] = ['title' => html_entity_decode((string) $class['title'], ENT_QUOTES, 'UTF-8'), 'rows' => $block];
+                array_push($rows, ...array_column($block, 0));
+            }
+        }
+
+        return ['state' => $state, 'blocks' => $blocks, 'rows' => $rows];
+    }
+
+    /**
+     * The section as the template renders it: notices worded, and each row's
+     * choices (none, the codes listed at 0%, and a saved code no longer
+     * listed, marked, so nothing saved disappears unseen).
+     *
+     * @return array{view: string, notices: list<array{level: string, text: string}>, clear: bool, blocks: list<array{title: string, rows: list<array{key: string, label: string, selected: string, options: list<array{value: string, label: string}>}>}>}
+     */
+    private function taxCodeView(Services $services, string $brand): array
+    {
+        $section = $this->taxCodeSection($services);
+        $state = $section['state'];
+        $notices = [];
+        if ($state['view'] === TaxCodes::VIEW_RECORD_ERROR) {
+            $notices[] = ['level' => 'warning', 'text' => sprintf($this->language->get('text_tax_codes_record_error'), $brand)];
+        } elseif ($state['view'] === TaxCodes::VIEW_LIST_ERROR) {
+            $notices[] = ['level' => 'warning', 'text' => sprintf($this->language->get('text_tax_codes_list_error'), $state['country'], $brand)];
+        }
+        $wording = [
+            TaxCodes::NOTICE_UNREADABLE => ['danger', $this->language->get('text_tax_codes_unreadable')],
+            TaxCodes::NOTICE_SAVED_VALID => ['info', sprintf($this->language->get('text_tax_codes_saved_valid'), $brand, $state['country'])],
+            TaxCodes::NOTICE_SAVED_INVALID => ['warning', sprintf($this->language->get('text_tax_codes_saved_invalid'), $state['country'], $brand)],
+        ];
+        foreach ($state['notices'] as $notice) {
+            $notices[] = ['level' => $wording[$notice][0], 'text' => $wording[$notice][1]];
+        }
+        $stored = TaxCodes::parse($services->settings->store()->get(TaxCodes::MAP_KEY)) ?? [];
+        $zero = TaxCodes::zeroRated($state['codes']);
+        $listed = array_column($zero, 'code');
+        $blocks = [];
+        foreach ($section['blocks'] as $block) {
+            $rows = [];
+            foreach ($block['rows'] as [$key, $label]) {
+                $selected = $stored[$key] ?? '';
+                $options = [['value' => '', 'label' => $this->language->get('text_tax_codes_none')]];
+                foreach ($zero as $code) {
+                    $options[] = ['value' => $code['code'], 'label' => $code['display_name'] . ' (' . $code['code'] . ')'];
+                }
+                if ($selected !== '' && !in_array($selected, $listed, true)) {
+                    $options[] = ['value' => $selected, 'label' => sprintf($this->language->get('text_tax_codes_unlisted'), $selected)];
+                }
+                $rows[] = ['key' => $key, 'label' => $label, 'selected' => $selected, 'options' => $options];
+            }
+            $blocks[] = ['title' => $block['title'], 'rows' => $rows];
+        }
+
+        return ['view' => $state['view'], 'notices' => $notices, 'clear' => $state['clear'], 'blocks' => $blocks];
+    }
+
+    /**
+     * The shop's text custom fields on the account or the address, any of
+     * which may hold the buyer's VAT number (section 22.4).
+     *
+     * @return list<array{id: string, name: string}>
+     */
+    private function buyerVatFields(): array
+    {
+        $query = $this->db->query('SELECT cf.`custom_field_id`, cfd.`name` FROM `' . DB_PREFIX . 'custom_field` cf JOIN `' . DB_PREFIX . "custom_field_description` cfd ON (cfd.`custom_field_id` = cf.`custom_field_id` AND cfd.`language_id` = '" . (int) $this->config->get('config_language_id') . "') WHERE cf.`location` IN ('account', 'address') AND cf.`type` = 'text' ORDER BY cf.`sort_order`, cfd.`name`");
+
+        return array_values(array_map(static fn (array $row): array => ['id' => (string) $row['custom_field_id'], 'name' => html_entity_decode((string) $row['name'], ENT_QUOTES, 'UTF-8')], $query->rows));
     }
 
     /**
