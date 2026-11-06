@@ -170,12 +170,11 @@ class Two extends \Opencart\System\Engine\Controller
      * An unplaced order still paid with Two: one whose buyer switched to
      * another method is never adopted.
      *
-     * @param array<string, mixed>|false|null $order
-     * @phpstan-assert-if-true array<string, mixed> $order
+     * @param array<string, mixed> $order getOrder's answer, empty when there is no such order
      */
-    private function waiting(mixed $order): bool
+    private function waiting(array $order): bool
     {
-        if (!is_array($order) || $order === [] || !$this->model_extension_two_payment_two->unplaced($order)) {
+        if ($order === [] || !$this->model_extension_two_payment_two->unplaced($order)) {
             return false;
         }
         $method = $order['payment_method'] ?? null;
