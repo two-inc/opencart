@@ -102,10 +102,15 @@ export async function placeWithoutReturn(page: Page, quantity = 1): Promise<{ or
   const company = await guestDetails(page, "E2E Trad");
   await chooseTwo(page, company);
   const payment = new RegExp(`^https://localhost:${STUB_PORT}/checkout/`);
-  await page.route(payment, (route) => route.abort());
-  const leaving = page.waitForRequest(payment);
+  // Resolved once the navigation is aborted: unrouting on the request event alone can let it through.
+  let left: (url: string) => void = () => {};
+  const leaving = new Promise<string>((resolve) => (left = resolve));
+  await page.route(payment, async (route) => {
+    await route.abort();
+    left(route.request().url());
+  });
   await page.click("#button-two-confirm");
-  const paymentUrl = (await leaving).url();
+  const paymentUrl = await leaving;
   await page.unroute(payment);
   return { orderId: latestOrderId(), paymentUrl };
 }
