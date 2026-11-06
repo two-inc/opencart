@@ -25,6 +25,7 @@
 // and changes nothing, as Two does. /__stub/fault makes the next matching
 // request fail without applying it, or apply it and drop the connection with
 // no answer at all, so the specs reach both halves of the refund-unknown path.
+// POST /__stub/orders/<id> sets an order's state, as Two changes it on its own.
 import fs from "node:fs";
 import https from "node:https";
 import { randomUUID } from "node:crypto";
@@ -311,6 +312,12 @@ function control(method, path, body, query, res) {
   const m = path.match(/^\/__stub\/orders\/([0-9a-f-]{36})$/);
   if (method === "GET" && m) {
     return orders.has(m[1]) ? send(res, 200, orders.get(m[1])) : send(res, 404, {});
+  }
+  // Sets the order's state as Two would on its own: a buyer verifying at Two, or Two cancelling an order.
+  if (method === "POST" && m) {
+    if (!orders.has(m[1])) return send(res, 404, {});
+    orders.get(m[1]).state = String(body.state || "");
+    return send(res, 200, orders.get(m[1]));
   }
   return send(res, 404, { error: `no control route ${method} ${path}` });
 }

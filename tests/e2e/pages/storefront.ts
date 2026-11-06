@@ -1,6 +1,6 @@
 import { Page, expect } from "@playwright/test";
 
-import { PRODUCT_ID } from "../config";
+import { PRODUCT_ID, STUB_PORT } from "../config";
 import { latestOrderId } from "./shop";
 
 // The OpenCart 4.1 guest checkout, as a buyer drives it: one page with the
@@ -91,4 +91,21 @@ export async function placeOrder(page: Page, quantity = 1, search = "E2E Trad", 
   const company = await guestDetails(page, search);
   await chooseTwo(page, company);
   return confirmAndReturn(page);
+}
+
+/**
+ * Places an order and leaves at Two's hosted checkout: the buyer never comes
+ * back to the shop. Returns the shop's order id and Two's payment URL.
+ */
+export async function placeWithoutReturn(page: Page, quantity = 1): Promise<{ orderId: number; paymentUrl: string }> {
+  await addToCart(page, quantity);
+  const company = await guestDetails(page, "E2E Trad");
+  await chooseTwo(page, company);
+  const payment = new RegExp(`^https://localhost:${STUB_PORT}/checkout/`);
+  await page.route(payment, (route) => route.abort());
+  const leaving = page.waitForRequest(payment);
+  await page.click("#button-two-confirm");
+  const paymentUrl = (await leaving).url();
+  await page.unroute(payment);
+  return { orderId: latestOrderId(), paymentUrl };
 }

@@ -80,3 +80,10 @@ async function outcome(page: Page): Promise<string> {
   await page.locator("#alert").evaluate((el) => (el.innerHTML = ""));
   return text;
 }
+
+/** Presses Check status with Two on the Two tab of an unplaced order and returns the outcome shown. */
+export async function checkStatusWithTwo(page: Page): Promise<string> {
+  await openTwoTab(page);
+  await page.locator("#form-two-check button[type=submit]").click();
+  return outcome(page);
+}
