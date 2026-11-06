@@ -20,6 +20,7 @@ use Opencart\System\Library\Extension\Two\Core\OrderEdit;
 use Opencart\System\Library\Extension\Two\Core\OrderLifecycle;
 use Opencart\System\Library\Extension\Two\Core\OrderRefunds;
 use Opencart\System\Library\Extension\Two\Core\PaymentTerms;
+use Opencart\System\Library\Extension\Two\Core\PendingCheck;
 use Opencart\System\Library\Extension\Two\Core\Postprocessing;
 use Opencart\System\Library\Extension\Two\Core\RecordProvider;
 use Opencart\System\Library\Extension\Two\Core\SettingsProvider;
@@ -40,6 +41,15 @@ final class Services
     public const CRON_ACTION = 'extension/two/cron/two';
     public const CRON_CYCLE = 'day';
     public const CRON_DESCRIPTION = 'Refreshes the cached Two merchant record.';
+
+    /**
+     * The pending check's row (TWO-26300): hourly, so a shop that runs only
+     * OpenCart's own cron still recovers a verified order within the hour.
+     * The token URL, scheduled every 15 minutes, runs the same check.
+     */
+    public const PENDING_CRON_CODE = 'two_pending_check';
+    public const PENDING_CRON_CYCLE = 'hour';
+    public const PENDING_CRON_DESCRIPTION = 'Checks Two orders the buyer verified but never returned from, and places them.';
 
     /**
      * The order lifecycle's row in OpenCart's event table. Admin status
@@ -148,6 +158,12 @@ final class Services
         $postprocessing = new Postprocessing(new EventSubscribers($this->db, $event), $this->logger, $this->settings->taxSubtotals());
 
         return new OrderFlow($this->client, new OrderBuilder(), $postprocessing, new ErrorMapper(), $this->orders, $this->logger);
+    }
+
+    /** The pending check: the schedule's and the admin button's way to the checkout flow's resolver. */
+    public function pendingCheck(\Opencart\System\Engine\Event $event): PendingCheck
+    {
+        return new PendingCheck($this->orderFlow($event), $this->orders, $this->logger);
     }
 
     /** Fulfil, cancel and the invoice download, sharing the checkout flow's Two reads and snapshot check. */

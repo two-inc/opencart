@@ -32,6 +32,15 @@ final class OrderFlow
     /** Refused because the shop order changed after the Two order was created. */
     public const CHANGED = 'changed';
     public const UNAUTHORISED = 'unauthorised';
+    /** A check from the schedule or the admin changed nothing: the order still waits, and is checked again later. */
+    public const WAITING = 'waiting';
+    /** Two answered 404 for the Two order: it does not know it (counted only by PendingCheck, never on the buyer's return). */
+    public const MISSING = 'missing';
+
+    /** What asked for the Two order's state: the buyer's return, the scheduled check or the admin's button. */
+    public const TRIGGER_BUYER = 'buyer_return';
+    public const TRIGGER_SCHEDULED = 'scheduled_check';
+    public const TRIGGER_ADMIN = 'admin_check';
 
     public const APPROVED = 'approved';
     public const DECLINED = 'declined';
@@ -143,6 +152,8 @@ final class OrderFlow
                 return $this->refused($orderId, Message::of('note_create_not_stored', $field));
             }
         }
+        // A new Two order starts the pending check afresh (PendingCheck).
+        $this->records->put($orderId, ['checked_at' => '0', 'missing_at' => '0', 'check_closed' => '']);
 
         $response = $this->client->request('POST', '/v1/order', $payload, Client::TIMEOUT_SECONDS, true, IdempotencyKey::header(IdempotencyKey::orderCreate($orderId, $stored['token_hash'])));
         $body = $response->json();
@@ -173,7 +184,7 @@ final class OrderFlow
      *        the shop's stored order as create's inputs, given the stored record (company included); null when it is gone
      * @param array{products: list<array<string, mixed>>, totals: list<array<string, mixed>>, addresses: array<string, mixed>, currency?: string}|null $rows
      *        the order's own rows, whose hash is kept once Two holds the order as placed, for the check before fulfilment
-     * @return array{outcome: string, reason: string, message: Message, two_order_id: string}
+     * @return array{outcome: string, reason: string, message: Message, two_order_id: string, state: string}
      */
     public function confirm(int $orderId, string $token, \Closure $rebuild, ?array $rows = null): array
     {
@@ -181,51 +192,110 @@ final class OrderFlow
         if ($record === null) {
             return self::outcome(self::UNAUTHORISED, Message::of('note_confirm_token'), '');
         }
-        $twoOrderId = $record['two_order_id'];
-        if ($twoOrderId === '') {
+
+        return $this->resolve($orderId, $record, self::TRIGGER_BUYER, $rebuild, $rows);
+    }
+
+    /**
+     * The one resolver behind the buyer's return, the scheduled check and the
+     * admin's button (TWO-26300): read the Two order, then act on its state.
+     * The caller holds the order's lock and has found the shop order still
+     * unplaced.
+     *
+     * - The buyer's return keeps its own rules: a changed order is cancelled
+     *   at Two and the buyer told, and any state but VERIFIED or placed is
+     *   refused.
+     * - The schedule and the button send Two nothing but the confirm of a
+     *   VERIFIED order whose shop order still rebuilds what Two holds. A
+     *   changed order, a cancelled one, an unverified, refunded or unknown
+     *   state, a failed read or a failed confirm change nothing at Two; a
+     *   failed confirm leaves the order waiting for the next check.
+     *
+     * @param array<string, string> $record the order's record
+     * @param \Closure(array<string, string>): (array{order: array<string, mixed>, lines: list<array<string, mixed>>, totals: list<array<string, mixed>>, context?: array<string, mixed>}|null) $rebuild
+     * @param array{products: list<array<string, mixed>>, totals: list<array<string, mixed>>, addresses: array<string, mixed>, currency?: string}|null $rows
+     * @param Message|null $by who checked, for the note of an order the schedule or the button places
+     * @return array{outcome: string, reason: string, message: Message, two_order_id: string, state: string}
+     */
+    public function resolve(int $orderId, array $record, string $trigger, \Closure $rebuild, ?array $rows = null, ?Message $by = null): array
+    {
+        $twoOrderId = $record['two_order_id'] ?? '';
+        if ($twoOrderId === '' || !self::validTwoOrderId($twoOrderId)) {
             return self::outcome(self::REFUSED, Message::of('note_confirm_no_order'), '');
         }
+        $buyer = $trigger === self::TRIGGER_BUYER;
+        $by ??= Message::of('note_by_schedule');
 
-        $changed = $this->snapshotMismatch($record, $rebuild);
-        if ($changed !== null) {
-            $this->sendCancel($twoOrderId, 'order_changed', $orderId);
-            $this->readState($orderId, $twoOrderId);
+        if ($buyer) {
+            $changed = $this->snapshotMismatch($record, $rebuild);
+            if ($changed !== null) {
+                $this->sendCancel($twoOrderId, 'order_changed', $orderId);
+                $this->readState($orderId, $twoOrderId);
 
-            return self::outcome($changed[0], Message::of($changed[1], $twoOrderId, ...$changed[2]), $twoOrderId);
+                return self::outcome($changed[0], Message::of($changed[1], $twoOrderId, ...$changed[2]), $twoOrderId);
+            }
         }
 
-        $state = $this->readState($orderId, $twoOrderId);
+        $read = $this->read($orderId, $twoOrderId);
+        $state = $read['state'];
         if ($state === null) {
-            return self::outcome(self::REFUSED, Message::of('note_confirm_unread', $twoOrderId), $twoOrderId);
+            if ($buyer) {
+                return self::outcome(self::REFUSED, Message::of('note_confirm_unread', $twoOrderId), $twoOrderId);
+            }
+
+            return self::outcome($read['status'] === 404 ? self::MISSING : self::WAITING, Message::of('note_check_unread', $twoOrderId, $read['reason']), $twoOrderId);
         }
         if ($state === 'CANCELLED') {
-            return self::outcome(self::CANCELLED, Message::of('note_confirm_cancelled', $twoOrderId), $twoOrderId);
+            return self::outcome(self::CANCELLED, Message::of($buyer ? 'note_confirm_cancelled' : 'note_check_cancelled', $twoOrderId), $twoOrderId, $state);
         }
         $placed = $rows === null ? [] : ['rows_hash' => OrderLifecycle::rowsHash($rows)];
+        if (!$buyer) {
+            if ($state === 'UNVERIFIED') {
+                return self::outcome(self::WAITING, Message::of('note_check_unverified', $twoOrderId), $twoOrderId, $state);
+            }
+            if ($state !== 'VERIFIED' && (!in_array($state, self::PLACED_STATES, true) || $state === 'REFUNDED')) {
+                $this->logger->error('Two order ' . $twoOrderId . ' (order ' . $orderId . ') is ' . $state . ': left unchanged by the ' . $trigger . '.');
+
+                return self::outcome(self::WAITING, Message::of('note_check_state', $twoOrderId, $state), $twoOrderId, $state);
+            }
+            $changed = $this->snapshotMismatch($record, $rebuild);
+            if ($changed !== null) {
+                $this->logger->error('Order ' . $orderId . ': ' . Message::of($changed[1], $twoOrderId, ...$changed[2])->english() . ' The ' . $trigger . ' sent nothing to Two.');
+
+                return self::outcome(self::CHANGED, Message::of('note_check_unmatched', $twoOrderId), $twoOrderId, $state);
+            }
+        }
         if (in_array($state, self::PLACED_STATES, true)) {
             if ($placed !== []) {
                 $this->records->put($orderId, $placed);
             }
 
-            return self::outcome(self::CONFIRMED, Message::of('note_confirm_already', $twoOrderId, $state), $twoOrderId);
+            return self::outcome(self::CONFIRMED, $buyer ? Message::of('note_confirm_already', $twoOrderId, $state) : Message::of('note_check_already', $twoOrderId, $by), $twoOrderId, $state);
         }
         if ($state !== 'VERIFIED') {
-            return self::outcome(self::REFUSED, Message::of('note_confirm_state', $twoOrderId, $state), $twoOrderId);
+            return self::outcome(self::REFUSED, Message::of('note_confirm_state', $twoOrderId, $state), $twoOrderId, $state);
         }
 
         $path = '/v1/order/' . $twoOrderId . '/confirm';
         try {
-            $body = $this->postprocessing->apply(Postprocessing::ORDER_CONFIRM, 'buyer_return', $path, [], ['order_id' => $orderId]);
+            $body = $this->postprocessing->apply(Postprocessing::ORDER_CONFIRM, $trigger, $path, [], ['order_id' => $orderId]);
         } catch (OrderRefused $refused) {
-            return self::outcome(self::REFUSED, Message::of('note_confirm_not_built', $twoOrderId, $refused->note), $twoOrderId);
+            $message = Message::of('note_confirm_not_built', $twoOrderId, $refused->note);
+
+            return self::outcome($buyer ? self::REFUSED : self::WAITING, $message, $twoOrderId, $state);
         }
         $response = $this->client->request('POST', $path, $body, Client::TIMEOUT_SECONDS, true, IdempotencyKey::header(IdempotencyKey::forTwoOrder(IdempotencyKey::CONFIRM, $twoOrderId)));
         if (!$response->reachedTwo() || $response->status >= 400) {
-            return self::outcome(self::REFUSED, Message::of('note_confirm_refused', $twoOrderId, $this->errors->noteReason($response)), $twoOrderId);
+            if ($buyer) {
+                return self::outcome(self::REFUSED, Message::of('note_confirm_refused', $twoOrderId, $this->errors->noteReason($response)), $twoOrderId, $state);
+            }
+            $this->logger->error('Two order ' . $twoOrderId . ' (order ' . $orderId . ') confirm failed on the ' . $trigger . ', left for the next check: ' . $this->errors->reason($response));
+
+            return self::outcome(self::WAITING, Message::of('note_check_confirm_failed', $twoOrderId, $this->errors->noteReason($response)), $twoOrderId, $state);
         }
         $this->records->put($orderId, self::stateFields($response->json() ?? []) + ['two_order_state' => 'CONFIRMED'] + $placed);
 
-        return self::outcome(self::CONFIRMED, Message::of('note_confirmed', $twoOrderId), $twoOrderId);
+        return self::outcome(self::CONFIRMED, $buyer ? Message::of('note_confirmed', $twoOrderId) : Message::of('note_check_confirmed', $twoOrderId, $by), $twoOrderId, 'CONFIRMED');
     }
 
     /**
@@ -233,7 +303,7 @@ final class OrderFlow
      * reads it back whatever the cancel answered: the order counts as
      * cancelled once Two says so, including when it already was.
      *
-     * @return array{outcome: string, reason: string, message: Message, two_order_id: string}
+     * @return array{outcome: string, reason: string, message: Message, two_order_id: string, state: string}
      */
     public function cancel(int $orderId, string $token): array
     {
@@ -536,16 +606,27 @@ final class OrderFlow
     /** Two's state for the order, stored as read; null when Two did not answer with one. */
     public function readState(int $orderId, string $twoOrderId): ?string
     {
+        return $this->read($orderId, $twoOrderId)['state'];
+    }
+
+    /**
+     * readState with Two's HTTP status (0 when Two was not reached) and why
+     * no state came back.
+     *
+     * @return array{state: string|null, status: int, reason: Message|string}
+     */
+    private function read(int $orderId, string $twoOrderId): array
+    {
         $response = $this->client->request('GET', '/v1/order/' . $twoOrderId);
         $body = $response->json();
         if (!$response->reachedTwo() || $response->status >= 400 || !is_string($body['state'] ?? null)) {
             $this->logger->error('Two order ' . $twoOrderId . ' state could not be read: ' . $this->errors->reason($response));
 
-            return null;
+            return ['state' => null, 'status' => $response->reachedTwo() ? $response->status : 0, 'reason' => $this->errors->noteReason($response)];
         }
         $this->records->put($orderId, self::stateFields($body));
 
-        return strtoupper($body['state']);
+        return ['state' => strtoupper($body['state']), 'status' => $response->status, 'reason' => ''];
     }
 
     /**
@@ -638,10 +719,10 @@ final class OrderFlow
     }
 
     /**
-     * @return array{outcome: string, reason: string, message: Message, two_order_id: string}
+     * @return array{outcome: string, reason: string, message: Message, two_order_id: string, state: string}
      */
-    private static function outcome(string $outcome, Message $message, string $twoOrderId): array
+    private static function outcome(string $outcome, Message $message, string $twoOrderId, string $state = ''): array
     {
-        return ['outcome' => $outcome, 'reason' => $message->english(), 'message' => $message, 'two_order_id' => $twoOrderId];
+        return ['outcome' => $outcome, 'reason' => $message->english(), 'message' => $message, 'two_order_id' => $twoOrderId, 'state' => $state];
     }
 }

@@ -170,6 +170,8 @@ $_['column_left'] = 'Gjenstår å refundere';
 $_['text_panel_loading'] = 'Spør Two om denne ordren...';
 $_['error_panel'] = 'Two-fanen kunne ikke lastes inn. Åpne fanen på nytt for å prøve igjen, eller last inn siden på nytt.';
 $_['error_ajax'] = 'Butikken svarte ikke som forventet. Sjekk ordrehistorikken og Two-fanen før du prøver igjen.';
+$_['button_check_status'] = 'Sjekk status hos Two';
+$_['help_check_status'] = 'Denne ordren venter på at kjøperen skal komme tilbake fra Two. Spør Two nå: en ordre kjøperen har bekreftet, blir bekreftet og lagt inn, og en kansellert ordre blir notert.';
 
 // Diagnostics: trusted proxies for the checkout's rate limits.
 $_['entry_trusted_proxies'] = 'Klarerte proxyer';
@@ -318,9 +320,10 @@ $_['help_refresh_profile'] = 'Betalingsbetingelsene du kan tilby, kjøpertillegg
 $_['text_profile_refreshed'] = 'Merchantprofilen er oppdatert.';
 $_['error_profile_refresh'] = 'Kunne ikke oppdatere merchantprofilen - den tidligere mellomlagrede er fortsatt i bruk. Sjekk at API-nøkkelen verifiseres og at %s er tilgjengelig.';
 $_['entry_cron_url'] = 'URL for planlagt oppdatering';
-$_['help_cron_url'] = 'Kall denne én gang om dagen fra crontab på serveren din for å oppdatere merchantprofilen. Tokenet kan i stedet sendes som en X-Two-Cron-Token-header eller et POST-felt, som holder det utenfor prosesslister og proxy-logger. Hold det hemmelig; alle som har det, kan utløse oppdateringen. Hvis crontab allerede kaller OpenCarts egen cron-URL (siden Cron Jobs), kjører oppdateringen daglig med den, og denne URL-en trengs ikke.';
+$_['help_cron_url'] = 'Kall denne hvert 15. minutt fra crontab på serveren din. Hvert kall sjekker Two-ordrer som kjøperen bekreftet, men aldri kom tilbake fra, og legger dem inn, og oppdaterer merchantprofilen når det er tid for det. Tokenet kan i stedet sendes som en X-Two-Cron-Token-header eller et POST-felt, som holder det utenfor prosesslister og proxy-logger. Hold det hemmelig; alle som har det, kan utløse kjøringen. OpenCarts egen cron (siden Cron Jobs) kjører den samme kontrollen hver time og oppdateringen daglig, men bare denne URL-en henter inn en ordre innen 15 minutter.';
 $_['text_cron_last_run'] = 'Den planlagte oppdateringen kjørte sist %s.';
 $_['text_cron_never'] = 'Den planlagte oppdateringen har ikke kjørt ennå.';
+$_['text_pending_stale'] = '%d Two-ordrer venter på at kjøperen skal komme tilbake, og den planlagte URL-en har ikke kjørt den siste timen. Planlegg den hvert 15. minutt, så blir bekreftede ordrer lagt inn.';
 
 // TWO-27055: the product page message and buy button (Checkout fields).
 $_['entry_product_message_enabled'] = 'Vis melding på produktsider';

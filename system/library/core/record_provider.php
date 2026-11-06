@@ -50,7 +50,11 @@ final class RecordProvider
     public const CRON_TOKEN_KEY = 'cron_token';
     public const CRON_REJECT_LOGGED_KEY = 'cron_reject_logged_at';
 
-    /** One accepted call of the public refresh URL per this many seconds: a daily crontab never trips it. */
+    /**
+     * The public URL refreshes the record at most once per this many seconds.
+     * Every accepted call still runs the pending check (TWO-26300), so the
+     * URL can be scheduled every 15 minutes.
+     */
     public const CRON_MIN_INTERVAL = 900;
     public const REJECT_LOG_INTERVAL = 3_600;
 
@@ -173,10 +177,11 @@ final class RecordProvider
 
     /**
      * The scheduled refresh as called on its public URL by the merchant's
-     * own crontab: the presented token must match the stored one, and one
-     * accepted run per CRON_MIN_INTERVAL. A rejection is logged at most once
-     * per REJECT_LOG_INTERVAL, since anyone can call the URL. One of the
-     * CRON_* values.
+     * own crontab: the presented token must match the stored one, and the
+     * record is refreshed at most once per CRON_MIN_INTERVAL (THROTTLED when
+     * it was not due; the call is still accepted). A rejection is logged at
+     * most once per REJECT_LOG_INTERVAL, since anyone can call the URL. One
+     * of the CRON_* values.
      */
     public function runTokenRefresh(string $candidate): string
     {

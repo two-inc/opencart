@@ -170,6 +170,8 @@ $_['column_left'] = 'Left to refund';
 $_['text_panel_loading'] = 'Asking Two for this order...';
 $_['error_panel'] = 'The Two tab could not be loaded. Open the tab again to retry, or reload the page.';
 $_['error_ajax'] = 'The shop did not answer as expected. Check the order history and the Two tab before trying again.';
+$_['button_check_status'] = 'Check status with Two';
+$_['help_check_status'] = 'This order is waiting for the buyer to return from Two. Ask Two now: an order the buyer verified is confirmed and placed, a cancelled one is noted.';
 
 // Diagnostics: trusted proxies for the checkout's rate limits.
 $_['entry_trusted_proxies'] = 'Trusted proxies';
@@ -318,9 +320,10 @@ $_['help_refresh_profile'] = 'Your offerable payment terms, buyer-surcharge rate
 $_['text_profile_refreshed'] = 'Merchant profile refreshed.';
 $_['error_profile_refresh'] = 'Could not refresh the merchant profile - the previously cached one is still in use. Check that the API key verifies and that %s is reachable.';
 $_['entry_cron_url'] = 'Scheduled refresh URL';
-$_['help_cron_url'] = 'Call this once a day from your server\'s crontab to refresh the merchant profile. The token may instead be sent as an X-Two-Cron-Token header or a POST field, which keeps it out of process listings and proxy logs. Keep it secret; anyone holding it can trigger the refresh. If your crontab already calls OpenCart\'s own cron URL (the Cron Jobs page), the refresh runs daily with it and this URL is not needed.';
+$_['help_cron_url'] = 'Call this every 15 minutes from your server\'s crontab. Each call checks Two orders the buyer verified but never returned from and places them, and refreshes the merchant profile when it is due. The token may instead be sent as an X-Two-Cron-Token header or a POST field, which keeps it out of process listings and proxy logs. Keep it secret; anyone holding it can trigger the run. OpenCart\'s own cron (the Cron Jobs page) runs the same check hourly and the refresh daily, but only this URL recovers an order within 15 minutes.';
 $_['text_cron_last_run'] = 'The scheduled refresh last ran at %s.';
 $_['text_cron_never'] = 'The scheduled refresh has not run yet.';
+$_['text_pending_stale'] = '%d Two orders are waiting for the buyer to return, and the scheduled URL has not run in the last hour. Schedule it every 15 minutes so verified orders are placed.';
 
 // TWO-27055: the product page message and buy button (Checkout fields).
 $_['entry_product_message_enabled'] = 'Show message on product pages';

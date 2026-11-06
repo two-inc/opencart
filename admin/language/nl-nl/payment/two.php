@@ -170,6 +170,8 @@ $_['column_left'] = 'Nog terug te betalen';
 $_['text_panel_loading'] = 'Two wordt gevraagd naar deze bestelling...';
 $_['error_panel'] = 'Het tabblad Two kon niet worden geladen. Open het tabblad opnieuw om het nog eens te proberen, of laad de pagina opnieuw.';
 $_['error_ajax'] = 'De winkel antwoordde niet zoals verwacht. Controleer de bestelgeschiedenis en het tabblad Two voordat je het opnieuw probeert.';
+$_['button_check_status'] = 'Status controleren bij Two';
+$_['help_check_status'] = 'Deze bestelling wacht tot de koper terugkeert van Two. Vraag het Two nu: een bestelling die de koper heeft geverifieerd, wordt bevestigd en geplaatst, en een geannuleerde wordt genoteerd.';
 
 // Diagnostics: trusted proxies for the checkout's rate limits.
 $_['entry_trusted_proxies'] = 'Vertrouwde proxy\'s';
@@ -318,9 +320,10 @@ $_['help_refresh_profile'] = 'Uw aan te bieden betaaltermijnen, kopertoeslagtari
 $_['text_profile_refreshed'] = 'Merchantprofiel vernieuwd.';
 $_['error_profile_refresh'] = 'Kon het merchantprofiel niet vernieuwen - het eerder gecachete profiel is nog in gebruik. Controleer of de API-sleutel verifieert en of %s bereikbaar is.';
 $_['entry_cron_url'] = 'URL voor geplande vernieuwing';
-$_['help_cron_url'] = 'Roep dit eenmaal per dag aan vanuit de crontab van uw server om het merchantprofiel te vernieuwen. Het token kan ook worden verzonden als X-Two-Cron-Token-header of als POST-veld, waardoor het buiten proceslijsten en proxylogs blijft. Houd het geheim; iedereen die het heeft, kan de vernieuwing starten. Als uw crontab de eigen cron-URL van OpenCart al aanroept (de pagina Cron Jobs), loopt de vernieuwing daarmee dagelijks mee en is deze URL niet nodig.';
+$_['help_cron_url'] = 'Roep dit elke 15 minuten aan vanuit de crontab van uw server. Elke aanroep controleert Two-bestellingen die de koper heeft geverifieerd maar waarvan hij nooit is teruggekeerd, plaatst ze, en vernieuwt het merchantprofiel wanneer dat nodig is. Het token kan ook worden verzonden als X-Two-Cron-Token-header of als POST-veld, waardoor het buiten proceslijsten en proxylogs blijft. Houd het geheim; iedereen die het heeft, kan de run starten. De eigen cron van OpenCart (de pagina Cron Jobs) voert dezelfde controle elk uur uit en de vernieuwing dagelijks, maar alleen deze URL plaatst een bestelling binnen 15 minuten.';
 $_['text_cron_last_run'] = 'De geplande vernieuwing is voor het laatst uitgevoerd op %s.';
 $_['text_cron_never'] = 'De geplande vernieuwing is nog niet uitgevoerd.';
+$_['text_pending_stale'] = '%d Two-bestellingen wachten tot de koper terugkeert, en de geplande URL heeft het afgelopen uur niet gedraaid. Plan hem elke 15 minuten in, zodat geverifieerde bestellingen worden geplaatst.';
 
 // TWO-27055: the product page message and buy button (Checkout fields).
 $_['entry_product_message_enabled'] = 'Bericht tonen op productpagina’s';

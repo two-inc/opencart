@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Opencart\System\Library\Extension\Two\Opencart;
 
 use Opencart\System\Library\Extension\Two\Core\OrderRecords;
+use Opencart\System\Library\Extension\Two\Core\PendingCheck;
 
 /**
  * The core's OrderRecords port over the plugin's own `two_order` table, one
@@ -20,7 +21,7 @@ final class DbOrderRecords implements OrderRecords
     public const TABLE = 'two_order';
 
     /** Columns added after the table first shipped, added in place by install() rather than renaming the table aside. */
-    public const ADDED_COLUMNS = ['rows_hash' => "CHAR(64) NOT NULL DEFAULT ''", 'edit_key' => "VARCHAR(100) NOT NULL DEFAULT ''", 'edit_refused_hash' => "CHAR(64) NOT NULL DEFAULT ''", 'buyer_fields' => "TEXT NULL", 'payment_terms' => "VARCHAR(255) NOT NULL DEFAULT ''", 'payment_fee' => "CHAR(1) NOT NULL DEFAULT ''", 'placed_fee' => "TEXT NULL"];
+    public const ADDED_COLUMNS = ['rows_hash' => "CHAR(64) NOT NULL DEFAULT ''", 'edit_key' => "VARCHAR(100) NOT NULL DEFAULT ''", 'edit_refused_hash' => "CHAR(64) NOT NULL DEFAULT ''", 'buyer_fields' => "TEXT NULL", 'payment_terms' => "VARCHAR(255) NOT NULL DEFAULT ''", 'payment_fee' => "CHAR(1) NOT NULL DEFAULT ''", 'placed_fee' => "TEXT NULL", 'checked_at' => 'INT(11) NOT NULL DEFAULT 0', 'missing_at' => 'INT(11) NOT NULL DEFAULT 0', 'check_closed' => "VARCHAR(16) NOT NULL DEFAULT ''"];
 
     /** @var list<string>|null */
     private ?array $columns = null;
@@ -83,11 +84,51 @@ final class DbOrderRecords implements OrderRecords
             . '`placed_fee` TEXT NULL,'
             . '`edit_key` VARCHAR(100) NOT NULL DEFAULT \'\','
             . '`edit_refused_hash` CHAR(64) NOT NULL DEFAULT \'\','
+            . '`checked_at` INT(11) NOT NULL DEFAULT 0,'
+            . '`missing_at` INT(11) NOT NULL DEFAULT 0,'
+            . '`check_closed` VARCHAR(16) NOT NULL DEFAULT \'\','
             . '`date_added` DATETIME NOT NULL,'
             . '`date_modified` DATETIME NOT NULL,'
             . 'PRIMARY KEY (`order_id`),'
             . 'KEY `two_order_id` (`two_order_id`)'
             . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci';
+    }
+
+    /**
+     * The orders the pending check takes next (PendingCheck): unplaced shop
+     * orders paid with Two that hold a Two order id, last touched at
+     * checkout over MIN_AGE ago and created under MAX_AGE ago, neither
+     * cancelled at Two nor closed by the check, not checked within
+     * RECHECK_AFTER; oldest check first. Ages are the database's own clock,
+     * the one that stamped the order; the check stamp is Unix seconds.
+     *
+     * @return list<int>
+     */
+    public static function waiting(\Opencart\System\Library\DB $db, int $voidStatusId, int $now, int $limit = PendingCheck::BATCH): array
+    {
+        $query = $db->query('SELECT `t`.`order_id` FROM ' . self::waitingFrom($voidStatusId)
+            . " AND `t`.`checked_at` < '" . ($now - PendingCheck::RECHECK_AFTER) . "'"
+            . ' ORDER BY `t`.`checked_at` ASC, `t`.`order_id` ASC LIMIT ' . max(1, $limit));
+
+        return is_object($query) ? array_map(static fn (array $row): int => (int) $row['order_id'], $query->rows) : [];
+    }
+
+    /** How many orders wait for the pending check, however recently checked: the Diagnostics tab's warning. */
+    public static function waitingCount(\Opencart\System\Library\DB $db, int $voidStatusId): int
+    {
+        $query = $db->query('SELECT COUNT(*) AS `waiting` FROM ' . self::waitingFrom($voidStatusId));
+
+        return is_object($query) ? (int) ($query->row['waiting'] ?? 0) : 0;
+    }
+
+    private static function waitingFrom(int $voidStatusId): string
+    {
+        return '`' . DB_PREFIX . self::TABLE . '` `t` JOIN `' . DB_PREFIX . 'order` `o` ON `o`.`order_id` = `t`.`order_id`'
+            . " WHERE `t`.`two_order_id` <> '' AND `t`.`two_order_state` <> 'CANCELLED' AND `t`.`check_closed` = ''"
+            . " AND `o`.`order_status_id` IN (0, '" . $voidStatusId . "')"
+            . " AND `o`.`payment_method` LIKE '%\"code\":\"two.two\"%'"
+            . ' AND `o`.`date_modified` < NOW() - INTERVAL ' . PendingCheck::MIN_AGE . ' SECOND'
+            . ' AND `o`.`date_added` > NOW() - INTERVAL ' . PendingCheck::MAX_AGE . ' SECOND';
     }
 
     public function get(int $orderId): ?array

@@ -8,8 +8,10 @@ use Opencart\System\Library\Extension\Two\Core\ApiKeyVerdict;
 use Opencart\System\Library\Extension\Two\Core\Brand;
 use Opencart\System\Library\Extension\Two\Core\ErrorLog;
 use Opencart\System\Library\Extension\Two\Core\Message;
+use Opencart\System\Library\Extension\Two\Core\OrderFlow;
 use Opencart\System\Library\Extension\Two\Core\OrderLifecycle;
 use Opencart\System\Library\Extension\Two\Core\OrderRefunds;
+use Opencart\System\Library\Extension\Two\Core\PendingCheck;
 use Opencart\System\Library\Extension\Two\Core\Postprocessing;
 use Opencart\System\Library\Extension\Two\Core\RefundRecords;
 use Opencart\System\Library\Extension\Two\Core\RateLimiter;
@@ -160,6 +162,9 @@ class Two extends \Opencart\System\Engine\Controller
         $data['cron_url'] = HTTP_CATALOG . 'index.php?route=' . Services::CRON_ACTION . '&token=' . rawurlencode($services->records->cronToken());
         $ranAt = (int) $settings->store()->get(RecordProvider::CRON_LAST_RUN_KEY);
         $data['cron_last_run'] = $ranAt > 0 ? sprintf($this->language->get('text_cron_last_run'), gmdate('Y-m-d H:i', $ranAt) . 'Z') : $this->language->get('text_cron_never');
+        // Orders the buyer verified but never returned from are placed only by the pending check (TWO-26300): warn when they wait and the URL has stopped running.
+        $waiting = DbOrderRecords::waitingCount($this->db, (int) $this->config->get('config_void_status_id'));
+        $data['pending_stale'] = PendingCheck::scheduleStale($waiting, (int) $settings->store()->get(PendingCheck::LAST_RUN_KEY), time()) ? sprintf($this->language->get('text_pending_stale'), $waiting) : '';
         $shopCurrency = (string) $this->config->get('config_currency');
         $data['entry_min_order_amount'] = sprintf($this->language->get('entry_min_order_amount'), $shopCurrency);
 
@@ -461,7 +466,8 @@ class Two extends \Opencart\System\Engine\Controller
     /**
      * Called by Extensions > Payments > Install. Seeds the fresh-install
      * defaults (the status maps by the shop's status names) and registers
-     * the daily merchant-record refresh with OpenCart's cron.
+     * the daily merchant-record refresh and the hourly pending check with
+     * OpenCart's cron.
      */
     public function install(): void
     {
@@ -487,6 +493,8 @@ class Two extends \Opencart\System\Engine\Controller
         $this->load->model('setting/cron');
         $this->model_setting_cron->deleteCronByCode(Services::CRON_CODE);
         $this->model_setting_cron->addCron(Services::CRON_CODE, Services::CRON_DESCRIPTION, Services::CRON_CYCLE, Services::CRON_ACTION, true);
+        $this->model_setting_cron->deleteCronByCode(Services::PENDING_CRON_CODE);
+        $this->model_setting_cron->addCron(Services::PENDING_CRON_CODE, Services::PENDING_CRON_DESCRIPTION, Services::PENDING_CRON_CYCLE, Services::CRON_ACTION, true);
 
         $this->load->model('setting/event');
         $this->model_setting_event->deleteEventByCode(Services::EVENT_CODE);
@@ -537,6 +545,7 @@ class Two extends \Opencart\System\Engine\Controller
 
         $this->load->model('setting/cron');
         $this->model_setting_cron->deleteCronByCode(Services::CRON_CODE);
+        $this->model_setting_cron->deleteCronByCode(Services::PENDING_CRON_CODE);
 
         $this->load->model('setting/event');
         $this->model_setting_event->deleteEventByCode(Services::EVENT_CODE);
@@ -605,7 +614,8 @@ class Two extends \Opencart\System\Engine\Controller
         $text = [];
         foreach (['text_two_order', 'text_two_state', 'text_no_two_order', 'button_invoice', 'help_invoice', 'button_credit_note', 'help_credit_note', 'text_refund', 'text_refunded', 'text_remaining',
             'text_refund_help', 'text_refund_unavailable', 'text_refund_unread', 'text_refunds', 'column_line', 'column_quantity', 'column_net', 'column_tax', 'column_rate', 'column_refund_quantity',
-            'column_date', 'column_amount', 'column_state', 'entry_refund_net', 'entry_refund_tax', 'entry_refund_rate', 'entry_refund_reason', 'button_refund', 'button_retry', 'text_refund_blocked', 'column_left', 'error_ajax'] as $key) {
+            'column_date', 'column_amount', 'column_state', 'entry_refund_net', 'entry_refund_tax', 'entry_refund_rate', 'entry_refund_reason', 'button_refund', 'button_retry', 'text_refund_blocked', 'column_left', 'error_ajax',
+            'button_check_status', 'help_check_status'] as $key) {
             $text[$key] = $this->language->get($key);
         }
         $unresolved = false;
@@ -634,7 +644,58 @@ class Two extends \Opencart\System\Engine\Controller
             'panel_action' => $link('panel'),
             'rates' => $two === null ? [] : OrderRefunds::rates($two),
             'refunds' => $refunds,
+            // Waiting for the buyer's return: the merchant may ask Two now (TWO-26300).
+            'check_action' => $order !== null && $this->unplaced($order) ? $link('checkStatus') : '',
         ]);
+    }
+
+    /**
+     * "Check status with Two" on an unplaced order: asks Two at once, at any
+     * age, and places the order if Two holds it verified or confirmed. The
+     * check runs in the order's store front (a store instance), so placing
+     * fires the storefront's order events and the order mail, as the buyer's
+     * return would; the history note is written there. Same rights as a
+     * refund.
+     */
+    public function checkStatus(): void
+    {
+        $this->load->language(self::ROUTE);
+        if (!$this->user->hasPermission('modify', 'sale/order') || !$this->user->hasPermission('modify', self::ROUTE)) {
+            $this->json(['error' => $this->language->get('error_refund_permission')]);
+
+            return;
+        }
+        $orderId = (int) ($this->request->get['order_id'] ?? 0);
+        $order = $this->twoOrder($orderId);
+        if ($order === null) {
+            $this->json(['error' => $this->language->get('error_invoice_no_reference')]);
+
+            return;
+        }
+        $this->load->model('setting/store');
+        $store = $this->model_setting_store->createStoreInstance((int) $order['store_id'], (string) $this->config->get('config_language'));
+        $loader = $store->get('load');
+        $result = $loader instanceof \Opencart\System\Engine\Loader ? $loader->controller(Services::CRON_ACTION . '.check', $orderId, $this->user->getUserName()) : null;
+        if (!is_array($result) || !($result['message'] ?? null) instanceof Message) {
+            $this->json(['error' => $this->language->get('error_ajax')]);
+
+            return;
+        }
+        // The answer in the admin user's language; the history note was written in the shop's.
+        $text = NoteText::render($result['message'], $this->load, $this->language, NoteText::adminCode($this->config));
+        $this->json($result['outcome'] === OrderFlow::CONFIRMED ? ['success' => $text] : ['error' => $text]);
+    }
+
+    /**
+     * Not yet placed: status 0, or the shop's void status.
+     *
+     * @param array<string, mixed> $order
+     */
+    private function unplaced(array $order): bool
+    {
+        $status = (int) $order['order_status_id'];
+
+        return $status === 0 || $status === (int) $this->config->get('config_void_status_id');
     }
 
     private function orderLink(string $action, int $orderId): string

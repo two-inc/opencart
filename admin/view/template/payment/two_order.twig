@@ -9,6 +9,12 @@
     {% endif %}
   </tbody>
 </table>
+{% if check_action %}
+<form id="form-two-check" action="{{ check_action|e }}" method="post" class="mb-3 two-action">
+  <button type="submit" class="btn btn-primary"><i class="fa-solid fa-rotate"></i> {{ button_check_status|e }}</button>
+  <div class="form-text">{{ help_check_status|e }}</div>
+</form>
+{% endif %}
 {% if invoice %}
 <a href="{{ invoice|e }}" target="_blank" rel="noopener" class="btn btn-primary"><i class="fa-solid fa-file-pdf"></i> {{ button_invoice|e }}</a>
 {% endif %}
@@ -66,7 +72,7 @@
 {% endif %}
 {% if two_order_id %}
 <script>
-// Refund and retry post here, show the outcome, and reload the tab whatever it was, so the form, the figures and the Retry button are never stale.
+// Refund, retry and the status check post here, show the outcome, and reload the tab whatever it was, so the form, the figures and the Retry button are never stale.
 $(document).off('submit.two', '#two-order-panel form.two-action').on('submit.two', '#two-order-panel form.two-action', function (event) {
   event.preventDefault();
   var form = this;

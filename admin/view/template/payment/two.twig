@@ -561,6 +561,7 @@
                   <input type="text" id="input-cron-url" class="form-control" value="{{ cron_url|e }}" readonly/>
                   <div class="form-text">{{ help_cron_url|e }}</div>
                   <div class="form-text" id="two-cron-last-run">{{ cron_last_run|e }}</div>
+                  {% if pending_stale %}<div class="alert alert-warning mt-2" id="two-pending-stale">{{ pending_stale|e }}</div>{% endif %}
                 </div>
               </div>
             </div>

@@ -170,6 +170,8 @@ $_['column_left'] = 'Pendiente de reembolsar';
 $_['text_panel_loading'] = 'Consultando a Two sobre este pedido...';
 $_['error_panel'] = 'No se ha podido cargar la pestaña Two. Vuelve a abrir la pestaña para reintentarlo o vuelve a cargar la página.';
 $_['error_ajax'] = 'La tienda no respondió como se esperaba. Revisa el historial del pedido y la pestaña Two antes de volver a intentarlo.';
+$_['button_check_status'] = 'Comprobar estado con Two';
+$_['help_check_status'] = 'Este pedido espera a que el comprador vuelva de Two. Consulte a Two ahora: un pedido que el comprador verificó se confirma y se registra, y uno cancelado se anota.';
 
 // Diagnostics: trusted proxies for the checkout's rate limits.
 $_['entry_trusted_proxies'] = 'Proxies de confianza';
@@ -318,9 +320,10 @@ $_['help_refresh_profile'] = 'Los plazos de pago que puede ofrecer, los recargos
 $_['text_profile_refreshed'] = 'Perfil del comercio actualizado.';
 $_['error_profile_refresh'] = 'No se pudo actualizar el perfil del comercio: se sigue usando el que estaba en caché. Compruebe que la clave de API se verifica y que %s es accesible.';
 $_['entry_cron_url'] = 'URL de la actualización programada';
-$_['help_cron_url'] = 'Llame a esta URL una vez al día desde el crontab de su servidor para actualizar el perfil del comercio. El token también puede enviarse como cabecera X-Two-Cron-Token o como campo POST, lo que lo mantiene fuera de las listas de procesos y de los registros del proxy. Manténgalo en secreto; cualquiera que lo tenga puede lanzar la actualización. Si su crontab ya llama a la URL de cron propia de OpenCart (la página Cron Jobs), la actualización se ejecuta a diario con ella y esta URL no es necesaria.';
+$_['help_cron_url'] = 'Llame a esta URL cada 15 minutos desde el crontab de su servidor. Cada llamada comprueba los pedidos de Two que el comprador verificó pero de los que nunca volvió, los registra y actualiza el perfil del comercio cuando toca. El token también puede enviarse como cabecera X-Two-Cron-Token o como campo POST, lo que lo mantiene fuera de las listas de procesos y de los registros del proxy. Manténgalo en secreto; cualquiera que lo tenga puede lanzar la ejecución. El cron propio de OpenCart (la página Cron Jobs) ejecuta la misma comprobación cada hora y la actualización a diario, pero solo esta URL recupera un pedido en 15 minutos.';
 $_['text_cron_last_run'] = 'La actualización programada se ejecutó por última vez el %s.';
 $_['text_cron_never'] = 'La actualización programada aún no se ha ejecutado.';
+$_['text_pending_stale'] = '%d pedidos de Two esperan a que el comprador vuelva, y la URL programada no se ha ejecutado en la última hora. Prográmela cada 15 minutos para que se registren los pedidos verificados.';
 
 // TWO-27055: the product page message and buy button (Checkout fields).
 $_['entry_product_message_enabled'] = 'Mostrar mensaje en las páginas de producto';
