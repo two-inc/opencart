@@ -144,7 +144,7 @@ final class OrderFlowSpec
             [$flow] = self::flow($responses, $records);
             $flow->create($order('ES_IVA_CANARY', null), [$line], [], self::TOKEN);
             $stored = $records->rows[42]['tax_codes'] ?? null;
-            TinyAssert::same('{"product:7":"ES_IVA_CANARY"}', $stored, 'tax code record: ' . $description . ' (kept at create)');
+            TinyAssert::same('{"codes":{"product:7":"ES_IVA_CANARY"},"mapped":["product:7"]}', $stored, 'tax code record: ' . $description . ' (kept at create)');
             $recorded = $withRecord ? TaxCodes::decodeRecord((string) $stored) : null;
             $rebuild = static fn (array $record): array => ['order' => $order('ES_IVA_EXPORT', $recorded), 'lines' => [$line], 'totals' => []];
             $result = $flow->confirm(42, self::TOKEN, $rebuild, ['products' => [], 'totals' => [], 'addresses' => []]);

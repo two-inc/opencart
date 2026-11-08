@@ -412,8 +412,8 @@ final class OrderFlow
      * @param list<array<string, mixed>> $lines
      * @param list<array<string, mixed>> $totals
      * @param array<string, mixed>       $context
-     * @param array<string, string>|null $taxCodes set to the build's placement record of tax codes
-     * @param-out array<string, string> $taxCodes
+     * @param array{codes: array<string, string>, mapped: list<string>}|null $taxCodes set to the build's placement record of tax codes
+     * @param-out array{codes: array<string, string>, mapped: list<string>} $taxCodes
      * @return array<string, mixed>
      */
     private function payload(array $order, array $lines, array $totals, array $context, string $trigger, string $requestType = Postprocessing::ORDER_CREATE, ?array &$taxCodes = null): array

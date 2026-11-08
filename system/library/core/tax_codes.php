@@ -138,12 +138,13 @@ final class TaxCodes
      * to the mapping, the addresses or a tax rule never moves a placed order
      * (TWO-27110). A line placement did not code (one an edit added, or an
      * order placed before the record existed) is resolved as at placement.
-     * Step 4 shares the codes of the lines with a class, recorded or
-     * resolved, never a code step 4 gave.
+     * Step 4 shares the recorded codes the mapping gave at placement (the
+     * record's `mapped` keys) and the codes resolved now, never a code step 4
+     * gave, even when a line's tax class has changed since.
      *
      * @param list<array<string, mixed>>                                                                             $items the payload's line items
      * @param list<array{class: int, rates: list<array{id: int, rate: float, type: string}>, line?: string|null}|null> $keys  one per item: its tax class, the rates applied and the line's record key, null for a line with none
-     * @param array{map?: string|null, exempt?: bool, recorded?: array<string, string>|null}|null                    $facts the stored mapping, whether the buyer is exempt (step 1) and the placement record (null on a create)
+     * @param array{map?: string|null, exempt?: bool, recorded?: array{codes: array<string, string>, mapped: list<string>}|null}|null $facts the stored mapping, whether the buyer is exempt (step 1) and the placement record (null on a create)
      * @return list<array<string, mixed>>
      *
      * @throws OrderRefused when a 0% line needs a mapping the plugin's form could not have written (the last guard: checkout withholds Two first)
@@ -157,7 +158,7 @@ final class TaxCodes
         $map = null;
         $codes = [];
         $keyless = [];
-        // Recorded codes of lines with no class: kept as placed, and out of step 4's pool.
+        // Recorded codes step 4 gave at placement: kept as placed, and out of step 4's pool.
         $kept = [];
         foreach ($items as $i => $item) {
             if ((float) $item['tax_rate'] != 0.0) {
@@ -166,11 +167,11 @@ final class TaxCodes
             $key = $keys[$i] ?? null;
             $classed = $key !== null && $key['class'] > 0;
             $line = $key['line'] ?? null;
-            if ($line !== null && isset($recorded[$line])) {
-                if ($classed) {
-                    $codes[$i] = $recorded[$line];
+            if ($line !== null && isset($recorded['codes'][$line])) {
+                if (in_array($line, $recorded['mapped'], true)) {
+                    $codes[$i] = $recorded['codes'][$line];
                 } else {
-                    $kept[$i] = $recorded[$line];
+                    $kept[$i] = $recorded['codes'][$line];
                 }
                 continue;
             }
@@ -202,24 +203,28 @@ final class TaxCodes
 
     /**
      * The placement record (TWO-27110): the code each 0% line with a record
-     * key was sent with, by that key, whether its class or step 4 gave it. A
-     * line sent with no code is not recorded. The first line with a key
-     * decides it.
+     * key was sent with, by that key (`codes`), and which of those the
+     * mapping gave, steps 1 to 3 for a line with a tax class (`mapped`), as
+     * against step 4. A line sent with no code is not recorded. The first
+     * line with a key decides it.
      *
      * @param list<array<string, mixed>>        $items the coded line items
      * @param list<array<string, mixed>|null>   $keys  as apply()'s
-     * @return array<string, string>
+     * @return array{codes: array<string, string>, mapped: list<string>}
      */
     public static function record(array $items, array $keys): array
     {
-        $record = [];
+        $record = ['codes' => [], 'mapped' => []];
         foreach ($items as $i => $item) {
             $key = $keys[$i] ?? null;
             $line = is_string($key['line'] ?? null) ? $key['line'] : null;
-            if ($line === null || (float) $item['tax_rate'] != 0.0 || isset($record[$line]) || !self::isCode($item['tax_code'] ?? null)) {
+            if ($line === null || (float) $item['tax_rate'] != 0.0 || isset($record['codes'][$line]) || !self::isCode($item['tax_code'] ?? null)) {
                 continue;
             }
-            $record[$line] = $item['tax_code'];
+            $record['codes'][$line] = $item['tax_code'];
+            if ((int) ($key['class'] ?? 0) > 0) {
+                $record['mapped'][] = $line;
+            }
         }
 
         return $record;
@@ -228,32 +233,41 @@ final class TaxCodes
     /**
      * The record as stored on the order's row: '' for none.
      *
-     * @param array<string, string> $record
+     * @param array{codes: array<string, string>, mapped: list<string>} $record
      */
     public static function encodeRecord(array $record): string
     {
-        return $record === [] ? '' : (string) json_encode($record, JSON_UNESCAPED_SLASHES);
+        return $record['codes'] === [] ? '' : (string) json_encode($record, JSON_UNESCAPED_SLASHES);
     }
 
     /**
      * The stored record; null when there is none (an order placed before
      * the record existed, or with no coded line) or it is not one.
      *
-     * @return array<string, string>|null
+     * @return array{codes: array<string, string>, mapped: list<string>}|null
      */
     public static function decodeRecord(string $raw): ?array
     {
         $decoded = $raw === '' ? null : json_decode($raw, true);
-        if (!is_array($decoded) || $decoded === []) {
+        if (!is_array($decoded) || !is_array($decoded['codes'] ?? null) || $decoded['codes'] === [] || !is_array($decoded['mapped'] ?? null) || !array_is_list($decoded['mapped'])) {
             return null;
         }
-        foreach ($decoded as $line => $code) {
+        $codes = [];
+        foreach ($decoded['codes'] as $line => $code) {
             if (!is_string($line) || $line === '' || !self::isCode($code)) {
                 return null;
             }
+            $codes[$line] = $code;
+        }
+        $mapped = [];
+        foreach ($decoded['mapped'] as $line) {
+            if (!is_string($line) || !isset($codes[$line])) {
+                return null;
+            }
+            $mapped[] = $line;
         }
 
-        return $decoded;
+        return ['codes' => $codes, 'mapped' => $mapped];
     }
 
     /**

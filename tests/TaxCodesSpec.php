@@ -100,30 +100,35 @@ final class TaxCodesSpec
         $ship = ['code' => 'shipping', 'title' => 'Ship', 'value' => 10, 'tax' => 0, 'rate' => 0.0, 'tax_key' => ['class' => 10, 'rates' => []]];
         $coupon = ['code' => 'coupon', 'title' => 'Coupon', 'value' => -10];
         $shipNone = ['code' => 'shipping', 'title' => 'Ship', 'value' => 10, 'tax' => 0, 'rate' => 0.0, 'tax_key' => null];
+        $voucher = ['code' => 'voucher', 'title' => 'Gift voucher', 'value' => -20];
+        // The record: each line's code, and the keys whose code the mapping gave (steps 1 to 3).
+        $r = static fn (array $codes, array $mapped): array => ['codes' => $codes, 'mapped' => $mapped];
         $cases = [
-            [$placed, [$a], [], ['product:1' => self::CANARY], $changed, false, [$a], [], [self::CANARY], 'the mapping changed after placement: the edit sends the recorded code'],
-            [$placed, [$a], [], ['product:1' => self::CANARY], $placed, true, [['A', 100, 0, 0.0, [9, []], 1]], [], [self::CANARY], 'the addresses and rates changed (now exempt, no rule): still the recorded code'],
-            [$placed, [$a], [], ['product:1' => self::CANARY], $changed, false, [$a, ['B', 50, 0, 0.0, [9, []], 2]], [], [self::CANARY, self::INTRA], 'a line an edit added is resolved from the mapping as it is now'],
-            [$placed, [$a], [$ship, $coupon], ['product:1' => self::CANARY, 'shipping' => self::EXPORT], $changed, false, [$a], [$ship, $coupon], [self::CANARY, self::EXPORT, null], 'a charge is recorded under its total code; a discount is not, and shares nothing when the recorded codes disagree'],
-            [$placed, [$a], [$coupon], ['product:1' => self::CANARY, 'discount' => self::CANARY], $changed, false, [$a], [$coupon], [self::CANARY, self::CANARY], 'a discount step 4 coded is recorded, and keeps its code'],
-            [$placed, [$a], [$shipNone], ['product:1' => self::CANARY, 'shipping' => self::CANARY], $changed, false, [$a, ['B', 50, 0, 0.0, [9, []], 2]], [$shipNone], [self::CANARY, self::INTRA, self::CANARY], 'shipping with no class keeps its placed code when an edit adds a line with another code'],
-            [$placed, [$a], [$shipNone], ['product:1' => self::CANARY, 'shipping' => self::CANARY], $changed, false, [['C', 100, 25, 0.25, [9, ['8:25']], 3]], [$shipNone], [null, self::CANARY], 'shipping with no class keeps its placed code when an edit removes the only coded line'],
-            [[], [$a], [], [], $changed, false, [$a], [], [self::INTRA], 'a line placed with no code is not recorded, so a rebuild resolves it'],
-            [$placed, [['A', 100, 25, 0.25, [9, ['8:25']], 1]], [], [], $changed, false, [$a], [], [self::INTRA], 'a taxed line is never recorded'],
+            [$placed, [$a], [], $r(['product:1' => self::CANARY], ['product:1']), $changed, false, [$a], [], [self::CANARY], 'the mapping changed after placement: the edit sends the recorded code'],
+            [$placed, [$a], [], $r(['product:1' => self::CANARY], ['product:1']), $placed, true, [['A', 100, 0, 0.0, [9, []], 1]], [], [self::CANARY], 'the addresses and rates changed (now exempt, no rule): still the recorded code'],
+            [$placed, [$a], [], $r(['product:1' => self::CANARY], ['product:1']), $changed, false, [$a, ['B', 50, 0, 0.0, [9, []], 2]], [], [self::CANARY, self::INTRA], 'a line an edit added is resolved from the mapping as it is now'],
+            [$placed, [$a], [$ship, $coupon], $r(['product:1' => self::CANARY, 'shipping' => self::EXPORT], ['product:1', 'shipping']), $changed, false, [$a], [$ship, $coupon], [self::CANARY, self::EXPORT, null], 'a charge is recorded under its total code; a discount is not, and shares nothing when the recorded codes disagree'],
+            [$placed, [$a], [$coupon], $r(['product:1' => self::CANARY, 'discount' => self::CANARY], ['product:1']), $changed, false, [$a], [$coupon], [self::CANARY, self::CANARY], 'a discount step 4 coded is recorded, and keeps its code'],
+            [$placed, [$a], [$shipNone], $r(['product:1' => self::CANARY, 'shipping' => self::CANARY], ['product:1']), $changed, false, [$a, ['B', 50, 0, 0.0, [9, []], 2]], [$shipNone], [self::CANARY, self::INTRA, self::CANARY], 'shipping with no class keeps its placed code when an edit adds a line with another code'],
+            [$placed, [$a], [$shipNone], $r(['product:1' => self::CANARY, 'shipping' => self::CANARY], ['product:1']), $changed, false, [['C', 100, 25, 0.25, [9, ['8:25']], 3]], [$shipNone], [null, self::CANARY], 'shipping with no class keeps its placed code when an edit removes the only coded line'],
+            [[], [$a], [], $r([], []), $changed, false, [$a], [], [self::INTRA], 'a line placed with no code is not recorded, so a rebuild resolves it'],
+            [$placed, [['A', 100, 25, 0.25, [9, ['8:25']], 1]], [], $r([], []), $changed, false, [$a], [], [self::INTRA], 'a taxed line is never recorded'],
+            [$placed, [$a], [$shipNone], $r(['product:1' => self::CANARY, 'shipping' => self::CANARY], ['product:1']), $changed, false, [['B', 50, 0, 0.0, [9, []], 2]], [$ship, $voucher], [self::INTRA, self::CANARY, self::INTRA], 'shipping gained a tax class before the edit: it keeps its step 4 code, which step 4 does not share'],
+            [$placed, [$a], [], $r(['product:1' => self::CANARY], ['product:1']), $changed, false, [['A', 100, 0, 0.0, null, 1]], [$voucher], [self::CANARY, self::CANARY], 'a product lost its tax class before the edit: its mapped code is still shared by step 4'],
         ];
         foreach ($cases as [$rowsThen, $linesThen, $totalsThen, $record, $rowsNow, $exemptNow, $linesNow, $totalsNow, $expected, $description]) {
             $create = (new OrderBuilder())->build(self::order(['tax_codes' => ['map' => (string) json_encode($rowsThen), 'exempt' => false]]), array_map(self::line(...), $linesThen), $totalsThen, $kept);
             TinyAssert::same($record, $kept, 'placement record: ' . $description . ' (kept)');
-            TinyAssert::same($record === [] ? null : $record, TaxCodes::decodeRecord(TaxCodes::encodeRecord($kept)), 'placement record: ' . $description . ' (stored and read back)');
+            TinyAssert::same($record['codes'] === [] ? null : $record, TaxCodes::decodeRecord(TaxCodes::encodeRecord($kept)), 'placement record: ' . $description . ' (stored and read back)');
             $rebuilt = (new OrderBuilder())->build(self::order(['tax_codes' => ['map' => (string) json_encode($rowsNow), 'exempt' => $exemptNow, 'recorded' => TaxCodes::decodeRecord(TaxCodes::encodeRecord($kept))]]), array_map(self::line(...), $linesNow), $totalsNow);
             $codes = array_map(static fn (array $item): ?string => $item['tax_code'] ?? null, $rebuilt['line_items']);
             TinyAssert::same($expected, $codes, 'placement record: ' . $description);
             unset($kept);
         }
 
-        $replayed = (new OrderBuilder())->build(self::order(['tax_codes' => ['map' => '{"9":"X"}', 'exempt' => false, 'recorded' => ['product:1' => self::CANARY]]]), [self::line($a)], [$coupon]);
+        $replayed = (new OrderBuilder())->build(self::order(['tax_codes' => ['map' => '{"9":"X"}', 'exempt' => false, 'recorded' => $r(['product:1' => self::CANARY], ['product:1'])]]), [self::line($a)], [$coupon]);
         TinyAssert::same([self::CANARY, self::CANARY], array_map(static fn (array $item): ?string => $item['tax_code'] ?? null, $replayed['line_items']), 'placement record: a rebuild whose lines are all recorded never reads the mapping, so an unreadable one refuses nothing');
-        foreach (['', '[]', '{"product:1":"bad code"}', '{"":"ES_X"}', 'not json'] as $raw) {
+        foreach (['', '[]', '{"product:1":"ES_X"}', '{"codes":{},"mapped":[]}', '{"codes":{"product:1":"bad code"},"mapped":[]}', '{"codes":{"":"ES_X"},"mapped":[]}', '{"codes":{"product:1":"ES_X"},"mapped":["shipping"]}', '{"codes":{"product:1":"ES_X"}}', 'not json'] as $raw) {
             TinyAssert::same(null, TaxCodes::decodeRecord($raw), 'placement record: ' . var_export($raw, true) . ' is no record');
         }
     }

@@ -63,13 +63,13 @@ final class OrderBuilder
      *     terms?: array<string, mixed>|null,
      *     fee_refusal?: Message|null,
      *     currency_refusal?: Message|null,
-     *     tax_codes?: array{map?: string|null, exempt?: bool, recorded?: array<string, string>|null}|null,
+     *     tax_codes?: array{map?: string|null, exempt?: bool, recorded?: array{codes: array<string, string>, mapped: list<string>}|null}|null,
      *     buyer_vat_number?: string|null
      * } $order
      * @param list<array{name: string, quantity: int|string, price: float|string, total: float|string, tax: float|string, rate: float|null, fixed_tax?: bool, type: string, product_id?: int, tax_key?: array{class: int, rates: list<array{id: int, rate: float, type: string}>}|null}> $lines
      * @param list<array{code: string, title: string, value: float|string, tax?: float|string|null, rate?: float|null, fixed_tax?: bool, tax_key?: array{class: int, rates: list<array{id: int, rate: float, type: string}>}|null}> $totals
-     * @param array<string, string>|null $taxCodes set to the placement record of the codes this build gave (TaxCodes::record)
-     * @param-out array<string, string> $taxCodes
+     * @param array{codes: array<string, string>, mapped: list<string>}|null $taxCodes set to the placement record of the codes this build gave (TaxCodes::record)
+     * @param-out array{codes: array<string, string>, mapped: list<string>} $taxCodes
      * @return array<string, mixed>
      *
      * @throws OrderRefused when the order cannot be built from what the shop stored
@@ -129,7 +129,7 @@ final class OrderBuilder
         }
         // Codes come only from the merchant's rows, set before the hook so a subscriber sees them.
         $items = TaxCodes::apply($items, $keys, $order['tax_codes'] ?? null);
-        $taxCodes = ($order['tax_codes'] ?? null) === null ? [] : TaxCodes::record($items, $keys);
+        $taxCodes = ($order['tax_codes'] ?? null) === null ? ['codes' => [], 'mapped' => []] : TaxCodes::record($items, $keys);
 
         $company = $order['company'];
         $billing = $order['billing_address'];
