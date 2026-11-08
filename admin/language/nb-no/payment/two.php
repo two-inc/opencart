@@ -158,6 +158,7 @@ $_['entry_refund_rate'] = 'Beløpslinje, skattesats';
 $_['entry_refund_reason'] = 'Årsak (på kreditnotaen)';
 $_['button_refund'] = 'Send refusjon til Two';
 $_['error_refund_permission'] = 'Du har ikke tillatelse til å refundere denne ordren.';
+$_['error_check_permission'] = 'Du har ikke tillatelse til å sjekke denne ordren hos Two.';
 $_['error_refund_quantity'] = 'Ikke refundert: et antall er ikke et heltall.';
 $_['text_refund_state_pending'] = 'Ikke besvart';
 $_['text_refund_state_done'] = 'Refundert';

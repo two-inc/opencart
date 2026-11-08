@@ -158,6 +158,7 @@ $_['entry_refund_rate'] = 'Amount line, tax rate';
 $_['entry_refund_reason'] = 'Reason (on the credit note)';
 $_['button_refund'] = 'Send refund to Two';
 $_['error_refund_permission'] = 'You do not have permission to refund this order.';
+$_['error_check_permission'] = 'You do not have permission to check this order with Two.';
 $_['error_refund_quantity'] = 'Not refunded: a quantity is not a whole number.';
 $_['text_refund_state_pending'] = 'Not answered';
 $_['text_refund_state_done'] = 'Refunded';

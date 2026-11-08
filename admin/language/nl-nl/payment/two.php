@@ -158,6 +158,7 @@ $_['entry_refund_rate'] = 'Bedragregel, belastingtarief';
 $_['entry_refund_reason'] = 'Reden (op de creditnota)';
 $_['button_refund'] = 'Terugbetaling naar Two sturen';
 $_['error_refund_permission'] = 'Je hebt geen toestemming om deze bestelling terug te betalen.';
+$_['error_check_permission'] = 'Je hebt geen toestemming om deze bestelling bij Two te controleren.';
 $_['error_refund_quantity'] = 'Niet terugbetaald: een aantal is geen geheel getal.';
 $_['text_refund_state_pending'] = 'Niet beantwoord';
 $_['text_refund_state_done'] = 'Terugbetaald';

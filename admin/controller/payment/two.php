@@ -655,13 +655,13 @@ class Two extends \Opencart\System\Engine\Controller
      * check runs in the order's store front (a store instance), so placing
      * fires the storefront's order events and the order mail, as the buyer's
      * return would; the history note is written there. Same rights as a
-     * refund.
+     * refund, and POST only, as it may place the order.
      */
     public function checkStatus(): void
     {
         $this->load->language(self::ROUTE);
-        if (!$this->user->hasPermission('modify', 'sale/order') || !$this->user->hasPermission('modify', self::ROUTE)) {
-            $this->json(['error' => $this->language->get('error_refund_permission')]);
+        if (!$this->user->hasPermission('modify', 'sale/order') || !$this->user->hasPermission('modify', self::ROUTE) || ($this->request->server['REQUEST_METHOD'] ?? '') !== 'POST') {
+            $this->json(['error' => $this->language->get('error_check_permission')]);
 
             return;
         }

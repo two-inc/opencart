@@ -158,6 +158,7 @@ $_['entry_refund_rate'] = 'Beloppsrad, skattesats';
 $_['entry_refund_reason'] = 'Orsak (på kreditnotan)';
 $_['button_refund'] = 'Skicka återbetalning till Two';
 $_['error_refund_permission'] = 'Du har inte behörighet att återbetala den här ordern.';
+$_['error_check_permission'] = 'Du har inte behörighet att kontrollera den här ordern hos Two.';
 $_['error_refund_quantity'] = 'Inte återbetald: ett antal är inte ett heltal.';
 $_['text_refund_state_pending'] = 'Inte besvarad';
 $_['text_refund_state_done'] = 'Återbetald';

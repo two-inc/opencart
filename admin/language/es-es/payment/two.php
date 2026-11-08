@@ -158,6 +158,7 @@ $_['entry_refund_rate'] = 'Línea de importe, tipo impositivo';
 $_['entry_refund_reason'] = 'Motivo (en la nota de crédito)';
 $_['button_refund'] = 'Enviar reembolso a Two';
 $_['error_refund_permission'] = 'No tienes permiso para reembolsar este pedido.';
+$_['error_check_permission'] = 'No tienes permiso para comprobar este pedido con Two.';
 $_['error_refund_quantity'] = 'No reembolsado: una cantidad no es un número entero.';
 $_['text_refund_state_pending'] = 'Sin respuesta';
 $_['text_refund_state_done'] = 'Reembolsado';
