@@ -374,6 +374,27 @@ describe('address autofill', () => {
         expect([input.value, description]).toEqual([after, description]);
     });
 
+    // The registry's phone from a pick with autofill, on the buyer's own form (TWO-27110).
+    test.each([
+        [['payment'], 'payment', true, '+44 20 7946 0000', '', false, '+44 20 7946 0000', 'billing: the registry phone is written'],
+        [['payment'], 'payment', true, undefined, '+44 1', true, '', 'no registry phone: the plugin\'s earlier number is cleared'],
+        [['payment'], 'payment', true, undefined, '+44 1', false, '+44 1', 'no registry phone: the buyer\'s number stays'],
+        [['shipping'], 'shipping', true, '+44 20 7946 0000', '', false, '+44 20 7946 0000', 'shipping, with no billing form on the page: the buyer\'s form'],
+        [['payment', 'shipping'], 'shipping', true, '+44 20 7946 0000', '+44 1', false, '+44 1', 'shipping beside a billing form: not the buyer\'s phone'],
+        [['payment'], 'payment', false, '+44 20 7946 0000', '+44 1', false, '+44 1', 'autofill switched off: nothing written'],
+    ])('a pick\'s registry phone, case %#', async (forms, role, lookup, phone, before, ours, after, description) => {
+        document.body.innerHTML = forms.map(ADDRESS).join('') + '<input id="input-telephone">';
+        const address = Object.assign({ type: 'REGISTERED', street_address: '1 High St', city: 'London', postal_code: 'EC1A 1AA' }, phone === undefined ? {} : { phone_number: phone });
+        const { hosts } = start(config({ address_lookup: lookup }), { d: { organization_number: '0123', addresses: [address] } });
+        await flush();
+        const input = document.getElementById('input-telephone');
+        input.value = before;
+        if (ours) input.setAttribute('data-two-autofilled-value', before);
+        await hosts[role].component.selectCompany({ text: 'Acme Ltd', companyId: '', lookupId: 'L1' });
+        await flush();
+        expect([input.value, description]).toEqual([after, description]);
+    });
+
     test('a details failure shows the address notice under the field', async () => {
         document.body.innerHTML = ADDRESS('payment');
         const { hosts } = start(config(), { d: { error: 'unavailable' } });

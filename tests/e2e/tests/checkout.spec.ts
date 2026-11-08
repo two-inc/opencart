@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { orderStatusId, shopDefaultStatusId, twoOrderId, twoSetting } from "../pages/shop";
+import { orderStatusId, shopDefaultStatusId, sql, twoOrderId, twoSetting } from "../pages/shop";
 import { addToCart, chooseTwo, confirmAndReturn, guestDetails, placeOrder } from "../pages/storefront";
 import { expectState, requests, stubOrder } from "../pages/stub";
 
@@ -40,6 +40,19 @@ test("a buyer finds their company, places the order with Two and sees the confir
   expect(["discount_amount", "billing_address"].filter((k) => k in intent), "the intent carries no order-level discount_amount or billing_address").toEqual([]);
   expect(["discount_amount", "billing_address"].filter((k) => !(k in create)), "the create still carries both").toEqual([]);
   expect(intent.line_items.every((l: any) => "discount_amount" in l), "intent lines keep their own discount_amount").toBe(true);
+});
+
+test("company autofill writes the registry's phone into the buyer's telephone field", async ({ page }) => {
+  // OpenCart shows the telephone field only when the shop asks for it (TWO-27110).
+  const display = "DELETE FROM oc_setting WHERE store_id = 0 AND `key` = 'config_telephone_display'";
+  sql(`${display}; INSERT INTO oc_setting SET store_id = 0, code = 'config', \`key\` = 'config_telephone_display', value = '1', serialized = 0`);
+  try {
+    await addToCart(page, 1);
+    await guestDetails(page, "E2E Trad");
+    await expect(page.locator("#input-telephone"), "the picked company's registry phone").toHaveValue("+44 20 7946 0000");
+  } finally {
+    sql(display);
+  }
 });
 
 test("a coupon reaches Two as a negative discount line, and Two accepts the order", async ({ page }) => {

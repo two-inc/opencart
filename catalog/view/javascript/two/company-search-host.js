@@ -316,8 +316,25 @@
      * @param {string} phone
      */
     RoleHost.prototype.writeTelephone = function (phone) {
+        if (this.role !== 'payment') return;
+        this.setTelephone(phone);
+    };
+
+    /**
+     * The registry's phone from a company pick with autofill (TWO-27110), on
+     * the buyer's own form: billing, else shipping when the page has no
+     * billing address. A blank clears only a number this wrote.
+     *
+     * @param {string} phone
+     */
+    RoleHost.prototype.writeRegistryPhone = function (phone) {
+        const buyer = this.role === 'payment' || (this.role === 'shipping' && !this.doc.getElementById('input-payment-company'));
+        if (buyer) this.setTelephone(phone);
+    };
+
+    RoleHost.prototype.setTelephone = function (phone) {
         const input = this.doc.getElementById('input-telephone');
-        if (!input || this.role !== 'payment') return;
+        if (!input) return;
         const value = typeof phone === 'string' ? phone.trim() : '';
         if (!value) {
             if (!input.value || !holdsOurs(input)) return;
@@ -371,7 +388,10 @@
                 }
                 const address = preferredAddress(json.addresses);
                 if (autofill && !address) throw new Error('no address');
-                if (autofill) this.writeAddress(address);
+                if (autofill) {
+                    this.writeAddress(address);
+                    this.writeRegistryPhone(address.phone_number);
+                }
             })
             .catch(() => {
                 if (!superseded() && autofill) identity.addressNotice(this.copy('address_unavailable'));
