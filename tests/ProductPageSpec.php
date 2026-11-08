@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Opencart\System\Library\Extension\Two\Core\ApiKeyVerdict;
+use Opencart\System\Library\Extension\Two\Core\Brand;
 use Opencart\System\Library\Extension\Two\Core\Client;
 use Opencart\System\Library\Extension\Two\Core\CustomHeaders;
 use Opencart\System\Library\Extension\Two\Core\Environment;
@@ -73,7 +74,13 @@ final class ProductPageSpec
             'parts' => ['brand' => 'Two', 'message' => 'Buy now, pay later.', 'stylesheet' => 'p.css?v=1'],
             'contains' => ['<link rel="stylesheet" href="p.css?v=1">', '<span class="two-product-promo__brand">Two</span>', '<span class="two-product-promo__text">Buy now, pay later.</span>'],
             'absent' => ['<button', '<script'],
-            'description' => 'the message alone carries the brand name as text',
+            'description' => 'the message alone, a brand with no mark: its name shown as text',
+        ],
+        [
+            'parts' => ['brand' => 'Two', 'mark' => 'two_logo.svg?v=1', 'message' => 'Buy now, pay later.', 'stylesheet' => 'p.css'],
+            'contains' => ['<img class="two-product-mark" src="two_logo.svg?v=1" alt="">', '<span class="two-product-promo__brand two-product-hidden">Two</span>', '<span class="two-product-promo__text">Buy now, pay later.</span>'],
+            'absent' => ['<span class="two-product-promo__brand">'],
+            'description' => 'the message with the brand mark: the mark shown, the name kept as text for assistive technology (TWO-27110)',
         ],
         [
             'parts' => ['brand' => 'Two', 'message' => '<script>alert(1)</script> & "x"', 'stylesheet' => 'p.css'],
@@ -82,13 +89,19 @@ final class ProductPageSpec
             'description' => 'the override is escaped',
         ],
         [
-            'parts' => ['brand' => 'Two', 'button' => ['label' => 'Buy with Two', 'add_url' => 'index.php?route=checkout/cart.add&language=en-gb', 'checkout_url' => 'https://shop/index.php?route=checkout/checkout&language=en-gb', 'unreachable' => 'Sorry, "try" again.', 'script' => 'b.js?v=1'], 'stylesheet' => 'p.css'],
-            'contains' => ['<button type="button"', 'data-two-buy-now', 'data-two-add-url="index.php?route=checkout/cart.add&amp;language=en-gb"', 'data-two-checkout-url="https://shop/index.php?route=checkout/checkout&amp;language=en-gb"', 'data-two-unreachable="Sorry, &quot;try&quot; again."', '<span class="two-product-button__label">Buy with Two</span>', 'role="alert"', '<script src="b.js?v=1"></script>'],
+            'parts' => ['brand' => 'Two', 'button' => ['label' => 'Buy with %s', 'add_url' => 'index.php?route=checkout/cart.add&language=en-gb', 'checkout_url' => 'https://shop/index.php?route=checkout/checkout&language=en-gb', 'unreachable' => 'Sorry, "try" again.', 'script' => 'b.js?v=1'], 'stylesheet' => 'p.css'],
+            'contains' => ['<button type="button"', 'data-two-buy-now', 'data-two-add-url="index.php?route=checkout/cart.add&amp;language=en-gb"', 'data-two-checkout-url="https://shop/index.php?route=checkout/checkout&amp;language=en-gb"', 'data-two-unreachable="Sorry, &quot;try&quot; again."', '<span class="two-product-button__label">Buy with <span class="two-product-button__brand">Two</span></span>', 'role="alert"', '<script src="b.js?v=1"></script>'],
             'absent' => ['two-product-promo'],
             'description' => 'the button alone: a non-submitting button naming the brand, its URLs escaped once, and its script',
         ],
         [
-            'parts' => ['brand' => 'Two', 'message' => 'Buy now.', 'button' => ['label' => 'Buy with Two', 'add_url' => 'a', 'checkout_url' => 'c', 'unreachable' => 'u', 'script' => 'b.js'], 'stylesheet' => 'p.css'],
+            'parts' => ['brand' => 'Two', 'mark' => 'm.svg', 'button' => ['label' => 'Kjøp med %s & <b>', 'add_url' => 'a', 'checkout_url' => 'c', 'unreachable' => 'u', 'script' => 'b.js'], 'stylesheet' => 'p.css'],
+            'contains' => ['<span class="two-product-button__label">Kjøp med <img class="two-product-mark" src="m.svg" alt=""><span class="two-product-button__brand two-product-hidden">Two</span> &amp; &lt;b&gt;</span>'],
+            'absent' => ['%s', '<b>'],
+            'description' => 'the button with the brand mark where the label names the brand, the name kept as text, the rest escaped (TWO-27110)',
+        ],
+        [
+            'parts' => ['brand' => 'Two', 'message' => 'Buy now.', 'button' => ['label' => 'Buy with %s', 'add_url' => 'a', 'checkout_url' => 'c', 'unreachable' => 'u', 'script' => 'b.js'], 'stylesheet' => 'p.css'],
             'contains' => ['two-product-promo', 'two-product-button__cta'],
             'absent' => [],
             'description' => 'both together',
@@ -133,6 +146,11 @@ final class ProductPageSpec
             }
         }
         TinyAssert::same('', ProductPage::render(['brand' => 'Two', 'message' => '', 'stylesheet' => 'p.css']), 'render: nothing to show renders nothing, not even the stylesheet');
+
+        // The mark the fragment shows comes from the brand descriptor, and ships with the extension (TWO-27110).
+        $logo = Brand::default()->logo;
+        TinyAssert::true($logo !== null && is_file(dirname(__DIR__) . '/' . $logo) && str_starts_with((string) file_get_contents(dirname(__DIR__) . '/' . $logo), '<svg'), 'brand: the default brand ships its mark as an SVG');
+        TinyAssert::same(null, Brand::fromArray(['product_name' => 'X', 'provider_full_name' => 'X', 'about_url' => 'https://x.example'])->logo, 'brand: a descriptor with no mark has none, so its name is shown');
 
         foreach (self::PLACES as $case) {
             TinyAssert::same($case['expected'], ProductPage::place($case['page'], '[F]'), 'place: ' . $case['description']);

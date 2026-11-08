@@ -1,8 +1,8 @@
 /*
  * The product page message and buy button (Build Guide section 20), the
- * reference plugin's look. The brand name is text: OpenCart ships no brand
- * mark, and a mark alone would leave the offer unattributed for assistive
- * technology.
+ * reference plugin's look. The brand mark is shown with the brand name kept
+ * as text for assistive technology (two-product-hidden); a brand with no
+ * mark shows its name.
  */
 .two-product-promo {
     display: flex;
@@ -15,6 +15,29 @@
     border-inline-start: 4px solid #1a1a1a;
     border-radius: 4px;
     background: #fff;
+}
+
+.two-product-mark {
+    flex: 0 0 auto;
+    width: auto;
+    height: 1.25em;
+}
+
+.two-product-promo .two-product-mark {
+    height: 22px;
+}
+
+/* Out of sight, still read by assistive technology. */
+.two-product-hidden {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
 }
 
 .two-product-promo__brand {
@@ -72,4 +95,11 @@
 .two-product-button__error {
     margin: 0.5rem 0 0;
     font-size: 0.875rem;
+}
+
+/* "Buy with" and the brand mark side by side. */
+.two-product-button__label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35em;
 }

@@ -21,6 +21,7 @@ final class Brand
         public readonly bool $intentDeclinedNoticeEnabled = true,
         public readonly ?string $intentApprovedNotice = null,
         public readonly ?string $intentDeclinedNotice = null,
+        public readonly ?string $logo = null,
     ) {
     }
 
@@ -30,6 +31,7 @@ final class Brand
             'product_name' => 'Two',
             'provider_full_name' => 'Two',
             'about_url' => 'https://www.two.inc/what-is-two',
+            'logo' => 'catalog/view/image/two_logo.svg',
         ]);
     }
 
@@ -58,6 +60,8 @@ final class Brand
             $flag('intent_declined_notice_enabled'),
             $copy('intent_approved_notice'),
             $copy('intent_declined_notice'),
+            // The brand mark, a path under the extension directory; a brand without one shows its name instead (TWO-27110).
+            $copy('logo'),
         );
     }
 }

@@ -28,6 +28,7 @@ A rewrite of the extension for OpenCart 4.1. It does not run on OpenCart 3, and 
 ### Changed
 - **Two API connection** (TWO-26648). Calls Two's current API hosts, for both Sandbox and Production.
 - **"What is Two?" explainer** (TWO-27110). The checkout tile shows it as a question-mark icon with the explainer in its tooltip, in place of the words.
+- **Product page message and buy button** (TWO-27110). Both show the Two logo beside the Two name, as in Two's other plugins.
 - **Surcharge percentage** (TWO-27110). The share of Two's fee passed to the buyer is no longer capped at 100: any percentage of 0 or more saves, as in Two's other plugins.
 
 ### Removed
