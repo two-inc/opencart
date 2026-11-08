@@ -78,7 +78,7 @@ final class ProductPageSpec
         ],
         [
             'parts' => ['brand' => 'Two', 'mark' => 'two_logo.svg?v=1', 'message' => 'Buy now, pay later.', 'stylesheet' => 'p.css'],
-            'contains' => ['<img class="two-product-mark" src="two_logo.svg?v=1" alt="">', '<span class="two-product-promo__brand two-product-hidden">Two</span>', '<span class="two-product-promo__text">Buy now, pay later.</span>'],
+            'contains' => ['<img class="two-product-mark" src="two_logo.svg?v=1" alt="" onerror="this.nextElementSibling.classList.remove(\'two-product-hidden\');this.remove()">', '<span class="two-product-promo__brand two-product-hidden">Two</span>', '<span class="two-product-promo__text">Buy now, pay later.</span>'],
             'absent' => ['<span class="two-product-promo__brand">'],
             'description' => 'the message with the brand mark: the mark shown, the name kept as text for assistive technology (TWO-27110)',
         ],
@@ -96,7 +96,7 @@ final class ProductPageSpec
         ],
         [
             'parts' => ['brand' => 'Two', 'mark' => 'm.svg', 'button' => ['label' => 'Kjøp med %s & <b>', 'add_url' => 'a', 'checkout_url' => 'c', 'unreachable' => 'u', 'script' => 'b.js'], 'stylesheet' => 'p.css'],
-            'contains' => ['<span class="two-product-button__label">Kjøp med <img class="two-product-mark" src="m.svg" alt=""><span class="two-product-button__brand two-product-hidden">Two</span> &amp; &lt;b&gt;</span>'],
+            'contains' => ['<span class="two-product-button__label">Kjøp med <img class="two-product-mark" src="m.svg" alt="" onerror="this.nextElementSibling.classList.remove(\'two-product-hidden\');this.remove()"><span class="two-product-button__brand two-product-hidden">Two</span> &amp; &lt;b&gt;</span>'],
             'absent' => ['%s', '<b>'],
             'description' => 'the button with the brand mark where the label names the brand, the name kept as text, the rest escaped (TWO-27110)',
         ],

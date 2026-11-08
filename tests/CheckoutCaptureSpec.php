@@ -210,6 +210,7 @@ final class CheckoutCaptureSpec
             ['1234-ab', 'nl', '1234 ab', 'a hyphen is swapped for the space, letter case kept'],
             ['00950', 'PL', '00-950', 'a hyphenated format'],
             ['11122', 'SE', '111 22', 'a spaced format'],
+            ['VLT1117', 'MT', 'VLT 1117', 'letters then digits'],
             ['1000-001', 'PT', '1000-001', 'already fitted'],
             ['123 4AB', 'NL', '1234 AB', 'a stray space moves'],
             ['12345', 'NL', '12345', 'one that does not fit the format is left alone'],

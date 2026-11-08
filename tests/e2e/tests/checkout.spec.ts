@@ -44,14 +44,17 @@ test("a buyer finds their company, places the order with Two and sees the confir
 
 test("company autofill writes the registry's phone into the buyer's telephone field", async ({ page }) => {
   // OpenCart shows the telephone field only when the shop asks for it (TWO-27110).
-  const display = "DELETE FROM oc_setting WHERE store_id = 0 AND `key` = 'config_telephone_display'";
-  sql(`${display}; INSERT INTO oc_setting SET store_id = 0, code = 'config', \`key\` = 'config_telephone_display', value = '1', serialized = 0`);
+  const found = sql("SELECT value FROM oc_setting WHERE store_id = 0 AND `key` = 'config_telephone_display'");
+  const set = (value: string) => sql(`DELETE FROM oc_setting WHERE store_id = 0 AND \`key\` = 'config_telephone_display'; INSERT INTO oc_setting SET store_id = 0, code = 'config', \`key\` = 'config_telephone_display', value = '${value}', serialized = 0`);
+  set("1");
   try {
     await addToCart(page, 1);
     await guestDetails(page, "E2E Trad");
     await expect(page.locator("#input-telephone"), "the picked company's registry phone").toHaveValue("+44 20 7946 0000");
   } finally {
-    sql(display);
+    // Put back what was there: the value found, or no row.
+    if (found.length) set(found[0][0]);
+    else sql("DELETE FROM oc_setting WHERE store_id = 0 AND `key` = 'config_telephone_display'");
   }
 });
 

@@ -22,6 +22,7 @@ final class PostcodeFormat
         'DE' => 'NNNNN', 'DK' => 'NNNN', 'EE' => 'NNNNN', 'ES' => 'NNNNN', 'FI' => 'NNNNN', 'FR' => 'NNNNN',
         'GR' => 'NNN NN', 'HR' => 'NNNNN', 'HU' => 'NNNN', 'IT' => 'NNNNN', 'LU' => 'NNNN', 'NL' => 'NNNN LL',
         'NO' => 'NNNN', 'PL' => 'NN-NNN', 'PT' => 'NNNN-NNN', 'RO' => 'NNNNNN', 'SE' => 'NNN NN', 'SK' => 'NNN NN',
+        'IS' => 'NNN', 'LI' => 'NNNN', 'MT' => 'LLL NNNN', 'SI' => 'NNNN',
     ];
 
     /**

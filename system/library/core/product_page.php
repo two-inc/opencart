@@ -85,7 +85,8 @@ final class ProductPage
         $mark = $parts['mark'] ?? '';
         $brand = static fn (string $class): string => $mark === ''
             ? '<span class="' . $class . '">' . $e($parts['brand']) . '</span>'
-            : '<img class="two-product-mark" src="' . $e($mark) . '" alt="">'
+            // A mark that fails to load shows the name instead, so the offer is never unattributed.
+            : '<img class="two-product-mark" src="' . $e($mark) . '" alt="" onerror="this.nextElementSibling.classList.remove(\'two-product-hidden\');this.remove()">'
                 . '<span class="' . $class . ' two-product-hidden">' . $e($parts['brand']) . '</span>';
         $html = '';
         if (($parts['message'] ?? '') !== '') {

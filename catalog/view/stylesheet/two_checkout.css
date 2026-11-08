@@ -211,6 +211,10 @@
 .two-about {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
+    /* A 24px target, as WCAG 2.2 asks of a pointer target. */
+    min-width: 24px;
+    min-height: 24px;
     vertical-align: middle;
     margin-inline-start: 0.25rem;
 }
