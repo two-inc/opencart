@@ -120,10 +120,12 @@ final class OrderBuilder
         }
         if ($discounts !== []) {
             $items[] = self::discountLine($discounts, $items, self::cents($order['tax_total'], $fx), $fx);
+            $keys[] = self::recordKey(null, 'discount');
         }
         foreach ($postTax as $total) {
             $gross = self::cents($total['value'], $fx);
             $items[] = self::line($total['title'], 'DIGITAL', 1, $gross, $gross, 0, 0.0, 'item');
+            $keys[] = self::recordKey(null, $total['code']);
         }
         // Codes come only from the merchant's rows, set before the hook so a subscriber sees them.
         $items = TaxCodes::apply($items, $keys, $order['tax_codes'] ?? null);
@@ -189,15 +191,20 @@ final class OrderBuilder
 
     /**
      * A line's tax-code key with the key its code is recorded under at
-     * placement (`product:<id>`, or the charge total's code), null for a
-     * line with no tax class.
+     * placement: `product:<id>`, the total's code for a charge, store credit
+     * or a voucher, `discount` for the discount line. A line with no tax
+     * class has class 0 (step 4). Null for a line with neither.
      *
      * @param array{class: int, rates: list<array{id: int, rate: float, type: string}>}|null $key
      * @return array{class: int, rates: list<array{id: int, rate: float, type: string}>, line: string|null}|null
      */
     private static function recordKey(?array $key, ?string $line): ?array
     {
-        return $key === null ? null : $key + ['line' => $line];
+        if ($key === null && $line === null) {
+            return null;
+        }
+
+        return ($key ?? ['class' => 0, 'rates' => []]) + ['line' => $line];
     }
 
     /**

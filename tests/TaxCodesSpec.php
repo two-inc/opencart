@@ -99,12 +99,15 @@ final class TaxCodesSpec
         $a = ['A', 100, 0, 0.0, [9, ['5:0']], 1];
         $ship = ['code' => 'shipping', 'title' => 'Ship', 'value' => 10, 'tax' => 0, 'rate' => 0.0, 'tax_key' => ['class' => 10, 'rates' => []]];
         $coupon = ['code' => 'coupon', 'title' => 'Coupon', 'value' => -10];
+        $shipNone = ['code' => 'shipping', 'title' => 'Ship', 'value' => 10, 'tax' => 0, 'rate' => 0.0, 'tax_key' => null];
         $cases = [
             [$placed, [$a], [], ['product:1' => self::CANARY], $changed, false, [$a], [], [self::CANARY], 'the mapping changed after placement: the edit sends the recorded code'],
             [$placed, [$a], [], ['product:1' => self::CANARY], $placed, true, [['A', 100, 0, 0.0, [9, []], 1]], [], [self::CANARY], 'the addresses and rates changed (now exempt, no rule): still the recorded code'],
             [$placed, [$a], [], ['product:1' => self::CANARY], $changed, false, [$a, ['B', 50, 0, 0.0, [9, []], 2]], [], [self::CANARY, self::INTRA], 'a line an edit added is resolved from the mapping as it is now'],
             [$placed, [$a], [$ship, $coupon], ['product:1' => self::CANARY, 'shipping' => self::EXPORT], $changed, false, [$a], [$ship, $coupon], [self::CANARY, self::EXPORT, null], 'a charge is recorded under its total code; a discount is not, and shares nothing when the recorded codes disagree'],
-            [$placed, [$a], [$coupon], ['product:1' => self::CANARY], $changed, false, [$a], [$coupon], [self::CANARY, self::CANARY], 'step 4 on a rebuild shares the recorded code'],
+            [$placed, [$a], [$coupon], ['product:1' => self::CANARY, 'discount' => self::CANARY], $changed, false, [$a], [$coupon], [self::CANARY, self::CANARY], 'a discount step 4 coded is recorded, and keeps its code'],
+            [$placed, [$a], [$shipNone], ['product:1' => self::CANARY, 'shipping' => self::CANARY], $changed, false, [$a, ['B', 50, 0, 0.0, [9, []], 2]], [$shipNone], [self::CANARY, self::INTRA, self::CANARY], 'shipping with no class keeps its placed code when an edit adds a line with another code'],
+            [$placed, [$a], [$shipNone], ['product:1' => self::CANARY, 'shipping' => self::CANARY], $changed, false, [['C', 100, 25, 0.25, [9, ['8:25']], 3]], [$shipNone], [null, self::CANARY], 'shipping with no class keeps its placed code when an edit removes the only coded line'],
             [[], [$a], [], [], $changed, false, [$a], [], [self::INTRA], 'a line placed with no code is not recorded, so a rebuild resolves it'],
             [$placed, [['A', 100, 25, 0.25, [9, ['8:25']], 1]], [], [], $changed, false, [$a], [], [self::INTRA], 'a taxed line is never recorded'],
         ];
