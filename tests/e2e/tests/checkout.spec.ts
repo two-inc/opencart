@@ -6,7 +6,14 @@ import { expectState, requests, stubOrder } from "../pages/stub";
 
 test("a buyer finds their company, places the order with Two and sees the confirmation", async ({ page }) => {
   const seen = (await requests("")).length;
-  const orderId = await placeOrder(page);
+  await addToCart(page, 1);
+  await chooseTwo(page, await guestDetails(page, "E2E Trad"));
+  // The explainer is the extension's own "?" icon, named for assistive technology (TWO-27110).
+  const about = page.locator("#checkout-confirm [data-two-about]");
+  await expect(about, "the explainer link is named for screen readers").toHaveAccessibleName("What is Two?");
+  await expect(about, "it shows an icon, not the words").toHaveText("");
+  await expect.poll(() => about.locator("img").evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0), { message: "the shipped question icon loads" }).toBe(true);
+  const orderId = await confirmAndReturn(page);
 
   const twoId = twoOrderId(orderId);
   expect(twoId, "the shop order is linked to a Two order").not.toBe("");

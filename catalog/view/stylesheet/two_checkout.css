@@ -206,3 +206,16 @@
     background-position: right 12px center;
     cursor: progress;
 }
+
+/* The explainer link's "?" icon beside the subtitle (TWO-27110). */
+.two-about {
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+    margin-inline-start: 0.25rem;
+}
+
+.two-about__icon {
+    width: 20px;
+    height: 19px;
+}
