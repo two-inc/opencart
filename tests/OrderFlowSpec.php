@@ -13,6 +13,7 @@ use Opencart\System\Library\Extension\Two\Core\OrderFlow;
 use Opencart\System\Library\Extension\Two\Core\OrderLifecycle;
 use Opencart\System\Library\Extension\Two\Core\Postprocessing;
 use Opencart\System\Library\Extension\Two\Core\SettingsProvider;
+use Opencart\System\Library\Extension\Two\Core\TaxCodes;
 
 /**
  * The hosted checkout flow against a scripted Two. Each case is Two's
@@ -30,6 +31,7 @@ final class OrderFlowSpec
         self::testRecreate();
         self::testCreateKeyPerAttempt();
         self::testCreateKeepsTermsAndFee();
+        self::testTaxCodeRecord();
         self::testConfirm();
         self::testCancel();
         self::testNewToken();
@@ -118,6 +120,35 @@ final class OrderFlowSpec
             TinyAssert::same($case['calls'], self::calls($transport), $d . ': requests');
             TinyAssert::same($case['id'], $records->rows[42]['two_order_id'], $d . ': stored Two order id');
             self::assertKeys($transport, $d, $earlier);
+        }
+    }
+
+    /**
+     * TWO-27110: create keeps the codes its 0% lines were sent with, and the
+     * confirm check rebuilds with them, so a mapping changed while the buyer
+     * is at Two's checkout no longer refuses the order. Each case: the record
+     * the rebuild is given, and the outcome.
+     */
+    private static function testTaxCodeRecord(): void
+    {
+        $line = ['name' => 'Widget', 'quantity' => 2, 'price' => 100, 'total' => 200, 'tax' => 0, 'rate' => 0.0, 'type' => 'PHYSICAL', 'product_id' => 7, 'tax_key' => ['class' => 9, 'rates' => [['id' => 5, 'rate' => 0.0, 'type' => 'P']]]];
+        $order = static fn (string $code, ?array $recorded): array => ['total' => 200, 'tax_total' => 0, 'tax_codes' => ['map' => (string) json_encode(['9|rate:5' => $code]), 'exempt' => false, 'recorded' => $recorded]] + self::order();
+        $get = static fn (string $state): HttpResponse => self::json(200, ['id' => self::ID, 'state' => $state, 'status' => 'APPROVED']);
+        $created = self::json(201, ['id' => self::ID, 'state' => 'UNVERIFIED', 'payment_url' => 'https://checkout.sandbox.two.inc/o/1']);
+        $cases = [
+            [true, [$created, $get('VERIFIED'), self::json(200, ['state' => 'CONFIRMED'])], OrderFlow::CONFIRMED, 'the record kept at create: the remapped order still confirms'],
+            [false, [$created, self::json(200, []), $get('CANCELLED')], OrderFlow::CHANGED, 'control, an order with no record: the remapped rebuild differs and is refused'],
+        ];
+        foreach ($cases as [$withRecord, $responses, $outcome, $description]) {
+            $records = new MemoryRecords();
+            [$flow] = self::flow($responses, $records);
+            $flow->create($order('ES_IVA_CANARY', null), [$line], [], self::TOKEN);
+            $stored = $records->rows[42]['tax_codes'] ?? null;
+            TinyAssert::same('{"product:7":"ES_IVA_CANARY"}', $stored, 'tax code record: ' . $description . ' (kept at create)');
+            $recorded = $withRecord ? TaxCodes::decodeRecord((string) $stored) : null;
+            $rebuild = static fn (array $record): array => ['order' => $order('ES_IVA_EXPORT', $recorded), 'lines' => [$line], 'totals' => []];
+            $result = $flow->confirm(42, self::TOKEN, $rebuild, ['products' => [], 'totals' => [], 'addresses' => []]);
+            TinyAssert::same($outcome, $result['outcome'], 'tax code record: ' . $description);
         }
     }
 

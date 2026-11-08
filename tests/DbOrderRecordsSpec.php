@@ -26,6 +26,7 @@ final class DbOrderRecordsSpec
             // table exists, its columns, columns the first run adds, description
             [true, self::all(), [], 'every column present: nothing altered'],
             [true, self::without(['checked_at', 'missing_at', 'check_closed']), ['checked_at', 'missing_at', 'check_closed'], 'a build before the pending check: its three columns added'],
+            [true, self::without(['tax_codes']), ['tax_codes'], 'a build before the tax code record (TWO-27110): its column added'],
             [true, self::without(array_keys(DbOrderRecords::ADDED_COLUMNS)), array_keys(DbOrderRecords::ADDED_COLUMNS), 'the first shape: every added column, in order'],
             [true, self::without(['token_hash']), [], 'another shape (no token column): left to install()'],
             [false, [], [], 'no table: left to install()'],

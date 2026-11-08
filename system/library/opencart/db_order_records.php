@@ -23,7 +23,7 @@ final class DbOrderRecords implements OrderRecords
     public const TABLE = 'two_order';
 
     /** Columns added after the table first shipped, added in place by install() rather than renaming the table aside. */
-    public const ADDED_COLUMNS = ['rows_hash' => "CHAR(64) NOT NULL DEFAULT ''", 'edit_key' => "VARCHAR(100) NOT NULL DEFAULT ''", 'edit_refused_hash' => "CHAR(64) NOT NULL DEFAULT ''", 'buyer_fields' => "TEXT NULL", 'payment_terms' => "VARCHAR(255) NOT NULL DEFAULT ''", 'payment_fee' => "CHAR(1) NOT NULL DEFAULT ''", 'placed_fee' => "TEXT NULL", 'checked_at' => 'INT(11) NOT NULL DEFAULT 0', 'missing_at' => 'INT(11) NOT NULL DEFAULT 0', 'check_closed' => "VARCHAR(16) NOT NULL DEFAULT ''"];
+    public const ADDED_COLUMNS = ['rows_hash' => "CHAR(64) NOT NULL DEFAULT ''", 'edit_key' => "VARCHAR(100) NOT NULL DEFAULT ''", 'edit_refused_hash' => "CHAR(64) NOT NULL DEFAULT ''", 'buyer_fields' => "TEXT NULL", 'payment_terms' => "VARCHAR(255) NOT NULL DEFAULT ''", 'payment_fee' => "CHAR(1) NOT NULL DEFAULT ''", 'placed_fee' => "TEXT NULL", 'checked_at' => 'INT(11) NOT NULL DEFAULT 0', 'missing_at' => 'INT(11) NOT NULL DEFAULT 0', 'check_closed' => "VARCHAR(16) NOT NULL DEFAULT ''", 'tax_codes' => 'TEXT NULL'];
 
     /** The columns the pending check's selection reads. */
     public const SELECTION_COLUMNS = ['checked_at', 'check_closed'];
@@ -207,6 +207,7 @@ final class DbOrderRecords implements OrderRecords
             . '`checked_at` INT(11) NOT NULL DEFAULT 0,'
             . '`missing_at` INT(11) NOT NULL DEFAULT 0,'
             . '`check_closed` VARCHAR(16) NOT NULL DEFAULT \'\','
+            . '`tax_codes` TEXT NULL,'
             . '`date_added` DATETIME NOT NULL,'
             . '`date_modified` DATETIME NOT NULL,'
             . 'PRIMARY KEY (`order_id`),'

@@ -1,7 +1,8 @@
 import { expect, test } from "@playwright/test";
 
 import { PRODUCT_ID } from "../config";
-import { sql } from "../pages/shop";
+import { addOneMore, openOrder } from "../pages/admin";
+import { sql, twoOrderId } from "../pages/shop";
 import { addToCart, chooseTwo, confirmAndReturn, guestDetails } from "../pages/storefront";
 import { requests } from "../pages/stub";
 
@@ -75,3 +76,25 @@ for (const { mapped, expected, description } of cases) {
     expect(lines.filter((l) => Number(l.tax_rate) !== 0).every((l) => l.tax_code === undefined), `${description}: a taxed line never carries a code`).toBe(true);
   });
 }
+
+// TWO-27110: placement records the code each 0% line was sent with, and an
+// edit sends the recorded code, so a mapping changed after placement never
+// moves a placed order.
+test("an edit after the mapping changed sends the code the order was placed with", async ({ page }) => {
+  const row = `${classId}|rate:${rateId}`;
+  setMap(JSON.stringify({ [row]: CODE }));
+  const name = sql(`SELECT name FROM oc_product_description WHERE product_id = ${PRODUCT_ID} AND language_id = 1`)[0][0];
+  await addToCart(page, 1);
+  await chooseTwo(page, await guestDetails(page, "E2E Tax"));
+  const orderId = await confirmAndReturn(page);
+  const twoId = twoOrderId(orderId);
+
+  setMap(JSON.stringify({ [row]: "ES_IVA_CHANGED" }));
+  await openOrder(page, orderId);
+  await addOneMore(page, name, 2);
+  await expect.poll(async () => (await requests(`/v1/order/${twoId}`)).filter((r) => r.method === "PUT").length, { message: "the edit is sent to Two" }).toBe(1);
+  const put = (await requests(`/v1/order/${twoId}`)).find((r) => r.method === "PUT")!;
+  const product = (put.body as { line_items: Line[] }).line_items.find((l) => l.name === name);
+  expect(product?.tax_rate, "the edited product line is still 0%").toBe("0");
+  expect(product?.tax_code, "the edit sends the code recorded at placement, not the changed mapping's").toBe(CODE);
+});

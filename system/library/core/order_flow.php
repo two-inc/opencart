@@ -118,7 +118,7 @@ final class OrderFlow
         }
 
         try {
-            $payload = $this->payload($order, $lines, $totals, $context, 'checkout');
+            $payload = $this->payload($order, $lines, $totals, $context, 'checkout', Postprocessing::ORDER_CREATE, $taxCodes);
         } catch (OrderRefused $refused) {
             return $this->refused($orderId, Message::of('note_create_not_built', $refused->note));
         }
@@ -156,8 +156,9 @@ final class OrderFlow
                 return $this->refused($orderId, Message::of('note_create_not_stored', $field));
             }
         }
-        // A new Two order starts the pending check afresh (PendingCheck).
-        $this->records->put($orderId, ['checked_at' => '0', 'missing_at' => '0', 'check_closed' => '']);
+        // A new Two order starts the pending check afresh (PendingCheck). The codes its 0% lines
+        // are sent with are kept for every rebuild (TWO-27110); a table without the column keeps none.
+        $this->records->put($orderId, ['checked_at' => '0', 'missing_at' => '0', 'check_closed' => '', 'tax_codes' => TaxCodes::encodeRecord($taxCodes)]);
 
         $response = $this->client->request('POST', '/v1/order', $payload, Client::TIMEOUT_SECONDS, true, IdempotencyKey::header(IdempotencyKey::orderCreate($orderId, $stored['token_hash'])));
         $body = $response->json();
@@ -411,11 +412,13 @@ final class OrderFlow
      * @param list<array<string, mixed>> $lines
      * @param list<array<string, mixed>> $totals
      * @param array<string, mixed>       $context
+     * @param array<string, string>|null $taxCodes set to the build's placement record of tax codes
+     * @param-out array<string, string> $taxCodes
      * @return array<string, mixed>
      */
-    private function payload(array $order, array $lines, array $totals, array $context, string $trigger, string $requestType = Postprocessing::ORDER_CREATE): array
+    private function payload(array $order, array $lines, array $totals, array $context, string $trigger, string $requestType = Postprocessing::ORDER_CREATE, ?array &$taxCodes = null): array
     {
-        $payload = $this->builder->build($order, $lines, $totals);
+        $payload = $this->builder->build($order, $lines, $totals, $taxCodes);
         $failures = OrderBuilder::shopMatchFailures($payload, $order);
         $intent = $requestType === Postprocessing::ORDER_INTENT;
         $payload = $intent ? self::intentPayload($payload, $context) : $payload;
