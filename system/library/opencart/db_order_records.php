@@ -106,6 +106,9 @@ final class DbOrderRecords implements OrderRecords
      */
     public static function waiting(\Opencart\System\Library\DB $db, int $voidStatusId, int $now, int $limit = PendingCheck::BATCH): array
     {
+        if (!self::checkColumnsPresent($db)) {
+            return [];
+        }
         $query = $db->query('SELECT `t`.`order_id` FROM ' . self::waitingFrom($voidStatusId)
             . " AND `t`.`checked_at` < '" . ($now - PendingCheck::RECHECK_AFTER) . "'"
             . ' ORDER BY `t`.`checked_at` ASC, `t`.`order_id` ASC LIMIT ' . max(1, $limit));
@@ -116,9 +119,22 @@ final class DbOrderRecords implements OrderRecords
     /** How many orders wait for the pending check, however recently checked: the Diagnostics tab's warning. */
     public static function waitingCount(\Opencart\System\Library\DB $db, int $voidStatusId): int
     {
+        if (!self::checkColumnsPresent($db)) {
+            return 0;
+        }
         $query = $db->query('SELECT COUNT(*) AS `waiting` FROM ' . self::waitingFrom($voidStatusId));
 
         return is_object($query) ? (int) ($query->row['waiting'] ?? 0) : 0;
+    }
+
+    /**
+     * Whether the table has the columns the selection reads. A shop whose
+     * files were replaced without install() running again lacks them: it
+     * selects nothing rather than failing, until the schema step runs.
+     */
+    private static function checkColumnsPresent(\Opencart\System\Library\DB $db): bool
+    {
+        return array_diff(['checked_at', 'check_closed'], (new self($db))->columns()) === [];
     }
 
     private static function waitingFrom(int $voidStatusId): string
