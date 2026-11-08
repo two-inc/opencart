@@ -159,6 +159,7 @@ $_['entry_refund_reason'] = 'Årsak (på kreditnotaen)';
 $_['button_refund'] = 'Send refusjon til Two';
 $_['error_refund_permission'] = 'Du har ikke tillatelse til å refundere denne ordren.';
 $_['error_check_permission'] = 'Du har ikke tillatelse til å sjekke denne ordren hos Two.';
+$_['error_check_method'] = 'Sjekk status hos Two må sendes fra knappen på Two-fanen.';
 $_['error_refund_quantity'] = 'Ikke refundert: et antall er ikke et heltall.';
 $_['text_refund_state_pending'] = 'Ikke besvart';
 $_['text_refund_state_done'] = 'Refundert';
@@ -325,6 +326,7 @@ $_['help_cron_url'] = 'Kall denne hvert 15. minutt fra crontab på serveren din.
 $_['text_cron_last_run'] = 'Den planlagte oppdateringen kjørte sist %s.';
 $_['text_cron_never'] = 'Den planlagte oppdateringen har ikke kjørt ennå.';
 $_['text_pending_stale'] = '%d Two-ordrer venter på at kjøperen skal komme tilbake, og den planlagte URL-en har ikke kjørt den siste timen. Planlegg den hvert 15. minutt, så blir bekreftede ordrer lagt inn.';
+$_['text_pending_table'] = 'Two-ordretabellen mangler kolonner som sjekken av ordrer kjøperen ikke kom tilbake fra trenger, og de kunne ikke legges til (se feilloggen). Til de er lagt til, blir disse ordrene ikke sjekket hos Two.';
 
 // TWO-27055: the product page message and buy button (Checkout fields).
 $_['entry_product_message_enabled'] = 'Vis melding på produktsider';

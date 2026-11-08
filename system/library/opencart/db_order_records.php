@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Opencart\System\Library\Extension\Two\Opencart;
 
+use Opencart\System\Library\Extension\Two\Core\Logger;
 use Opencart\System\Library\Extension\Two\Core\OrderRecords;
 use Opencart\System\Library\Extension\Two\Core\PendingCheck;
 
@@ -52,16 +53,78 @@ final class DbOrderRecords implements OrderRecords
                 $renamed = $table . '_legacy_' . gmdate('YmdHis');
                 $query('RENAME TABLE `' . $table . '` TO `' . $renamed . '`');
             } else {
-                foreach (self::ADDED_COLUMNS as $column => $definition) {
-                    if (!in_array($column, $columns, true)) {
-                        $query('ALTER TABLE `' . $table . '` ADD COLUMN `' . $column . '` ' . $definition);
-                    }
-                }
+                self::addColumns($query, $table, $columns);
             }
         }
         $query(self::createTableSql($prefix));
 
         return $renamed;
+    }
+
+    /**
+     * The schema step for an upgrade, which in OpenCart never runs install()
+     * again (the Installer only copies files): adds each column install()
+     * adds in place that the table lacks. Idempotent. A table that is absent
+     * or of another shape is left to install().
+     *
+     * @param \Closure(string): list<array<string, mixed>> $query runs one statement, returning the rows of a SHOW
+     * @return list<string> the columns added
+     */
+    public static function addMissingColumns(\Closure $query, string $prefix): array
+    {
+        $table = $prefix . self::TABLE;
+        if ($query("SHOW TABLES LIKE '" . str_replace('_', '\\_', $table) . "'") === []) {
+            return [];
+        }
+        $columns = array_map(static fn (array $row): string => (string) $row['Field'], $query('SHOW COLUMNS FROM `' . $table . '`'));
+        if (array_diff(array_diff(array_merge(['order_id'], self::FIELDS), array_keys(self::ADDED_COLUMNS)), $columns) !== []) {
+            return [];
+        }
+
+        return self::addColumns($query, $table, $columns);
+    }
+
+    /**
+     * Runs the schema step for the settings page and the pending check. A
+     * failure is logged and the selection's own guard keeps the check off.
+     *
+     * @return bool whether the table has every column the pending check reads
+     */
+    public static function upgrade(\Opencart\System\Library\DB $db, Logger $logger): bool
+    {
+        $query = static function (string $sql) use ($db): array {
+            $result = $db->query($sql);
+
+            return is_object($result) ? $result->rows : [];
+        };
+        try {
+            $added = self::addMissingColumns($query, DB_PREFIX);
+            if ($added !== []) {
+                $logger->info('Two order table: added the missing columns ' . implode(', ', $added) . '.');
+            }
+        } catch (\Throwable $e) {
+            $logger->error('Two order table: the missing columns could not be added: ' . $e->getMessage());
+        }
+
+        return self::checkColumnsPresent($db);
+    }
+
+    /**
+     * @param \Closure(string): list<array<string, mixed>> $query
+     * @param list<string> $columns the table's columns
+     * @return list<string> the columns added
+     */
+    private static function addColumns(\Closure $query, string $table, array $columns): array
+    {
+        $added = [];
+        foreach (self::ADDED_COLUMNS as $column => $definition) {
+            if (!in_array($column, $columns, true)) {
+                $query('ALTER TABLE `' . $table . '` ADD COLUMN `' . $column . '` ' . $definition);
+                $added[] = $column;
+            }
+        }
+
+        return $added;
     }
 
     /** The table's definition. */
@@ -128,9 +191,9 @@ final class DbOrderRecords implements OrderRecords
     }
 
     /**
-     * Whether the table has the columns the selection reads. A shop whose
-     * files were replaced without install() running again lacks them: it
-     * selects nothing rather than failing, until the schema step runs.
+     * Whether the table has the columns the selection reads. Should the
+     * schema step (upgrade()) fail, the check selects nothing rather than
+     * failing, and the Diagnostics tab says so.
      */
     private static function checkColumnsPresent(\Opencart\System\Library\DB $db): bool
     {

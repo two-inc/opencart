@@ -24,6 +24,7 @@ use Opencart\System\Library\Extension\Two\Opencart\DbOrderRecords;
 use Opencart\System\Library\Extension\Two\Opencart\DbRateLimits;
 use Opencart\System\Library\Extension\Two\Opencart\DbRefundRecords;
 use Opencart\System\Library\Extension\Two\Opencart\DbSettingsStore;
+use Opencart\System\Library\Extension\Two\Opencart\LogLogger;
 use Opencart\System\Library\Extension\Two\Opencart\NoteText;
 use Opencart\System\Library\Extension\Two\Opencart\Services;
 
@@ -163,6 +164,8 @@ class Two extends \Opencart\System\Engine\Controller
         $ranAt = (int) $settings->store()->get(RecordProvider::CRON_LAST_RUN_KEY);
         $data['cron_last_run'] = $ranAt > 0 ? sprintf($this->language->get('text_cron_last_run'), gmdate('Y-m-d H:i', $ranAt) . 'Z') : $this->language->get('text_cron_never');
         // Orders the buyer verified but never returned from are placed only by the pending check (TWO-26300): warn when they wait and the URL has stopped running.
+        // An upgrade copies files and never runs install() again, so the table's new columns are added here, and the tab warns while they are missing.
+        $data['pending_table'] = DbOrderRecords::upgrade($this->db, new LogLogger($this->log, false)) ? '' : $this->language->get('text_pending_table');
         $waiting = DbOrderRecords::waitingCount($this->db, (int) $this->config->get('config_void_status_id'));
         $data['pending_stale'] = PendingCheck::scheduleStale($waiting, (int) $settings->store()->get(PendingCheck::LAST_RUN_KEY), time()) ? sprintf($this->language->get('text_pending_stale'), $waiting) : '';
         $shopCurrency = (string) $this->config->get('config_currency');
@@ -660,8 +663,13 @@ class Two extends \Opencart\System\Engine\Controller
     public function checkStatus(): void
     {
         $this->load->language(self::ROUTE);
-        if (!$this->user->hasPermission('modify', 'sale/order') || !$this->user->hasPermission('modify', self::ROUTE) || ($this->request->server['REQUEST_METHOD'] ?? '') !== 'POST') {
+        if (!$this->user->hasPermission('modify', 'sale/order') || !$this->user->hasPermission('modify', self::ROUTE)) {
             $this->json(['error' => $this->language->get('error_check_permission')]);
+
+            return;
+        }
+        if (($this->request->server['REQUEST_METHOD'] ?? '') !== 'POST') {
+            $this->json(['error' => $this->language->get('error_check_method')]);
 
             return;
         }

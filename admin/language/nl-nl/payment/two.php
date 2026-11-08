@@ -159,6 +159,7 @@ $_['entry_refund_reason'] = 'Reden (op de creditnota)';
 $_['button_refund'] = 'Terugbetaling naar Two sturen';
 $_['error_refund_permission'] = 'Je hebt geen toestemming om deze bestelling terug te betalen.';
 $_['error_check_permission'] = 'Je hebt geen toestemming om deze bestelling bij Two te controleren.';
+$_['error_check_method'] = 'Status controleren bij Two moet worden verstuurd via de knop op het tabblad Two.';
 $_['error_refund_quantity'] = 'Niet terugbetaald: een aantal is geen geheel getal.';
 $_['text_refund_state_pending'] = 'Niet beantwoord';
 $_['text_refund_state_done'] = 'Terugbetaald';
@@ -325,6 +326,7 @@ $_['help_cron_url'] = 'Roep dit elke 15 minuten aan vanuit de crontab van uw ser
 $_['text_cron_last_run'] = 'De geplande vernieuwing is voor het laatst uitgevoerd op %s.';
 $_['text_cron_never'] = 'De geplande vernieuwing is nog niet uitgevoerd.';
 $_['text_pending_stale'] = '%d Two-bestellingen wachten tot de koper terugkeert, en de geplande URL heeft het afgelopen uur niet gedraaid. Plan hem elke 15 minuten in, zodat geverifieerde bestellingen worden geplaatst.';
+$_['text_pending_table'] = 'De Two-bestellingentabel mist kolommen die de controle van bestellingen waarvan de koper niet terugkwam nodig heeft, en toevoegen is mislukt (zie het foutlogboek). Tot ze zijn toegevoegd, worden die bestellingen niet bij Two gecontroleerd.';
 
 // TWO-27055: the product page message and buy button (Checkout fields).
 $_['entry_product_message_enabled'] = 'Bericht tonen op productpagina’s';

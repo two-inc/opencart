@@ -16,7 +16,7 @@ Version 2.x is for OpenCart 4.1. OpenCart 3 is not supported: the 1.x extension 
 2. In the OpenCart admin, open Extensions > Installer, upload `two.ocmod.zip`, then click Install beside it.
 3. Open Extensions > Extensions, choose Payments, and install Two. Then click Edit to configure it.
 
-To upgrade, replace the package in Extensions > Installer with the new release's `two.ocmod.zip`; your settings are kept. Do not uninstall Two under Extensions > Payments to upgrade: that deletes its settings.
+To upgrade, replace the package in Extensions > Installer with the new release's `two.ocmod.zip`; your settings are kept. The new release updates its own order table the next time the scheduled URL runs or the settings page is opened. Do not uninstall Two under Extensions > Payments to upgrade: that deletes its settings.
 
 ## Configure
 

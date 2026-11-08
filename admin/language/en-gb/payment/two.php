@@ -159,6 +159,7 @@ $_['entry_refund_reason'] = 'Reason (on the credit note)';
 $_['button_refund'] = 'Send refund to Two';
 $_['error_refund_permission'] = 'You do not have permission to refund this order.';
 $_['error_check_permission'] = 'You do not have permission to check this order with Two.';
+$_['error_check_method'] = 'Check status with Two must be sent from the button on the Two tab.';
 $_['error_refund_quantity'] = 'Not refunded: a quantity is not a whole number.';
 $_['text_refund_state_pending'] = 'Not answered';
 $_['text_refund_state_done'] = 'Refunded';
@@ -325,6 +326,7 @@ $_['help_cron_url'] = 'Call this every 15 minutes from your server\'s crontab. E
 $_['text_cron_last_run'] = 'The scheduled refresh last ran at %s.';
 $_['text_cron_never'] = 'The scheduled refresh has not run yet.';
 $_['text_pending_stale'] = '%d Two orders are waiting for the buyer to return, and the scheduled URL has not run in the last hour. Schedule it every 15 minutes so verified orders are placed.';
+$_['text_pending_table'] = 'The Two order table is missing columns that the check of unreturned orders needs, and adding them failed (see the error log). Until they are added, those orders are not checked with Two.';
 
 // TWO-27055: the product page message and buy button (Checkout fields).
 $_['entry_product_message_enabled'] = 'Show message on product pages';

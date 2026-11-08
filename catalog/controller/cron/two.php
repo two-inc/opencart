@@ -10,6 +10,7 @@ use Opencart\System\Library\Extension\Two\Core\PendingCheck;
 use Opencart\System\Library\Extension\Two\Core\RecordProvider;
 use Opencart\System\Library\Extension\Two\Opencart\DbOrderLock;
 use Opencart\System\Library\Extension\Two\Opencart\DbOrderRecords;
+use Opencart\System\Library\Extension\Two\Opencart\LogLogger;
 use Opencart\System\Library\Extension\Two\Opencart\Services;
 
 /**
@@ -105,6 +106,8 @@ class Two extends \Opencart\System\Engine\Controller
     private function runPendingCheck(): string
     {
         $started = microtime(true);
+        // An upgrade copies files and never runs install() again: add the table's new columns before selecting on them.
+        DbOrderRecords::upgrade($this->db, new LogLogger($this->log, false));
         $ids = DbOrderRecords::waiting($this->db, (int) $this->config->get('config_void_status_id'), time());
         $counts = [];
         $skipped = 0;
