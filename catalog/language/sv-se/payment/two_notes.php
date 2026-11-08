@@ -29,6 +29,7 @@ $_['note_check_already'] = 'Köparen verifierade den här ordern hos Two men åt
 $_['note_by_schedule'] = 'av den schemalagda kontrollen';
 $_['note_by_admin'] = 'av %s';
 $_['note_check_cancelled'] = 'Two anger ordern %s som avbruten. Ordern lämnas olagd för att stämma; inget skickades till Two.';
+$_['note_check_declined'] = 'Two avslog ordern %s. Ordern lämnas olagd; inget skickades till Two.';
 $_['note_check_unverified'] = 'Kontrollerat hos Two: köparen har inte slutfört verifieringen av ordern %s.';
 $_['note_check_state'] = 'Two anger ordern %1$s som %2$s; inget ändrades. Kontrollera ordern i Twos handlarportal.';
 $_['note_check_unread'] = 'Two kunde inte tillfrågas om statusen för ordern %1$s: %2$s';

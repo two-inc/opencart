@@ -29,6 +29,7 @@ $_['note_check_already'] = 'El comprador verificó este pedido con Two, pero no 
 $_['note_by_schedule'] = 'por la comprobación programada';
 $_['note_by_admin'] = 'por %s';
 $_['note_check_cancelled'] = 'Two indica que el pedido %s está cancelado. El pedido se deja sin registrar; no se envió nada a Two.';
+$_['note_check_declined'] = 'Two rechazó el pedido %s. El pedido se deja sin registrar; no se envió nada a Two.';
 $_['note_check_unverified'] = 'Comprobado con Two: el comprador no ha terminado la verificación del pedido %s.';
 $_['note_check_state'] = 'Two indica que el pedido %1$s está en %2$s; no se cambió nada. Revise el pedido en el portal de comerciantes de Two.';
 $_['note_check_unread'] = 'No se pudo consultar a Two el estado del pedido %1$s: %2$s';

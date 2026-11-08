@@ -29,6 +29,7 @@ $_['note_check_already'] = 'The buyer verified this order with Two but did not r
 $_['note_by_schedule'] = 'by the scheduled check';
 $_['note_by_admin'] = 'by %s';
 $_['note_check_cancelled'] = 'Two reports order %s as cancelled. The order is left unplaced to match; nothing was sent to Two.';
+$_['note_check_declined'] = 'Two declined order %s. The order is left unplaced; nothing was sent to Two.';
 $_['note_check_unverified'] = 'Checked with Two: the buyer has not finished verification of order %s.';
 $_['note_check_state'] = 'Two reports order %1$s as %2$s; nothing was changed. Check the order in the Two merchant portal.';
 $_['note_check_unread'] = 'Two could not be asked for the state of order %1$s: %2$s';

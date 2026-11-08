@@ -24,6 +24,11 @@ final class LogLogger implements Logger
         $this->write('error', $message, $context);
     }
 
+    public function warning(string $message, array $context = []): void
+    {
+        $this->write('warning', $message, $context);
+    }
+
     public function info(string $message, array $context = []): void
     {
         $this->write('info', $message, $context);

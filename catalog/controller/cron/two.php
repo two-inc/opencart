@@ -127,9 +127,10 @@ class Two extends \Opencart\System\Engine\Controller
     /**
      * Checks one order under its lock (the lock the buyer's return and
      * placement take), and only while it is still an unplaced Two order. The
-     * order is read again before any write.
+     * order is read again before any write. The scheduled check also reads
+     * its record again under the lock (PendingCheck::check).
      *
-     * @return array{outcome: string, message: Message}|null null when another request holds the order
+     * @return array{outcome: string, message: Message}|null null when another request holds the order, or the scheduled check finds it no longer due
      */
     private function checkOrder(int $orderId, string $trigger, int $waitSeconds, ?Message $by): ?array
     {
@@ -149,6 +150,10 @@ class Two extends \Opencart\System\Engine\Controller
             $services = new Services($this->db, $this->log, (int) $order['store_id']);
             $rebuild = OrderFlow::rebuildFrom(static fn (array $company, array $fields, array $terms): ?array => $model->orderInput($orderId, $company, [], $fields, $terms));
             $result = $services->pendingCheck($this->event)->check($orderId, $trigger, $rebuild, $model->orderRows($orderId), $by);
+            if ($result === null) {
+                // An overlapping run checked, closed or found it cancelled since this run's selection.
+                return null;
+            }
 
             $order = $this->model_checkout_order->getOrder($orderId);
             if (!$this->waiting($order)) {

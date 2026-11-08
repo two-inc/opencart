@@ -23,16 +23,19 @@ final class PendingCheckSpec
 {
     private const ID = '5f1c2a7e-0000-4000-8000-000000000001';
     private const NOW = 1_800_000_000;
+    /** The table's outcome for a scheduled check that left the order (check() answered null). */
+    private const SKIPPED = 'skipped';
 
     public static function runAll(): void
     {
         self::testCheck();
+        self::testWarnOnce();
         self::testScheduleStale();
     }
 
     private static function testCheck(): void
     {
-        $get = static fn (string $state): HttpResponse => self::json(200, ['id' => self::ID, 'state' => $state, 'status' => 'APPROVED']);
+        $get = static fn (string $state, string $status = 'APPROVED'): HttpResponse => self::json(200, ['id' => self::ID, 'state' => $state, 'status' => $status]);
         $read = 'GET /v1/order/' . self::ID;
         $confirm = 'POST /v1/order/' . self::ID . '/confirm';
         $s = OrderFlow::TRIGGER_SCHEDULED;
@@ -63,22 +66,23 @@ final class PendingCheckSpec
             [$a, [], [$get('CONFIRMED')], $grown, OrderFlow::CHANGED, 'note', 'note_check_unmatched', [$read], ['CONFIRMED', self::NOW, null, PendingCheck::CLOSED_CHANGED], 'button, confirmed but the cart changed: not placed, nothing sent'],
             [$s, [], [$get('CANCELLED')], $grown, OrderFlow::CANCELLED, 'note', 'note_check_cancelled', [$read], ['CANCELLED', self::NOW, null, null], 'scheduled, cancelled and changed: the cancel decides, nothing sent'],
             [$b, [], [self::json(404, [])], null, OrderFlow::REFUSED, 'none', 'note_confirm_unread', [$read], ['', self::NOW, null, null], 'the buyer\'s return: a 404 never counts as missing'],
+            [$s, [], [$get('UNVERIFIED', 'DECLINED')], null, OrderFlow::REJECTED, 'note', 'note_check_declined', [$read], ['UNVERIFIED', self::NOW, null, PendingCheck::CLOSED_DECLINED], 'scheduled, Two declined: as cancelled, noted once and closed, nothing sent'],
+            [$a, [], [$get('UNVERIFIED', 'REJECTED')], null, OrderFlow::REJECTED, 'note', 'note_check_declined', [$read], ['UNVERIFIED', self::NOW, null, PendingCheck::CLOSED_DECLINED], 'button, Two rejected: noted, nothing sent'],
+            [$s, ['checked_at' => (string) (self::NOW - 60)], [], null, self::SKIPPED, 'none', null, [], ['', self::NOW - 60, null, null], 'scheduled, an overlapping run checked it since the selection: left, nothing asked or stamped'],
+            [$s, ['check_closed' => PendingCheck::CLOSED_CHANGED], [], null, self::SKIPPED, 'none', null, [], ['', null, null, PendingCheck::CLOSED_CHANGED], 'scheduled, an overlapping run closed it: left, nothing asked or stamped'],
+            [$s, ['two_order_state' => 'CANCELLED'], [], null, self::SKIPPED, 'none', null, [], ['CANCELLED', null, null, null], 'scheduled, an overlapping run found it cancelled: left, no second note'],
+            [$s, ['checked_at' => (string) (self::NOW - 901)], [$get('UNVERIFIED')], null, OrderFlow::WAITING, 'none', 'note_check_unverified', [$read], ['UNVERIFIED', self::NOW, null, null], 'scheduled, last checked over 15 minutes ago: due again'],
+            [$a, ['checked_at' => (string) (self::NOW - 60)], [$get('UNVERIFIED')], null, OrderFlow::WAITING, 'note', 'note_check_unverified', [$read], ['UNVERIFIED', self::NOW, null, null], 'button, checked a minute ago: checks on demand'],
         ];
         foreach ($cases as [$trigger, $over, $responses, $rebuildSpec, $outcome, $action, $key, $calls, $stored, $description]) {
-            $records = new MemoryRecords([42 => $over + ['payload_hash' => OrderFlow::payloadHash((new OrderBuilder())->build(self::order(), self::lines(2), [])), 'two_order_id' => self::ID, 'two_order_state' => '', 'company_name' => 'Acme AS']]);
-            $transport = new ScriptedTransport($responses);
-            $logger = new RecordingLogger();
-            $subscribers = new ScriptedSubscribers();
-            $client = new Client(new Environment(false), new SettingsProvider(new MemoryStore(['api_key' => 'key-0123456789', 'environment' => 'sandbox'])), new CustomHeaders(), $transport, $logger, '1.0.0');
-            $flow = new OrderFlow($client, new OrderBuilder(), new Postprocessing($subscribers, $logger), new ErrorMapper(), $records, $logger);
-            $check = new PendingCheck($flow, $records, $logger, static fn (): int => self::NOW);
+            [$check, $records, $transport, $logger, $subscribers] = self::checker($over, $responses);
             $spec = $rebuildSpec ?? [2, []];
             $rebuild = static fn (array $record): array => ['order' => $spec[1] + self::order(), 'lines' => self::lines($spec[0]), 'totals' => []];
 
             $result = $check->check(42, $trigger, $rebuild, ['products' => [], 'totals' => [], 'addresses' => []], Message::of('note_by_admin', 'admin'));
             $d = 'pending check: ' . $description;
-            $did = $result['place'] ? 'place' : ($result['note'] ? 'note' : 'none');
-            TinyAssert::same([$outcome, $action, $key], [$result['outcome'], $did, $result['message']->key], $d . ': outcome, action and message');
+            $did = $result === null ? 'none' : ($result['place'] ? 'place' : ($result['note'] ? 'note' : 'none'));
+            TinyAssert::same([$outcome, $action, $key], $result === null ? [self::SKIPPED, $did, null] : [$result['outcome'], $did, $result['message']->key], $d . ': outcome, action and message');
             TinyAssert::same($calls, array_map(static fn (array $call): string => $call['method'] . ' ' . (string) parse_url($call['url'], PHP_URL_PATH), $transport->calls), $d . ': requests');
             $row = $records->rows[42];
             TinyAssert::same($stored, [
@@ -95,8 +99,47 @@ final class PendingCheckSpec
             if (in_array($confirm, $calls, true)) {
                 TinyAssert::same($trigger, $subscribers->contexts[count($subscribers->contexts) - 1]['trigger'] ?? null, $d . ': the hook sees the trigger');
             }
-            TinyAssert::same(1, count(array_filter($logger->at('info'), static fn (string $line): bool => str_starts_with($line, 'Two pending check: order 42, Two order ' . self::ID . ', trigger ' . $trigger . ','))), $d . ': one log line for the check');
+            TinyAssert::same($result === null ? 0 : 1, count(array_filter($logger->at('info'), static fn (string $line): bool => str_starts_with($line, 'Two pending check: order 42, Two order ' . self::ID . ', trigger ' . $trigger . ','))), $d . ': one log line per check made');
         }
+    }
+
+    /** A refunded or unknown state is a warning the first time it is read, never an error, and later checks only stamp. */
+    private static function testWarnOnce(): void
+    {
+        $cases = [
+            // state stored before the check, state Two reports, warnings expected, description
+            ['', 'REFUNDED', 1, 'refunded, first seen: one warning'],
+            ['REFUNDED', 'REFUNDED', 0, 'refunded again: stamped only'],
+            ['REFUNDED', 'SOMETHING_NEW', 1, 'a new unknown state: one warning'],
+            ['SOMETHING_NEW', 'SOMETHING_NEW', 0, 'the same unknown state: stamped only'],
+        ];
+        foreach ($cases as [$before, $state, $warnings, $description]) {
+            [$check, $records, , $logger] = self::checker(['two_order_state' => $before], [self::json(200, ['id' => self::ID, 'state' => $state, 'status' => 'APPROVED'])]);
+            $rebuild = static fn (array $record): array => ['order' => self::order(), 'lines' => self::lines(2), 'totals' => []];
+            $result = $check->check(42, OrderFlow::TRIGGER_SCHEDULED, $rebuild);
+            $d = 'pending check warns once: ' . $description;
+            TinyAssert::same([OrderFlow::WAITING, false, $state, (string) self::NOW], [$result['outcome'] ?? null, $result['note'] ?? null, $records->rows[42]['two_order_state'], $records->rows[42]['checked_at'] ?? null], $d . ': outcome, note, stored state and stamp');
+            TinyAssert::same([$warnings, 0], [count($logger->at('warning')), count($logger->at('error'))], $d . ': warnings and errors logged');
+        }
+    }
+
+    /**
+     * A check over order 42 with the record over the base and Two's scripted answers.
+     *
+     * @param array<string, string> $over
+     * @param list<HttpResponse> $responses
+     * @return array{PendingCheck, MemoryRecords, ScriptedTransport, RecordingLogger, ScriptedSubscribers}
+     */
+    private static function checker(array $over, array $responses): array
+    {
+        $records = new MemoryRecords([42 => $over + ['payload_hash' => OrderFlow::payloadHash((new OrderBuilder())->build(self::order(), self::lines(2), [])), 'two_order_id' => self::ID, 'two_order_state' => '', 'company_name' => 'Acme AS']]);
+        $transport = new ScriptedTransport($responses);
+        $logger = new RecordingLogger();
+        $subscribers = new ScriptedSubscribers();
+        $client = new Client(new Environment(false), new SettingsProvider(new MemoryStore(['api_key' => 'key-0123456789', 'environment' => 'sandbox'])), new CustomHeaders(), $transport, $logger, '1.0.0');
+        $flow = new OrderFlow($client, new OrderBuilder(), new Postprocessing($subscribers, $logger), new ErrorMapper(), $records, $logger);
+
+        return [new PendingCheck($flow, $records, $logger, static fn (): int => self::NOW), $records, $transport, $logger, $subscribers];
     }
 
     private static function testScheduleStale(): void

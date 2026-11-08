@@ -29,6 +29,7 @@ $_['note_check_already'] = 'Kjøperen bekreftet denne ordren hos Two, men kom ik
 $_['note_by_schedule'] = 'av den planlagte kontrollen';
 $_['note_by_admin'] = 'av %s';
 $_['note_check_cancelled'] = 'Two oppgir ordren %s som kansellert. Ordren blir stående som ikke lagt inn; ingenting ble sendt til Two.';
+$_['note_check_declined'] = 'Two avslo ordren %s. Ordren blir stående som ikke lagt inn; ingenting ble sendt til Two.';
 $_['note_check_unverified'] = 'Sjekket hos Two: kjøperen har ikke fullført verifiseringen av ordren %s.';
 $_['note_check_state'] = 'Two oppgir ordren %1$s som %2$s; ingenting ble endret. Sjekk ordren i Twos forhandlerportal.';
 $_['note_check_unread'] = 'Two kunne ikke spørres om statusen til ordren %1$s: %2$s';

@@ -21,7 +21,11 @@ namespace Opencart\System\Library\Extension\Two\Core;
  *   MISSING_REPEAT apart: the order is then closed and noted. Never on the
  *   buyer's return, which does not come through here.
  * - A shop order that no longer matches the Two order is closed and noted,
- *   with nothing sent to Two: the merchant settles it.
+ *   with nothing sent to Two: the merchant settles it. So is one whose Two
+ *   status is REJECTED or DECLINED.
+ * - The scheduled check re-reads the record under the lock and leaves an
+ *   order that an overlapping run has checked, closed or found cancelled
+ *   since the selection.
  *
  * The adapter holds the order's lock and has found the shop order still
  * unplaced before calling check(); it then places the order or writes the
@@ -38,6 +42,8 @@ final class PendingCheck
     /** Why an order is no longer selected, kept in its record's check_closed. */
     public const CLOSED_CHANGED = 'changed';
     public const CLOSED_MISSING = 'missing';
+    /** Two's status is REJECTED or DECLINED: as a cancelled order, noted once and not selected again. */
+    public const CLOSED_DECLINED = 'declined';
 
     /** When the token URL last ran the check, and how long without a run the Diagnostics tab warns. */
     public const LAST_RUN_KEY = 'pending_check_last_run';
@@ -63,13 +69,21 @@ final class PendingCheck
      *
      * @param \Closure(array<string, string>): (array{order: array<string, mixed>, lines: list<array<string, mixed>>, totals: list<array<string, mixed>>, context?: array<string, mixed>}|null) $rebuild
      * @param array{products: list<array<string, mixed>>, totals: list<array<string, mixed>>, addresses: array<string, mixed>, currency?: string}|null $rows
+     * The scheduled check reads the record again here, under the lock, and
+     * leaves an order another run checked, closed or found cancelled since
+     * its selection: null, nothing asked and nothing stamped. The button
+     * always checks.
+     *
      * @param Message|null $by who checked, for the note of an order placed from the admin
-     * @return array{place: bool, note: bool, message: Message, outcome: string, state: string}
+     * @return array{place: bool, note: bool, message: Message, outcome: string, state: string}|null null when the scheduled check finds the order no longer due
      */
-    public function check(int $orderId, string $trigger, \Closure $rebuild, ?array $rows = null, ?Message $by = null): array
+    public function check(int $orderId, string $trigger, \Closure $rebuild, ?array $rows = null, ?Message $by = null): ?array
     {
         $record = $this->records->get($orderId) ?? [];
         $now = ($this->clock)();
+        if ($trigger === OrderFlow::TRIGGER_SCHEDULED && !self::due($record, $now)) {
+            return null;
+        }
         $result = $this->flow->resolve($orderId, $record, $trigger, $rebuild, $rows, $by);
         $outcome = $result['outcome'];
         $message = $result['message'];
@@ -88,6 +102,8 @@ final class PendingCheck
         }
         if ($outcome === OrderFlow::CHANGED) {
             $stamp['check_closed'] = self::CLOSED_CHANGED;
+        } elseif ($outcome === OrderFlow::REJECTED) {
+            $stamp['check_closed'] = self::CLOSED_DECLINED;
         }
         $this->records->put($orderId, $stamp);
 
@@ -112,7 +128,20 @@ final class PendingCheck
         foreach ($counts as $outcome => $count) {
             $parts[] = $outcome . ' ' . $count;
         }
-        $this->logger->debug('Two pending check run (' . $trigger . '): checked ' . array_sum($counts) . ($parts === [] ? '' : ' (' . implode(', ', $parts) . ')') . ', skipped ' . $skipped . ' held by another request.');
+        $this->logger->debug('Two pending check run (' . $trigger . '): checked ' . array_sum($counts) . ($parts === [] ? '' : ' (' . implode(', ', $parts) . ')') . ', skipped ' . $skipped . ' (held by another request or no longer due).');
+    }
+
+    /**
+     * Whether the record still meets the selection's own rules: not checked
+     * within RECHECK_AFTER, not closed, not cancelled at Two.
+     *
+     * @param array<string, string> $record
+     */
+    private static function due(array $record, int $now): bool
+    {
+        return (int) ($record['checked_at'] ?? 0) < $now - self::RECHECK_AFTER
+            && ($record['check_closed'] ?? '') === ''
+            && ($record['two_order_state'] ?? '') !== 'CANCELLED';
     }
 
     /** Whether the Diagnostics tab warns: orders are waiting and the token URL has not run within WARN_AFTER. */

@@ -36,6 +36,10 @@ final class OrderFlow
     public const WAITING = 'waiting';
     /** Two answered 404 for the Two order: it does not know it (counted only by PendingCheck, never on the buyer's return). */
     public const MISSING = 'missing';
+    /** Two's status is REJECTED or DECLINED (a check from the schedule or the admin): handled as a cancelled order. */
+    public const REJECTED = 'rejected';
+    /** Two's order statuses that mean Two will never approve the order. */
+    public const REJECTED_STATUSES = ['REJECTED', 'DECLINED'];
 
     /** What asked for the Two order's state: the buyer's return, the scheduled check or the admin's button. */
     public const TRIGGER_BUYER = 'buyer_return';
@@ -207,9 +211,11 @@ final class OrderFlow
      *   refused.
      * - The schedule and the button send Two nothing but the confirm of a
      *   VERIFIED order whose shop order still rebuilds what Two holds. A
-     *   changed order, a cancelled one, an unverified, refunded or unknown
-     *   state, a failed read or a failed confirm change nothing at Two; a
-     *   failed confirm leaves the order waiting for the next check.
+     *   changed order, a cancelled one, one whose Two status is REJECTED or
+     *   DECLINED, an unverified, refunded or unknown state, a failed read or a
+     *   failed confirm change nothing at Two; a failed confirm leaves the
+     *   order waiting for the next check. A refunded or unknown state is
+     *   logged as a warning the first time it is seen.
      *
      * @param array<string, string> $record the order's record
      * @param \Closure(array<string, string>): (array{order: array<string, mixed>, lines: list<array<string, mixed>>, totals: list<array<string, mixed>>, context?: array<string, mixed>}|null) $rebuild
@@ -250,11 +256,17 @@ final class OrderFlow
         }
         $placed = $rows === null ? [] : ['rows_hash' => OrderLifecycle::rowsHash($rows)];
         if (!$buyer) {
+            if (in_array($read['two_status'], self::REJECTED_STATUSES, true)) {
+                return self::outcome(self::REJECTED, Message::of('note_check_declined', $twoOrderId), $twoOrderId, $state);
+            }
             if ($state === 'UNVERIFIED') {
                 return self::outcome(self::WAITING, Message::of('note_check_unverified', $twoOrderId), $twoOrderId, $state);
             }
             if ($state !== 'VERIFIED' && (!in_array($state, self::PLACED_STATES, true) || $state === 'REFUNDED')) {
-                $this->logger->error('Two order ' . $twoOrderId . ' (order ' . $orderId . ') is ' . $state . ': left unchanged by the ' . $trigger . '.');
+                // Logged the first time the order is seen in this state; later checks only stamp it.
+                if (($record['two_order_state'] ?? '') !== $state) {
+                    $this->logger->warning('Two order ' . $twoOrderId . ' (order ' . $orderId . ') is ' . $state . ': left unchanged by the ' . $trigger . '.');
+                }
 
                 return self::outcome(self::WAITING, Message::of('note_check_state', $twoOrderId, $state), $twoOrderId, $state);
             }
@@ -610,10 +622,11 @@ final class OrderFlow
     }
 
     /**
-     * readState with Two's HTTP status (0 when Two was not reached) and why
-     * no state came back.
+     * readState with Two's HTTP status (0 when Two was not reached), why no
+     * state came back, and the Two order's own `status` field (upper case,
+     * empty when absent).
      *
-     * @return array{state: string|null, status: int, reason: Message|string}
+     * @return array{state: string|null, status: int, reason: Message|string, two_status: string}
      */
     private function read(int $orderId, string $twoOrderId): array
     {
@@ -622,11 +635,12 @@ final class OrderFlow
         if (!$response->reachedTwo() || $response->status >= 400 || !is_string($body['state'] ?? null)) {
             $this->logger->error('Two order ' . $twoOrderId . ' state could not be read: ' . $this->errors->reason($response));
 
-            return ['state' => null, 'status' => $response->reachedTwo() ? $response->status : 0, 'reason' => $this->errors->noteReason($response)];
+            return ['state' => null, 'status' => $response->reachedTwo() ? $response->status : 0, 'reason' => $this->errors->noteReason($response), 'two_status' => ''];
         }
-        $this->records->put($orderId, self::stateFields($body));
+        $fields = self::stateFields($body);
+        $this->records->put($orderId, $fields);
 
-        return ['state' => strtoupper($body['state']), 'status' => $response->status, 'reason' => ''];
+        return ['state' => strtoupper($body['state']), 'status' => $response->status, 'reason' => '', 'two_status' => $fields['two_order_status'] ?? ''];
     }
 
     /**

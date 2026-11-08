@@ -29,6 +29,7 @@ $_['note_check_already'] = 'De koper heeft deze bestelling bij Two geverifieerd 
 $_['note_by_schedule'] = 'door de geplande controle';
 $_['note_by_admin'] = 'door %s';
 $_['note_check_cancelled'] = 'Two meldt bestelling %s als geannuleerd. De bestelling blijft ongeplaatst; er is niets naar Two gestuurd.';
+$_['note_check_declined'] = 'Two heeft bestelling %s afgewezen. De bestelling blijft ongeplaatst; er is niets naar Two gestuurd.';
 $_['note_check_unverified'] = 'Gecontroleerd bij Two: de koper heeft de verificatie van bestelling %s nog niet afgerond.';
 $_['note_check_state'] = 'Two meldt bestelling %1$s als %2$s; er is niets gewijzigd. Controleer de bestelling in het Two-merchantportaal.';
 $_['note_check_unread'] = 'Two kon niet worden gevraagd naar de status van bestelling %1$s: %2$s';
