@@ -223,7 +223,7 @@ $_['help_surcharge_line_description'] = 'Label van de toeslagregel die de koper 
 $_['help_surcharge_rounding_basis'] = 'Rond de toeslag af op een net interval. Kies Geen voor standaardbedragen met twee decimalen.';
 $_['help_surcharge_rounding_step'] = 'Het interval waarop de toeslag wordt afgerond. Geldt alleen als een afrondingsrichting is gekozen.';
 $_['help_surcharge_tax_class'] = 'De belastingklasse waartegen de toeslag wordt berekend, zoals voor elk product: de eigen belastingregels van de winkel gelden op het adres van de koper. Wil je de toeslag onbelast laten, maak dan een belastingklasse met een tarief van 0 procent en kies die. Verplicht zolang er een toeslag aan staat.';
-$_['help_surcharge_grid'] = 'Percentage is het deel van de %2$s-vergoeding dat aan de koper wordt doorberekend, van 0 tot 100. Het maximum geldt voor de hele vergoeding: het percentage en het vaste bedrag samen, niet alleen het percentage. Laat leeg voor geen maximum. Vaste bedragen en maxima zijn in %1$s en worden voor andere valuta omgerekend tegen de koersen van %2$s.';
+$_['help_surcharge_grid'] = 'Percentage is het deel van de %2$s-vergoeding dat aan de koper wordt doorberekend. Het maximum geldt voor de hele vergoeding: het percentage en het vaste bedrag samen, niet alleen het percentage. Laat leeg voor geen maximum. Vaste bedragen en maxima zijn in %1$s en worden voor andere valuta omgerekend tegen de koersen van %2$s.';
 $_['error_term_type_unknown'] = 'Kies een type betaaltermijn uit de lijst.';
 $_['error_terms_none'] = 'Je moet minimaal één betaaltermijn selecteren.';
 $_['error_terms_unknown'] = 'Selecteer alleen termijnen die je account aanbiedt.';
@@ -240,7 +240,6 @@ $_['text_health_fx'] = 'Wisselkoersen van %s opgehaald %s';
 $_['text_withheld_no_terms'] = 'er wordt geen betaaltermijn aangeboden: je account biedt geen van de termijnen die op het tabblad Betaaltermijnen zijn aangevinkt voor dit type termijn.';
 $_['text_withheld_fee_total_off'] = 'er is een toeslag ingesteld, maar het besteltotaal Two-toeslag betaaltermijnen is niet ingeschakeld. Schakel het in onder Extensies > Besteltotalen, of zet de toeslagmethode op Geen toeslag.';
 $_['text_withheld_tax_code_map_unreadable'] = 'opgeslagen belastingcodes voor regels met 0%% kunnen niet worden gelezen. Vink Opgeslagen belastingcodes wissen aan in de sectie Belastingcodes voor regels met 0%% (tabblad Orderbeheer) en sla op.';
-$_['error_surcharge_percent_range'] = '%1$s voor de termijn van %2$d dagen moet tussen 0 en 100 liggen: het is het deel van de toeslag dat aan de koper wordt doorberekend.';
 
 // TWO-27051: vendor name (General), subtitle and the tile switches (Checkout fields), the confirmed status and Validate tax subtotals (Order management), the merchant fee per term (Payment terms). %s is the brand's product name.
 $_['entry_vendor_name'] = 'Leveranciersnaam (optioneel)';

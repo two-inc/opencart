@@ -27,6 +27,7 @@ A rewrite of the extension for OpenCart 4.1. It does not run on OpenCart 3, and 
 
 ### Changed
 - **Two API connection** (TWO-26648). Calls Two's current API hosts, for both Sandbox and Production.
+- **Surcharge percentage** (TWO-27110). The share of Two's fee passed to the buyer is no longer capped at 100: any percentage of 0 or more saves, as in Two's other plugins.
 
 ### Removed
 - **OpenCart 3 support.** The 1.x extension for OpenCart 3 can no longer reach Two; move to OpenCart 4.1.

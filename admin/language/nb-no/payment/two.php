@@ -223,7 +223,7 @@ $_['help_surcharge_line_description'] = 'Teksten kjøperen ser på gebyrlinjen. 
 $_['help_surcharge_rounding_basis'] = 'Rund gebyret av til et jevnt intervall. Velg Ingen for vanlige beløp med to desimaler.';
 $_['help_surcharge_rounding_step'] = 'Intervallet gebyret rundes av til. Gjelder bare når en avrundingsretning er valgt.';
 $_['help_surcharge_tax_class'] = 'Avgiftsklassen gebyret belastes med, som for ethvert produkt: butikkens egne skatteregler gjelder på kjøperens adresse. Hvis gebyret skal være uten skatt, oppretter du en avgiftsklasse med en sats på 0 prosent og velger den. Påkrevd når et tillegg er på.';
-$_['help_surcharge_grid'] = 'Prosent er andelen av %2$s-gebyret som videreføres til kjøperen, fra 0 til 100. Maksbeløpet gjelder hele gebyret: prosenten og det faste beløpet til sammen, ikke bare prosenten. La feltet stå tomt for ingen grense. Faste beløp og maksbeløp er i %1$s og omregnes med kursene til %2$s for andre valutaer.';
+$_['help_surcharge_grid'] = 'Prosent er andelen av %2$s-gebyret som videreføres til kjøperen. Maksbeløpet gjelder hele gebyret: prosenten og det faste beløpet til sammen, ikke bare prosenten. La feltet stå tomt for ingen grense. Faste beløp og maksbeløp er i %1$s og omregnes med kursene til %2$s for andre valutaer.';
 $_['error_term_type_unknown'] = 'Velg en type betalingsvilkår fra listen.';
 $_['error_terms_none'] = 'Du må velge minst ett betalingsvilkår.';
 $_['error_terms_unknown'] = 'Velg bare vilkår kontoen din tilbyr.';
@@ -240,7 +240,6 @@ $_['text_health_fx'] = 'Valutakursene fra %s ble hentet %s';
 $_['text_withheld_no_terms'] = 'ingen betalingsvilkår tilbys: kontoen din tilbyr ingen av vilkårene som er krysset av på fanen Betalingsvilkår for denne vilkårstypen.';
 $_['text_withheld_fee_total_off'] = 'et tillegg er satt, men ordretotalen Two-gebyr for betalingsvilkår er ikke aktivert. Aktiver den under Utvidelser > Ordretotaler, eller sett metoden for tillegg til Ingen tillegg.';
 $_['text_withheld_tax_code_map_unreadable'] = 'lagrede avgiftskoder for linjer med 0%% kan ikke leses. Kryss av for Tøm lagrede avgiftskoder i delen Avgiftskoder for linjer med 0%% (fanen Ordrehåndtering) og lagre.';
-$_['error_surcharge_percent_range'] = '%1$s for vilkåret på %2$d dager må være mellom 0 og 100: det er andelen av gebyret som videreføres til kjøperen.';
 
 // TWO-27051: vendor name (General), subtitle and the tile switches (Checkout fields), the confirmed status and Validate tax subtotals (Order management), the merchant fee per term (Payment terms). %s is the brand's product name.
 $_['entry_vendor_name'] = 'Leverandørnavn (valgfritt)';

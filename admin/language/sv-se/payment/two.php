@@ -223,7 +223,7 @@ $_['help_surcharge_line_description'] = 'Texten köparen ser på avgiftsraden. A
 $_['help_surcharge_rounding_basis'] = 'Avrunda avgiften till ett jämnt steg. Välj Ingen för vanliga belopp med två decimaler.';
 $_['help_surcharge_rounding_step'] = 'Steget som avgiften avrundas till. Gäller bara när en avrundningsriktning är vald.';
 $_['help_surcharge_tax_class'] = 'Skatteklassen som avgiften debiteras med, som för vilken produkt som helst: butikens egna skatteregler gäller på köparens adress. Om avgiften ska vara skattefri skapar du en skatteklass med en sats på 0 procent och väljer den. Krävs när en tilläggsavgift är på.';
-$_['help_surcharge_grid'] = 'Procent är den andel av %2$s-avgiften som förs vidare till köparen, från 0 till 100. Taket gäller hela avgiften: procenten och det fasta beloppet tillsammans, inte bara procenten. Lämna tomt för inget tak. Fasta belopp och tak anges i %1$s och räknas om med kurserna från %2$s för andra valutor.';
+$_['help_surcharge_grid'] = 'Procent är den andel av %2$s-avgiften som förs vidare till köparen. Taket gäller hela avgiften: procenten och det fasta beloppet tillsammans, inte bara procenten. Lämna tomt för inget tak. Fasta belopp och tak anges i %1$s och räknas om med kurserna från %2$s för andra valutor.';
 $_['error_term_type_unknown'] = 'Välj en typ av betalningsvillkor i listan.';
 $_['error_terms_none'] = 'Du måste välja minst ett betalningsvillkor.';
 $_['error_terms_unknown'] = 'Välj bara villkor som ditt konto erbjuder.';
@@ -240,7 +240,6 @@ $_['text_health_fx'] = 'Valutakurserna från %s hämtades %s';
 $_['text_withheld_no_terms'] = 'inga betalningsvillkor erbjuds: ditt konto erbjuder inget av de villkor som är markerade på fliken Betalningsvillkor för den här villkorstypen.';
 $_['text_withheld_fee_total_off'] = 'en tilläggsavgift är inställd, men ordertotalen Two-avgift för betalningsvillkor är inte aktiverad. Aktivera den under Tillägg > Ordertotaler, eller sätt metoden för tilläggsavgift till Ingen tilläggsavgift appliceras.';
 $_['text_withheld_tax_code_map_unreadable'] = 'sparade skattekoder för rader med 0%% kan inte läsas. Markera Rensa sparade skattekoder i avsnittet Skattekoder för rader med 0%% (fliken Orderhantering) och spara.';
-$_['error_surcharge_percent_range'] = '%1$s för villkoret på %2$d dagar måste vara mellan 0 och 100: det är den andel av avgiften som förs vidare till köparen.';
 
 // TWO-27051: vendor name (General), subtitle and the tile switches (Checkout fields), the confirmed status and Validate tax subtotals (Order management), the merchant fee per term (Payment terms). %s is the brand's product name.
 $_['entry_vendor_name'] = 'Leverantörsnamn (valfritt)';
