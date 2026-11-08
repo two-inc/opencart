@@ -27,8 +27,12 @@ final class DbOrderRecords implements OrderRecords
 
     /** The columns the pending check's selection reads. */
     public const SELECTION_COLUMNS = ['checked_at', 'check_closed'];
+    /** The column the tax code placement record is kept in (TWO-27110). */
+    public const RECORD_COLUMNS = ['tax_codes'];
     /** When a missing-columns error was last logged, and how often it may be. */
     public const UPGRADE_LOGGED_KEY = 'order_table_logged_at';
+    /** When a missing tax code record column was last logged, on the same schedule. */
+    public const RECORD_LOGGED_KEY = 'order_table_record_logged_at';
     public const UPGRADE_LOG_EVERY = 3_600;
 
     /** @var list<string>|null */
@@ -123,25 +127,36 @@ final class DbOrderRecords implements OrderRecords
         } catch (\Throwable $e) {
             $failure = $e->getMessage();
         }
-        if (self::columnsPresent($query, $prefix)) {
-            return true;
+        $why = $failure !== '' ? 'adding them failed: ' . $failure : 'the table is absent or of another shape; install() has not run on it.';
+        if (!self::columnsPresent($query, $prefix)) {
+            self::logHourly($logger, $store, self::UPGRADE_LOGGED_KEY, $now, 'Two order table: the columns the pending check needs are missing, so it selects no orders: ' . $why);
+
+            return false;
         }
-        if ($now - (int) $store->get(self::UPGRADE_LOGGED_KEY) >= self::UPGRADE_LOG_EVERY) {
-            $logger->error('Two order table: the columns the pending check needs are missing, so it selects no orders: '
-                . ($failure !== '' ? 'adding them failed: ' . $failure : 'the table is absent or of another shape; install() has not run on it.'));
-            $store->setMany([self::UPGRADE_LOGGED_KEY => (string) $now]);
+        if (!self::columnsPresent($query, $prefix, self::RECORD_COLUMNS)) {
+            // The record is left out of every write, so rebuilds resolve codes from the mapping as it is then (TWO-27110).
+            self::logHourly($logger, $store, self::RECORD_LOGGED_KEY, $now, 'Two order table: the tax_codes column is missing, so orders keep no record of the tax codes they were placed with: ' . $why);
         }
 
-        return false;
+        return true;
+    }
+
+    private static function logHourly(Logger $logger, SettingsStore $store, string $key, int $now, string $message): void
+    {
+        if ($now - (int) $store->get($key) >= self::UPGRADE_LOG_EVERY) {
+            $logger->error($message);
+            $store->setMany([$key => (string) $now]);
+        }
     }
 
     /**
-     * Whether the table exists and has the columns the selection reads.
-     * Never throws: a failed read counts as missing.
+     * Whether the table exists and has the columns given, by default those
+     * the selection reads. Never throws: a failed read counts as missing.
      *
      * @param \Closure(string): list<array<string, mixed>> $query
+     * @param list<string> $wanted
      */
-    public static function columnsPresent(\Closure $query, string $prefix): bool
+    public static function columnsPresent(\Closure $query, string $prefix, array $wanted = self::SELECTION_COLUMNS): bool
     {
         $table = $prefix . self::TABLE;
         try {
@@ -153,7 +168,7 @@ final class DbOrderRecords implements OrderRecords
             return false;
         }
 
-        return array_diff(self::SELECTION_COLUMNS, $columns) === [];
+        return array_diff($wanted, $columns) === [];
     }
 
     /** @return \Closure(string): list<array<string, mixed>> */
