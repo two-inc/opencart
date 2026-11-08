@@ -8,6 +8,7 @@ use Opencart\System\Library\Extension\Two\Core\FeeQuote;
 use Opencart\System\Library\Extension\Two\Core\Message;
 use Opencart\System\Library\Extension\Two\Core\PaymentTerms;
 use Opencart\System\Library\Extension\Two\Core\TaxCodes;
+use Opencart\System\Library\Extension\Two\Opencart\NoteText;
 use Opencart\System\Library\Extension\Two\Opencart\OrderTax;
 use Opencart\System\Library\Extension\Two\Opencart\Services;
 
@@ -441,6 +442,47 @@ class Two extends \Opencart\System\Engine\Model
 
     /** The address columns the order keeps for each role, hashed as stored. */
     private const ADDRESS_FIELDS = ['firstname', 'lastname', 'company', 'address_1', 'address_2', 'city', 'postcode', 'country_id', 'zone_id'];
+
+    /**
+     * Not yet placed: status 0, or the shop's void status, which OpenCart
+     * 4.1.0.0 sets on every checkout edit of an unplaced order.
+     *
+     * @param array<string, mixed> $order
+     */
+    public function unplaced(array $order): bool
+    {
+        $status = (int) $order['order_status_id'];
+
+        return $status === 0 || $status === (int) $this->config->get('config_void_status_id');
+    }
+
+    /**
+     * Places an unplaced order at the status given, with no comment (OpenCart
+     * puts the placing comment in the buyer's order confirmation email, and
+     * the reference plugin places its order with none), then the merchant's
+     * note as its own history line. addHistory runs the order events and the
+     * order mail, as for any order placed on the storefront.
+     */
+    public function place(int $orderId, int $statusId, Message $message): void
+    {
+        $this->load->model('checkout/order');
+        $this->model_checkout_order->addHistory($orderId, $statusId);
+        $placed = $this->model_checkout_order->getOrder($orderId);
+        $this->historyNote($orderId, (int) ($placed['order_status_id'] ?? $statusId), $message);
+    }
+
+    /**
+     * A line in the order history for the merchant, in the shop's language
+     * whatever the buyer's, never notified. Written directly: the status does
+     * not change, so no order event or mail is due.
+     */
+    public function historyNote(int $orderId, int $statusId, Message $message): void
+    {
+        $this->load->language('extension/two/payment/two');
+        $text = $this->language->get('text_history_prefix') . NoteText::render($message, $this->load, $this->language, NoteText::shopCode($this->config));
+        $this->db->query('INSERT INTO `' . DB_PREFIX . "order_history` SET `order_id` = '" . $orderId . "', `order_status_id` = '" . $statusId . "', `notify` = '0', `comment` = '"
+            . $this->db->escape($text) . "', `date_added` = NOW()");
+    }
 
     /**
      * The order's own rows, as stored: its products (price, tax and

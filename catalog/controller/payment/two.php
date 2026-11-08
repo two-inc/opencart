@@ -14,7 +14,6 @@ use Opencart\System\Library\Extension\Two\Core\RateLimiter;
 use Opencart\System\Library\Extension\Two\Core\RequestToken;
 use Opencart\System\Library\Extension\Two\Opencart\DbOrderLock;
 use Opencart\System\Library\Extension\Two\Opencart\DbRateLimits;
-use Opencart\System\Library\Extension\Two\Opencart\NoteText;
 use Opencart\System\Library\Extension\Two\Core\ErrorMapper;
 use Opencart\System\Library\Extension\Two\Core\OrderFlow;
 use Opencart\System\Library\Extension\Two\Core\PaymentTerms;
@@ -594,13 +593,9 @@ class Two extends \Opencart\System\Engine\Controller
         $order = $this->model_checkout_order->getOrder($orderId);
         $after = OrderFlow::afterCallback($kind, $result['outcome'], $order && !$this->unplaced($order));
         if ($after['place']) {
-            // Placed with no comment: OpenCart puts the placing comment in the buyer's order confirmation
-            // email, and the reference plugin places its order with none. The note is the merchant's.
             // At the merchant's confirmed status (Order management), else the shop's default order status.
-            $status = $this->services()->settings->placedStatusId((int) $this->config->get('config_order_status_id'));
-            $this->model_checkout_order->addHistory($orderId, $status);
-            $placed = $this->model_checkout_order->getOrder($orderId);
-            $this->historyNote($orderId, (int) ($placed['order_status_id'] ?? $status), $result['message']);
+            $this->load->model(self::ROUTE);
+            $this->model_extension_two_payment_two->place($orderId, $this->services()->settings->placedStatusId((int) $this->config->get('config_order_status_id')), $result['message']);
             // The buyer's next checkout starts on the default chain again.
             unset($this->session->data['two_payment_term'], $this->session->data['two_fee_quotes']);
         } elseif ($after['note']) {
@@ -609,17 +604,12 @@ class Two extends \Opencart\System\Engine\Controller
         $this->leave($after['goto'], $after['notice']);
     }
 
-    /**
-     * Not yet placed: status 0, or the shop's void status, which OpenCart
-     * 4.1.0.0 sets on every checkout edit of an unplaced order.
-     *
-     * @param array<string, mixed> $order
-     */
+    /** @param array<string, mixed> $order */
     private function unplaced(array $order): bool
     {
-        $status = (int) $order['order_status_id'];
+        $this->load->model(self::ROUTE);
 
-        return $status === 0 || $status === (int) $this->config->get('config_void_status_id');
+        return $this->model_extension_two_payment_two->unplaced($order);
     }
 
     /** The reason in the order history of an unplaced order, its status unchanged. Placed orders are left alone. */
@@ -627,20 +617,8 @@ class Two extends \Opencart\System\Engine\Controller
     {
         $order = $this->model_checkout_order->getOrder($orderId);
         if ($order && $this->unplaced($order)) {
-            $this->historyNote($orderId, (int) $order['order_status_id'], $message);
+            $this->model_extension_two_payment_two->historyNote($orderId, (int) $order['order_status_id'], $message);
         }
-    }
-
-    /**
-     * A line in the order history for the merchant, in the shop's language
-     * whatever the buyer's, never notified. Written directly: the status does
-     * not change, so no order event or mail is due.
-     */
-    private function historyNote(int $orderId, int $statusId, Message $message): void
-    {
-        $text = $this->language->get('text_history_prefix') . NoteText::render($message, $this->load, $this->language, NoteText::shopCode($this->config));
-        $this->db->query('INSERT INTO `' . DB_PREFIX . "order_history` SET `order_id` = '" . $orderId . "', `order_status_id` = '" . $statusId . "', `notify` = '0', `comment` = '"
-            . $this->db->escape($text) . "', `date_added` = NOW()");
     }
 
     /**

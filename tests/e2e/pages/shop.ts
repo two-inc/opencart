@@ -68,3 +68,24 @@ export function refundRows(orderId: number): { state: string; note: string }[] {
 export function twoOrderId(orderId: number): string {
   return sql(`SELECT two_order_id FROM oc_two_order WHERE order_id = ${orderId}`)[0]?.[0] ?? "";
 }
+
+/** Unplaced: status 0, or the void status OpenCart 4.1.0.0 sets on every checkout edit. */
+export function isUnplaced(orderId: number): boolean {
+  const voided = Number(sql("SELECT value FROM oc_setting WHERE store_id = 0 AND `key` = 'config_void_status_id'")[0]?.[0] ?? "0");
+  return [0, voided].includes(orderStatusId(orderId));
+}
+
+/** Makes the order look 31 minutes old, so the pending check selects it. */
+export function backdate(orderId: number): void {
+  sql(`UPDATE oc_order SET date_added = NOW() - INTERVAL 31 MINUTE, date_modified = NOW() - INTERVAL 31 MINUTE WHERE order_id = ${orderId}`);
+}
+
+/** The order's history comments, oldest first. */
+export function historyComments(orderId: number): string[] {
+  return sql(`SELECT comment FROM oc_order_history WHERE order_id = ${orderId} ORDER BY order_history_id`).map(([comment]) => comment);
+}
+
+/** How many times the order was put at a status: history lines with no comment (the extension's notes carry one). */
+export function placings(orderId: number, statusId: number): number {
+  return Number(sql(`SELECT COUNT(*) FROM oc_order_history WHERE order_id = ${orderId} AND order_status_id = ${statusId} AND comment = ''`)[0][0]);
+}

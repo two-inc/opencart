@@ -22,6 +22,28 @@ export async function stubOrder(id: string): Promise<StubOrder> {
   return res.json();
 }
 
+/** Sets the Two order's state as Two would on its own (the buyer verifying, Two cancelling). */
+export async function setState(id: string, state: string): Promise<void> {
+  expect((await (await api()).post(`/__stub/orders/${id}`, { data: { state } })).ok(), `the stub sets Two order ${id} to ${state}`).toBeTruthy();
+}
+
+/**
+ * The buyer passes Two's hosted checkout (the order turns VERIFIED) but never
+ * follows its redirect back to the shop. Returns the confirmation URL Two
+ * would have sent the buyer to.
+ */
+export async function verifyAtTwo(paymentUrl: string): Promise<string> {
+  await setCheckoutOutcome("verify");
+  const res = await (await api()).get(paymentUrl, { maxRedirects: 0 });
+  expect(res.status(), "Two's hosted checkout redirects back to the shop").toBe(302);
+  return res.headers()["location"] ?? "";
+}
+
+/** What the hosted checkout does with the next buyer: verify, or leave (cancel). */
+export async function setCheckoutOutcome(outcome: "verify" | "cancel"): Promise<void> {
+  expect((await (await api()).post("/__stub/checkout", { data: { outcome } })).ok()).toBeTruthy();
+}
+
 export async function expectState(id: string, state: string): Promise<void> {
   await expect.poll(async () => (await stubOrder(id)).state, { message: `Two order ${id} reaches ${state}` }).toBe(state);
 }

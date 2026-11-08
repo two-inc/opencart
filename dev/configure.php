@@ -198,6 +198,11 @@ if (query($db, "SELECT `cron_id` FROM `{$p}cron` WHERE `code` = ?", [Services::C
     query($db, "INSERT INTO `{$p}cron` SET `code` = ?, `description` = ?, `cycle` = ?, `action` = ?, `status` = 1, `date_added` = NOW(), `date_modified` = NOW()", [Services::CRON_CODE, Services::CRON_DESCRIPTION, Services::CRON_CYCLE, Services::CRON_ACTION]);
     say('registered cron ' . Services::CRON_CODE);
 }
+// The hourly pending check (TWO-26300), as install() registers it.
+if (query($db, "SELECT `cron_id` FROM `{$p}cron` WHERE `code` = ?", [Services::PENDING_CRON_CODE]) === []) {
+    query($db, "INSERT INTO `{$p}cron` SET `code` = ?, `description` = ?, `cycle` = ?, `action` = ?, `status` = 1, `date_added` = NOW(), `date_modified` = NOW()", [Services::PENDING_CRON_CODE, Services::PENDING_CRON_DESCRIPTION, Services::PENDING_CRON_CYCLE, Services::CRON_ACTION]);
+    say('registered cron ' . Services::PENDING_CRON_CODE);
+}
 
 // 6. The order lifecycle on OpenCart's order history event, as install() registers it.
 if (query($db, "SELECT `event_id` FROM `{$p}event` WHERE `code` = ?", [Services::EVENT_CODE]) === []) {

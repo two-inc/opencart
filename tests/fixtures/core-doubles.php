@@ -67,6 +67,11 @@ final class RecordingLogger implements Logger
         $this->lines[] = ['level' => 'error', 'message' => $message, 'context' => $context];
     }
 
+    public function warning(string $message, array $context = []): void
+    {
+        $this->lines[] = ['level' => 'warning', 'message' => $message, 'context' => $context];
+    }
+
     public function info(string $message, array $context = []): void
     {
         $this->lines[] = ['level' => 'info', 'message' => $message, 'context' => $context];

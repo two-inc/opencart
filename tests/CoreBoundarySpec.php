@@ -21,7 +21,7 @@ final class CoreBoundarySpec
     /** The plan's ten core classes plus the key verdict heartbeat, then the ports and value objects they share. */
     private const CORE_TYPES = [
         'Client', 'Environment', 'RecordProvider', 'SettingsProvider', 'Availability', 'ApiKeyVerdict', 'BuyerCountries', 'MinimumOrder', 'CompanyLookup', 'CompanyCapture', 'RequestToken', 'BuyerFields', 'RateLimiter',
-        'OrderBuilder', 'Postprocessing', 'ErrorMapper', 'CustomHeaders', 'Brand', 'OrderFlow', 'OrderLifecycle', 'OrderRefunds', 'OrderEdit', 'IdempotencyKey', 'PaymentTerms', 'Surcharge', 'FxRates', 'FeeQuote', 'MerchantFeeRates', 'TaxCodes', 'TaxCodeList', 'ErrorLog',
+        'OrderBuilder', 'Postprocessing', 'ErrorMapper', 'CustomHeaders', 'Brand', 'OrderFlow', 'OrderLifecycle', 'OrderRefunds', 'OrderEdit', 'IdempotencyKey', 'PaymentTerms', 'Surcharge', 'FxRates', 'FeeQuote', 'MerchantFeeRates', 'TaxCodes', 'TaxCodeList', 'ErrorLog', 'PendingCheck',
         'SettingsStore', 'SettingsOverlay', 'SettingsSave', 'ProductPage', 'Transport', 'Logger', 'Message', 'HttpResponse', 'NotImplemented',
         'OrderRecords', 'OrderLock', 'RefundRecords', 'OrderRefused', 'PostprocessingSubscribers',
     ];
