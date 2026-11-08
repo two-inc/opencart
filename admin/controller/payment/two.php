@@ -164,8 +164,9 @@ class Two extends \Opencart\System\Engine\Controller
         $ranAt = (int) $settings->store()->get(RecordProvider::CRON_LAST_RUN_KEY);
         $data['cron_last_run'] = $ranAt > 0 ? sprintf($this->language->get('text_cron_last_run'), gmdate('Y-m-d H:i', $ranAt) . 'Z') : $this->language->get('text_cron_never');
         // Orders the buyer verified but never returned from are placed only by the pending check (TWO-26300): warn when they wait and the URL has stopped running.
-        // An upgrade copies files and never runs install() again, so the table's new columns are added here, and the tab warns while they are missing.
-        $data['pending_table'] = DbOrderRecords::upgrade($this->db, new LogLogger($this->log, false)) ? '' : $this->language->get('text_pending_table');
+        // An upgrade copies files and never runs install() again, so the table's new columns and the cron rows are added here, and the tab warns while the columns are missing.
+        $data['pending_table'] = DbOrderRecords::upgrade($this->db, new LogLogger($this->log, false), $settings->store()) ? '' : $this->language->get('text_pending_table');
+        $this->registerCronRows(false);
         $waiting = DbOrderRecords::waitingCount($this->db, (int) $this->config->get('config_void_status_id'));
         $data['pending_stale'] = PendingCheck::scheduleStale($waiting, (int) $settings->store()->get(PendingCheck::LAST_RUN_KEY), time()) ? sprintf($this->language->get('text_pending_stale'), $waiting) : '';
         $shopCurrency = (string) $this->config->get('config_currency');
@@ -493,11 +494,7 @@ class Two extends \Opencart\System\Engine\Controller
         $this->load->model('setting/setting');
         $this->model_setting_setting->editSetting(self::CODE, $defaults);
 
-        $this->load->model('setting/cron');
-        $this->model_setting_cron->deleteCronByCode(Services::CRON_CODE);
-        $this->model_setting_cron->addCron(Services::CRON_CODE, Services::CRON_DESCRIPTION, Services::CRON_CYCLE, Services::CRON_ACTION, true);
-        $this->model_setting_cron->deleteCronByCode(Services::PENDING_CRON_CODE);
-        $this->model_setting_cron->addCron(Services::PENDING_CRON_CODE, Services::PENDING_CRON_DESCRIPTION, Services::PENDING_CRON_CYCLE, Services::CRON_ACTION, true);
+        $this->registerCronRows(true);
 
         $this->load->model('setting/event');
         $this->model_setting_event->deleteEventByCode(Services::EVENT_CODE);
@@ -650,6 +647,28 @@ class Two extends \Opencart\System\Engine\Controller
             // Waiting for the buyer's return: the merchant may ask Two now (TWO-26300).
             'check_action' => $order !== null && $this->unplaced($order) ? $link('checkStatus') : '',
         ]);
+    }
+
+    /**
+     * The extension's rows in OpenCart's cron table: install() replaces them;
+     * the settings page adds only a missing one, since an upgrade copies files
+     * and never runs install() again. A row the merchant disabled is kept.
+     */
+    private function registerCronRows(bool $replace): void
+    {
+        $this->load->model('setting/cron');
+        $rows = [
+            Services::CRON_CODE => [Services::CRON_DESCRIPTION, Services::CRON_CYCLE],
+            Services::PENDING_CRON_CODE => [Services::PENDING_CRON_DESCRIPTION, Services::PENDING_CRON_CYCLE],
+        ];
+        foreach ($rows as $code => [$description, $cycle]) {
+            if ($replace) {
+                $this->model_setting_cron->deleteCronByCode($code);
+            } elseif ($this->model_setting_cron->getCronByCode($code) !== []) {
+                continue;
+            }
+            $this->model_setting_cron->addCron($code, $description, $cycle, Services::CRON_ACTION, true);
+        }
     }
 
     /**

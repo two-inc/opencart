@@ -107,7 +107,7 @@ class Two extends \Opencart\System\Engine\Controller
     {
         $started = microtime(true);
         // An upgrade copies files and never runs install() again: add the table's new columns before selecting on them.
-        DbOrderRecords::upgrade($this->db, new LogLogger($this->log, false));
+        DbOrderRecords::upgrade($this->db, new LogLogger($this->log, false), (new Services($this->db, $this->log))->settings->store());
         $ids = DbOrderRecords::waiting($this->db, (int) $this->config->get('config_void_status_id'), time());
         $counts = [];
         $skipped = 0;

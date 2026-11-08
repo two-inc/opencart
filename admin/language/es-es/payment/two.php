@@ -326,7 +326,7 @@ $_['help_cron_url'] = 'Llame a esta URL cada 15 minutos desde el crontab de su s
 $_['text_cron_last_run'] = 'La actualización programada se ejecutó por última vez el %s.';
 $_['text_cron_never'] = 'La actualización programada aún no se ha ejecutado.';
 $_['text_pending_stale'] = '%d pedidos de Two esperan a que el comprador vuelva, y la URL programada no se ha ejecutado en la última hora. Prográmela cada 15 minutos para que se registren los pedidos verificados.';
-$_['text_pending_table'] = 'A la tabla de pedidos de Two le faltan columnas que necesita la comprobación de los pedidos de compradores que no volvieron, y no se pudieron añadir (consulte el registro de errores). Hasta que se añadan, esos pedidos no se comprueban con Two.';
+$_['text_pending_table'] = 'A la tabla de pedidos de Two le faltan columnas que necesita la comprobación de los pedidos de compradores que no volvieron, y la extensión no pudo añadirlas (el registro de errores indica el motivo). Hasta que se añadan, esos pedidos no se comprueban con Two.';
 
 // TWO-27055: the product page message and buy button (Checkout fields).
 $_['entry_product_message_enabled'] = 'Mostrar mensaje en las páginas de producto';
