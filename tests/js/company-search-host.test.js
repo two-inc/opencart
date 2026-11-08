@@ -418,6 +418,26 @@ describe('address autofill', () => {
         await flush();
         expect([fields('payment'), hosts.payment.identity.companyName()]).toEqual([['', 'Edited', '', ''], '']);
     });
+
+    // The registry phone is a plugin write like the address (TWO-27110): a country change clears it unless the buyer changed it.
+    test.each([
+        [null, '', 'the registry phone still in place: cleared'],
+        ['+47 22 00 00 00', '+47 22 00 00 00', 'a phone the buyer typed since: kept'],
+    ])('a country change after a pick with a registry phone, case %#', async (typed, after, description) => {
+        document.body.innerHTML = ADDRESS('payment') + '<input id="input-telephone">';
+        const { hosts } = start(config(), { d: { organization_number: '0123', addresses: [{ type: 'REGISTERED', street_address: '1 High St', city: 'London', postal_code: 'EC1A 1AA', phone_number: '+44 20 7946 0000' }] } });
+        await flush();
+        await hosts.payment.component.selectCompany({ text: 'Acme Ltd', companyId: '0123', lookupId: 'L1' });
+        await flush();
+        const input = document.getElementById('input-telephone');
+        expect(input.value).toBe('+44 20 7946 0000');
+        if (typed !== null) input.value = typed;
+        const country = document.getElementById('input-payment-country');
+        country.value = '160';
+        country.dispatchEvent(new Event('change', { bubbles: true }));
+        await flush();
+        expect([input.value, description]).toEqual([after, description]);
+    });
 });
 
 describe('the tile', () => {
