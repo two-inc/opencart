@@ -41,6 +41,10 @@ final class Surcharge
     public const BASIS_UNKNOWN = 'surcharge_basis_unknown';
     public const CELL_INVALID = 'surcharge_cell_invalid';
     public const CAP_ZERO = 'surcharge_cap_zero';
+    public const PERCENT_RANGE = 'surcharge_percent_range';
+
+    /** The percentage is the share of Two's fee passed to the buyer, so Two takes 0 to 100. */
+    public const MAX_PERCENTAGE = 100;
 
     /**
      * @param array<int, array{percentage: float, fixed: float, cap: float|null}> $grid by term
@@ -257,6 +261,10 @@ final class Surcharge
                 $value = self::number($raw);
                 if ($value === null || (float) $value < 0) {
                     $gridErrors[] = self::CELL_INVALID . ':' . $column . ':' . $days;
+                    continue;
+                }
+                if ($column === 'percentage' && (float) $value > self::MAX_PERCENTAGE) {
+                    $gridErrors[] = self::PERCENT_RANGE . ':' . $column . ':' . $days;
                     continue;
                 }
                 if ($column === 'cap' && $capApplies && round((float) $value, self::MONEY_DECIMALS) === 0.0) {

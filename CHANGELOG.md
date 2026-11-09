@@ -31,7 +31,6 @@ A rewrite of the extension for OpenCart 4.1. It does not run on OpenCart 3, and 
 - **Product page message and buy button** (TWO-27110). Both show the Two logo beside the Two name, as in Two's other plugins.
 - **Company address autofill** (TWO-27110). Picking a company also fills the buyer's telephone with the company's registered phone, when the register has one, and writes the postcode the way its country does ("1234AB" becomes "1234 AB").
 - **Tax codes on placed orders** (TWO-27110). An order keeps the tax code each 0% line was placed with, and its edits send those codes, so changing your tax code mapping, the order's addresses or a tax rule later never changes a placed order. A buyer at Two's checkout while you change the mapping can still complete the order.
-- **Surcharge percentage** (TWO-27110). The share of Two's fee passed to the buyer is no longer capped at 100: any percentage of 0 or more saves, as in Two's other plugins.
 
 ### Removed
 - **OpenCart 3 support.** The 1.x extension for OpenCart 3 can no longer reach Two; move to OpenCart 4.1.
