@@ -1,6 +1,6 @@
 # Third PHPStan pass: the offline suite alone. It runs apart from the main
-# pass because tests/fixtures/opencart-db-double.php declares the real
-# OpenCart DB class name, so no OpenCart sources are scanned here; the
+# pass because tests/fixtures/opencart-db-double.php and
+# opencart-cron-double.php declare real OpenCart class names, so no OpenCart sources are scanned here; the
 # test bootstrap loads the double and the extension's autoloader instead.
 parameters:
     level: 6

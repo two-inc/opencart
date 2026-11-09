@@ -20,6 +20,9 @@ if (!class_exists('Opencart\\System\\Library\\DB', false)) {
 if (!class_exists('Opencart\\System\\Library\\Language', false)) {
     require __DIR__ . '/fixtures/opencart-language-doubles.php';
 }
+if (!class_exists('Opencart\\Admin\\Model\\Setting\\Cron', false)) {
+    require __DIR__ . '/fixtures/opencart-cron-double.php';
+}
 require_once __DIR__ . '/fixtures/core-doubles.php';
 
 /** The harness's assertions. Every message names the case that failed. */

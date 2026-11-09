@@ -12,7 +12,7 @@ parameters:
     excludePaths:
         - dev/environment-parity.php
         - dev/environment-contract.php
-    # tests/ is left out: its OpenCart DB double shares the real class name.
+    # tests/ is left out: its OpenCart DB and cron model doubles share the real class names.
     bootstrapFiles:
         - dev/ci/phpstan-bootstrap.php
     # Real OpenCart sources at the supported floor (4.1.0.0), fetched by
