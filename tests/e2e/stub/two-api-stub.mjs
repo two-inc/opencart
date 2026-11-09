@@ -249,7 +249,7 @@ function api(method, path, body, key) {
     return [200, { items: [{ name: "E2E Trading Ltd", national_identifier: { id: "12345678" }, highlight: "", lookup_id: "e2e-1" }] }];
   }
   if (method === "GET" && path === "/companies/v2/company/e2e-1") {
-    return [200, { national_identifier: { id: "12345678" }, addresses: [{ type: "REGISTERED", street_address: "1 Registry Road", city: "London", postal_code: "EC1A 1AA" }] }];
+    return [200, { national_identifier: { id: "12345678" }, addresses: [{ type: "REGISTERED", street_address: "1 Registry Road", city: "London", postal_code: "EC1A 1AA", phone_number: "+44 20 7946 0000" }] }];
   }
   if (method === "GET" && path === "/companies/v2/supported-countries") {
     return [200, { supported_countries: ["GB", "NO", "SE", "NL", "ES"] }];

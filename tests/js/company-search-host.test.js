@@ -374,6 +374,27 @@ describe('address autofill', () => {
         expect([input.value, description]).toEqual([after, description]);
     });
 
+    // The registry's phone from a pick with autofill, on the buyer's own form (TWO-27110).
+    test.each([
+        [['payment'], 'payment', true, '+44 20 7946 0000', '', false, '+44 20 7946 0000', 'billing: the registry phone is written'],
+        [['payment'], 'payment', true, undefined, '+44 1', true, '', 'no registry phone: the plugin\'s earlier number is cleared'],
+        [['payment'], 'payment', true, undefined, '+44 1', false, '+44 1', 'no registry phone: the buyer\'s number stays'],
+        [['shipping'], 'shipping', true, '+44 20 7946 0000', '', false, '+44 20 7946 0000', 'shipping, with no billing form on the page: the buyer\'s form'],
+        [['payment', 'shipping'], 'shipping', true, '+44 20 7946 0000', '+44 1', false, '+44 1', 'shipping beside a billing form: not the buyer\'s phone'],
+        [['payment'], 'payment', false, '+44 20 7946 0000', '+44 1', false, '+44 1', 'autofill switched off: nothing written'],
+    ])('a pick\'s registry phone, case %#', async (forms, role, lookup, phone, before, ours, after, description) => {
+        document.body.innerHTML = forms.map(ADDRESS).join('') + '<input id="input-telephone">';
+        const address = Object.assign({ type: 'REGISTERED', street_address: '1 High St', city: 'London', postal_code: 'EC1A 1AA' }, phone === undefined ? {} : { phone_number: phone });
+        const { hosts } = start(config({ address_lookup: lookup }), { d: { organization_number: '0123', addresses: [address] } });
+        await flush();
+        const input = document.getElementById('input-telephone');
+        input.value = before;
+        if (ours) input.setAttribute('data-two-autofilled-value', before);
+        await hosts[role].component.selectCompany({ text: 'Acme Ltd', companyId: '', lookupId: 'L1' });
+        await flush();
+        expect([input.value, description]).toEqual([after, description]);
+    });
+
     test('a details failure shows the address notice under the field', async () => {
         document.body.innerHTML = ADDRESS('payment');
         const { hosts } = start(config(), { d: { error: 'unavailable' } });
@@ -396,6 +417,53 @@ describe('address autofill', () => {
         country.dispatchEvent(new Event('change', { bubbles: true }));
         await flush();
         expect([fields('payment'), hosts.payment.identity.companyName()]).toEqual([['', 'Edited', '', ''], '']);
+    });
+
+    // The sole trader's verified phone (TWO-26775) is a plugin write too, so the same revert clears it (TWO-27110).
+    test.each([
+        ['leave', null, '', 'leaving sole-trader mode for a registered search clears it'],
+        ['country', null, '', 'a country change clears it'],
+        ['country', '+47 22 00 00 00', '+47 22 00 00 00', 'a phone the buyer typed since is kept'],
+    ])('a sole trader\'s verified phone on %s, case %#', async (how, typed, after, description) => {
+        document.body.innerHTML = ADDRESS('payment') + '<input id="input-telephone">';
+        const { hosts } = start(config());
+        await flush();
+        const identity = hosts.payment.identity;
+        identity.captureMode('soletrader');
+        identity.soleTraderAdopted(true);
+        hosts.payment.component.host().applyTelephone('+47 99 99 99 99');
+        const input = document.getElementById('input-telephone');
+        expect(input.value).toBe('+47 99 99 99 99');
+        if (typed !== null) input.value = typed;
+        if (how === 'leave') {
+            hosts.payment.component.registeredMode();
+        } else {
+            const country = document.getElementById('input-payment-country');
+            country.value = '160';
+            country.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        await flush();
+        expect([input.value, description]).toEqual([after, description]);
+    });
+
+    // The registry phone is a plugin write like the address (TWO-27110): a country change clears it unless the buyer changed it.
+    test.each([
+        [null, '', 'the registry phone still in place: cleared'],
+        ['+47 22 00 00 00', '+47 22 00 00 00', 'a phone the buyer typed since: kept'],
+    ])('a country change after a pick with a registry phone, case %#', async (typed, after, description) => {
+        document.body.innerHTML = ADDRESS('payment') + '<input id="input-telephone">';
+        const { hosts } = start(config(), { d: { organization_number: '0123', addresses: [{ type: 'REGISTERED', street_address: '1 High St', city: 'London', postal_code: 'EC1A 1AA', phone_number: '+44 20 7946 0000' }] } });
+        await flush();
+        await hosts.payment.component.selectCompany({ text: 'Acme Ltd', companyId: '0123', lookupId: 'L1' });
+        await flush();
+        const input = document.getElementById('input-telephone');
+        expect(input.value).toBe('+44 20 7946 0000');
+        if (typed !== null) input.value = typed;
+        const country = document.getElementById('input-payment-country');
+        country.value = '160';
+        country.dispatchEvent(new Event('change', { bubbles: true }));
+        await flush();
+        expect([input.value, description]).toEqual([after, description]);
     });
 });
 

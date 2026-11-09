@@ -132,9 +132,19 @@ final class TaxCodes
      * other rate are left as they are. The mapping is read only once a 0%
      * line needs it, so an order with none never depends on it.
      *
-     * @param list<array<string, mixed>>                                                    $items the payload's line items
-     * @param list<array{class: int, rates: list<array{id: int, rate: float, type: string}>}|null> $keys  one per item: its tax class and the rates applied, null for a line with none
-     * @param array{map?: string|null, exempt?: bool}|null                                 $facts the stored mapping and whether the buyer is exempt (step 1)
+     * A rebuilt order (the confirm check, an edit) passes its placement
+     * record (`recorded`, see record()): a 0% line placement coded takes the
+     * recorded code, whether its class or step 4 gave it, so a later change
+     * to the mapping, the addresses or a tax rule never moves a placed order
+     * (TWO-27110). A line placement did not code (one an edit added, or an
+     * order placed before the record existed) is resolved as at placement.
+     * Step 4 shares the recorded codes the mapping gave at placement (the
+     * record's `mapped` keys) and the codes resolved now, never a code step 4
+     * gave, even when a line's tax class has changed since.
+     *
+     * @param list<array<string, mixed>>                                                                             $items the payload's line items
+     * @param list<array{class: int, rates: list<array{id: int, rate: float, type: string}>, line?: string|null}|null> $keys  one per item: its tax class, the rates applied and the line's record key, null for a line with none
+     * @param array{map?: string|null, exempt?: bool, recorded?: array{codes: array<string, string>, mapped: list<string>}|null}|null $facts the stored mapping, whether the buyer is exempt (step 1) and the placement record (null on a create)
      * @return list<array<string, mixed>>
      *
      * @throws OrderRefused when a 0% line needs a mapping the plugin's form could not have written (the last guard: checkout withholds Two first)
@@ -144,37 +154,120 @@ final class TaxCodes
         if ($facts === null) {
             return $items;
         }
+        $recorded = $facts['recorded'] ?? null;
         $map = null;
         $codes = [];
         $keyless = [];
+        // Recorded codes step 4 gave at placement: kept as placed, and out of step 4's pool.
+        $kept = [];
         foreach ($items as $i => $item) {
             if ((float) $item['tax_rate'] != 0.0) {
                 continue;
             }
-            if ($map === null) {
+            $key = $keys[$i] ?? null;
+            $classed = $key !== null && $key['class'] > 0;
+            $line = $key['line'] ?? null;
+            if ($line !== null && isset($recorded['codes'][$line])) {
+                if (in_array($line, $recorded['mapped'], true)) {
+                    $codes[$i] = $recorded['codes'][$line];
+                } else {
+                    $kept[$i] = $recorded['codes'][$line];
+                }
+                continue;
+            }
+            // A rebuild's keyless lines share recorded codes, so only a line to resolve needs the mapping then.
+            if ($map === null && ($classed || $recorded === null)) {
                 $map = self::parse($facts['map'] ?? null);
                 if ($map === null) {
                     throw OrderRefused::because('tax_code_map_unreadable', Message::of('refusal_tax_code_map'));
                 }
             }
-            $key = $keys[$i] ?? null;
-            if ($key === null || $key['class'] <= 0) {
+            if (!$classed) {
                 $keyless[] = $i;
                 continue;
             }
-            $codes[$i] = self::resolve($map, $key['class'], (bool) ($facts['exempt'] ?? false), $key['rates']);
+            $codes[$i] = self::resolve($map ?? [], $key['class'], (bool) ($facts['exempt'] ?? false), $key['rates']);
         }
         $shared = self::shared(array_values($codes));
         foreach ($keyless as $i) {
             $codes[$i] = $shared;
         }
-        foreach ($codes as $i => $code) {
+        foreach ($kept + $codes as $i => $code) {
             if ($code !== null) {
                 $items[$i]['tax_code'] = $code;
             }
         }
 
         return $items;
+    }
+
+    /**
+     * The placement record (TWO-27110): the code each 0% line with a record
+     * key was sent with, by that key (`codes`), and which of those the
+     * mapping gave, steps 1 to 3 for a line with a tax class (`mapped`), as
+     * against step 4. A line sent with no code is not recorded. The first
+     * line with a key decides it.
+     *
+     * @param list<array<string, mixed>>        $items the coded line items
+     * @param list<array<string, mixed>|null>   $keys  as apply()'s
+     * @return array{codes: array<string, string>, mapped: list<string>}
+     */
+    public static function record(array $items, array $keys): array
+    {
+        $record = ['codes' => [], 'mapped' => []];
+        foreach ($items as $i => $item) {
+            $key = $keys[$i] ?? null;
+            $line = is_string($key['line'] ?? null) ? $key['line'] : null;
+            if ($line === null || (float) $item['tax_rate'] != 0.0 || isset($record['codes'][$line]) || !self::isCode($item['tax_code'] ?? null)) {
+                continue;
+            }
+            $record['codes'][$line] = $item['tax_code'];
+            if ((int) ($key['class'] ?? 0) > 0) {
+                $record['mapped'][] = $line;
+            }
+        }
+
+        return $record;
+    }
+
+    /**
+     * The record as stored on the order's row: '' for none.
+     *
+     * @param array{codes: array<string, string>, mapped: list<string>} $record
+     */
+    public static function encodeRecord(array $record): string
+    {
+        return $record['codes'] === [] ? '' : (string) json_encode($record, JSON_UNESCAPED_SLASHES);
+    }
+
+    /**
+     * The stored record; null when there is none (an order placed before
+     * the record existed, or with no coded line) or it is not one.
+     *
+     * @return array{codes: array<string, string>, mapped: list<string>}|null
+     */
+    public static function decodeRecord(string $raw): ?array
+    {
+        $decoded = $raw === '' ? null : json_decode($raw, true);
+        if (!is_array($decoded) || !is_array($decoded['codes'] ?? null) || $decoded['codes'] === [] || !is_array($decoded['mapped'] ?? null) || !array_is_list($decoded['mapped'])) {
+            return null;
+        }
+        $codes = [];
+        foreach ($decoded['codes'] as $line => $code) {
+            if (!is_string($line) || $line === '' || !self::isCode($code)) {
+                return null;
+            }
+            $codes[$line] = $code;
+        }
+        $mapped = [];
+        foreach ($decoded['mapped'] as $line) {
+            if (!is_string($line) || !isset($codes[$line])) {
+                return null;
+            }
+            $mapped[] = $line;
+        }
+
+        return ['codes' => $codes, 'mapped' => $mapped];
     }
 
     /**

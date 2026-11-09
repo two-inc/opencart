@@ -26,6 +26,7 @@ final class DbOrderRecordsSpec
             // table exists, its columns, columns the first run adds, description
             [true, self::all(), [], 'every column present: nothing altered'],
             [true, self::without(['checked_at', 'missing_at', 'check_closed']), ['checked_at', 'missing_at', 'check_closed'], 'a build before the pending check: its three columns added'],
+            [true, self::without(['tax_codes']), ['tax_codes'], 'a build before the tax code record (TWO-27110): its column added'],
             [true, self::without(array_keys(DbOrderRecords::ADDED_COLUMNS)), array_keys(DbOrderRecords::ADDED_COLUMNS), 'the first shape: every added column, in order'],
             [true, self::without(['token_hash']), [], 'another shape (no token column): left to install()'],
             [false, [], [], 'no table: left to install()'],
@@ -52,6 +53,8 @@ final class DbOrderRecordsSpec
             [true, $pending, 'refuse', false, [1, 1, 2], 'adding them failed: ALTER command denied', 'ALTER refused: logged once an hour'],
             [false, [], 'ok', false, [1, 1, 2], 'the table is absent or of another shape', 'no table: no exception, logged once an hour'],
             [true, [], 'unreadable', false, [1, 1, 2], 'adding them failed: SHOW command denied', 'columns unreadable: no exception, counted as missing'],
+            [true, self::without(['tax_codes']), 'refuse', true, [1, 1, 2], 'the tax_codes column is missing, so orders keep no record of the tax codes they were placed with: adding them failed: ALTER command denied', 'the tax code record column refused alone (TWO-27110): the check still selects, the missing record logged once an hour'],
+            [true, self::without(['tax_codes']), 'ok', true, [0, 0, 0], '', 'the tax code record column missing and added: nothing logged'],
         ];
         foreach ($cases as [$exists, $columns, $alter, $present, $errors, $text, $description]) {
             $table = self::table($exists, $columns, $alter);

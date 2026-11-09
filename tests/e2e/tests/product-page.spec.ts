@@ -1,4 +1,4 @@
-import { Page, expect, test } from "@playwright/test";
+import { Locator, Page, expect, test } from "@playwright/test";
 
 import { PRODUCT_ID } from "../config";
 import { sql } from "../pages/shop";
@@ -41,6 +41,13 @@ async function openPaymentMethods(page: Page, open: boolean): Promise<string> {
   return company;
 }
 
+/** The brand mark is shown and its SVG loads. */
+async function expectMark(scope: Locator): Promise<void> {
+  const mark = scope.locator("img.two-product-mark");
+  await expect(mark, "the brand mark is shown").toBeVisible();
+  await expect.poll(() => mark.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0), { message: "the shipped brand mark loads" }).toBe(true);
+}
+
 test("both switched off, the product page carries neither", async ({ page }) => {
   await page.goto(PRODUCT);
   await expect(page.locator("#button-cart")).toBeVisible();
@@ -53,6 +60,9 @@ test("the message names the brand and uses the checkout tile's sentence", async 
   const promo = page.locator("#form-product .two-product-promo");
   await expect(promo).toContainText("Two");
   await expect(promo).toContainText("Buy now, receive your goods, pay your invoice later.");
+  // The brand mark beside the name, which stays as text for assistive technology (TWO-27110).
+  await expectMark(promo);
+  await expect(promo.locator(".two-product-promo__brand"), "the brand name is kept as text").toHaveText("Two");
   await expect(page.locator("[data-two-buy-now]"), "the button has its own switch").toHaveCount(0);
 });
 
@@ -62,6 +72,7 @@ test("Buy with Two adds the item and opens checkout with Two preselected", async
   await expect(page.locator(".two-product-promo"), "the message has its own switch").toHaveCount(0);
   await page.fill("#input-quantity", "2");
   const button = page.getByRole("button", { name: "Buy with Two" });
+  await expectMark(button);
   await button.click();
   await page.waitForURL(/route=checkout\/checkout/);
 

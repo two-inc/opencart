@@ -223,7 +223,7 @@ $_['help_surcharge_line_description'] = 'Buyer-facing label for the fee line. Us
 $_['help_surcharge_rounding_basis'] = 'Snap the fee to a clean increment. Select None for standard two-decimal amounts.';
 $_['help_surcharge_rounding_step'] = 'Increment the fee is rounded to. Applies only when a rounding direction is selected.';
 $_['help_surcharge_tax_class'] = 'The tax class the fee is charged at, as for any product: the shop\'s own tax rules apply at the buyer\'s address. To leave the fee untaxed, create a tax class with a 0% rate and select it. Required while a surcharge is on.';
-$_['help_surcharge_grid'] = 'Percentage is the share of the %2$s fee passed to the buyer, from 0 to 100. The cap applies to the whole fee: the percentage and the fixed fee together, not the percentage alone. Leave it empty for no cap. Fixed fees and caps are in %1$s, converted at %2$s\'s rates for other currencies.';
+$_['help_surcharge_grid'] = 'Percentage is the share of the %2$s fee passed to the buyer. The cap applies to the whole fee: the percentage and the fixed fee together, not the percentage alone. Leave it empty for no cap. Fixed fees and caps are in %1$s, converted at %2$s\'s rates for other currencies.';
 $_['error_term_type_unknown'] = 'Choose a payment term type from the list.';
 $_['error_terms_none'] = 'You must select at least one payment term.';
 $_['error_terms_unknown'] = 'Select only terms your account offers.';
@@ -240,7 +240,6 @@ $_['text_health_fx'] = '%s\'s FX rates fetched %s';
 $_['text_withheld_no_terms'] = 'no payment term is offered: your account offers none of the terms ticked on the Payment terms tab for this term type.';
 $_['text_withheld_fee_total_off'] = 'a surcharge is set but the Two payment terms fee order total is not enabled. Enable it in Extensions > Order Totals, or set the surcharge method to No surcharge applied.';
 $_['text_withheld_tax_code_map_unreadable'] = 'the saved tax codes for 0%% lines cannot be read. Tick Clear saved tax codes in the Tax codes for 0%% lines section (Order management tab) and save.';
-$_['error_surcharge_percent_range'] = '%1$s for the %2$d-day term must be between 0 and 100: it is the share of the fee passed to the buyer.';
 
 // TWO-27051: vendor name (General), subtitle and the tile switches (Checkout fields), the confirmed status and Validate tax subtotals (Order management), the merchant fee per term (Payment terms). %s is the brand's product name.
 $_['entry_vendor_name'] = 'Vendor name (optional)';

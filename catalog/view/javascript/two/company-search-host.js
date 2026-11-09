@@ -316,8 +316,29 @@
      * @param {string} phone
      */
     RoleHost.prototype.writeTelephone = function (phone) {
+        if (this.role !== 'payment') return;
+        this.setTelephone(phone);
+    };
+
+    /**
+     * The registry's phone from a company pick with autofill (TWO-27110), on
+     * the buyer's own form: billing, else shipping when the page has no
+     * billing address. A blank clears only a number this wrote.
+     *
+     * @param {string} phone
+     */
+    RoleHost.prototype.writeRegistryPhone = function (phone) {
+        if (this.buyerForm()) this.setTelephone(phone);
+    };
+
+    /** Whether this is the buyer's own form: billing, else shipping when the page has no billing address. */
+    RoleHost.prototype.buyerForm = function () {
+        return this.role === 'payment' || (this.role === 'shipping' && !this.doc.getElementById('input-payment-company'));
+    };
+
+    RoleHost.prototype.setTelephone = function (phone) {
         const input = this.doc.getElementById('input-telephone');
-        if (!input || this.role !== 'payment') return;
+        if (!input) return;
         const value = typeof phone === 'string' ? phone.trim() : '';
         if (!value) {
             if (!input.value || !holdsOurs(input)) return;
@@ -330,9 +351,11 @@
         input.dispatchEvent(new Event('change', { bubbles: true }));
     };
 
+    /** Clears what still holds the plugin's write: the address fields, and on the buyer's form the phone (TWO-27110). */
     RoleHost.prototype.revertAddress = function () {
-        ADDRESS_FIELDS.forEach((suffix) => {
-            const input = this.field(suffix);
+        const fields = ADDRESS_FIELDS.map((suffix) => this.field(suffix));
+        if (this.buyerForm()) fields.push(this.doc.getElementById('input-telephone'));
+        fields.forEach((input) => {
             if (!input || !input.hasAttribute(AUTOFILLED)) return;
             const ours = input.getAttribute(AUTOFILLED) === input.value;
             input.removeAttribute(AUTOFILLED);
@@ -371,7 +394,10 @@
                 }
                 const address = preferredAddress(json.addresses);
                 if (autofill && !address) throw new Error('no address');
-                if (autofill) this.writeAddress(address);
+                if (autofill) {
+                    this.writeAddress(address);
+                    this.writeRegistryPhone(address.phone_number);
+                }
             })
             .catch(() => {
                 if (!superseded() && autofill) identity.addressNotice(this.copy('address_unavailable'));

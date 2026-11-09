@@ -539,6 +539,8 @@ class Two extends \Opencart\System\Engine\Model
             $product = $this->db->query('SELECT `tax_class_id`, `shipping` FROM `' . DB_PREFIX . "product` WHERE `product_id` = '" . (int) $row['product_id'] . "'")->row;
             $lines[] = [
                 'name' => (string) $row['name'],
+                // The key a 0% line's code is recorded under at placement (TWO-27110).
+                'product_id' => (int) $row['product_id'],
                 'quantity' => (int) $row['quantity'],
                 'price' => (float) $row['price'],
                 'total' => (float) $row['total'],
@@ -597,6 +599,8 @@ class Two extends \Opencart\System\Engine\Model
                 $vatNumber,
                 $merchantCountry
             ),
+            // A rebuild sends the codes placement recorded (TWO-27110); a create records them.
+            'recorded' => $terms === null ? null : TaxCodes::decodeRecord((string) ($record['tax_codes'] ?? '')),
         ];
 
         return [

@@ -63,16 +63,18 @@ final class OrderBuilder
      *     terms?: array<string, mixed>|null,
      *     fee_refusal?: Message|null,
      *     currency_refusal?: Message|null,
-     *     tax_codes?: array{map?: string|null, exempt?: bool}|null,
+     *     tax_codes?: array{map?: string|null, exempt?: bool, recorded?: array{codes: array<string, string>, mapped: list<string>}|null}|null,
      *     buyer_vat_number?: string|null
      * } $order
-     * @param list<array{name: string, quantity: int|string, price: float|string, total: float|string, tax: float|string, rate: float|null, fixed_tax?: bool, type: string, tax_key?: array{class: int, rates: list<array{id: int, rate: float, type: string}>}|null}> $lines
+     * @param list<array{name: string, quantity: int|string, price: float|string, total: float|string, tax: float|string, rate: float|null, fixed_tax?: bool, type: string, product_id?: int, tax_key?: array{class: int, rates: list<array{id: int, rate: float, type: string}>}|null}> $lines
      * @param list<array{code: string, title: string, value: float|string, tax?: float|string|null, rate?: float|null, fixed_tax?: bool, tax_key?: array{class: int, rates: list<array{id: int, rate: float, type: string}>}|null}> $totals
+     * @param array{codes: array<string, string>, mapped: list<string>}|null $taxCodes set to the placement record of the codes this build gave (TaxCodes::record)
+     * @param-out array{codes: array<string, string>, mapped: list<string>} $taxCodes
      * @return array<string, mixed>
      *
      * @throws OrderRefused when the order cannot be built from what the shop stored
      */
-    public function build(array $order, array $lines, array $totals): array
+    public function build(array $order, array $lines, array $totals, ?array &$taxCodes = null): array
     {
         $fx = (float) $order['currency_value'];
         if ($fx <= 0) {
@@ -91,7 +93,7 @@ final class OrderBuilder
         $keys = [];
         foreach ($lines as $line) {
             $items[] = self::productLine($line, $fx);
-            $keys[] = $line['tax_key'] ?? null;
+            $keys[] = self::recordKey($line['tax_key'] ?? null, isset($line['product_id']) ? 'product:' . $line['product_id'] : null);
         }
         $discounts = [];
         $postTax = [];
@@ -103,7 +105,7 @@ final class OrderBuilder
             }
             if (isset(self::CHARGE_CODES[$code])) {
                 $items[] = self::chargeLine($total, self::CHARGE_CODES[$code], $fx);
-                $keys[] = $total['tax_key'] ?? null;
+                $keys[] = self::recordKey($total['tax_key'] ?? null, $code);
             } elseif (in_array($code, self::DISCOUNT_CODES, true)) {
                 $discounts[] = $total;
             } elseif (in_array($code, self::POST_TAX_CODES, true)) {
@@ -118,13 +120,16 @@ final class OrderBuilder
         }
         if ($discounts !== []) {
             $items[] = self::discountLine($discounts, $items, self::cents($order['tax_total'], $fx), $fx);
+            $keys[] = self::recordKey(null, 'discount');
         }
         foreach ($postTax as $total) {
             $gross = self::cents($total['value'], $fx);
             $items[] = self::line($total['title'], 'DIGITAL', 1, $gross, $gross, 0, 0.0, 'item');
+            $keys[] = self::recordKey(null, $total['code']);
         }
         // Codes come only from the merchant's rows, set before the hook so a subscriber sees them.
         $items = TaxCodes::apply($items, $keys, $order['tax_codes'] ?? null);
+        $taxCodes = ($order['tax_codes'] ?? null) === null ? ['codes' => [], 'mapped' => []] : TaxCodes::record($items, $keys);
 
         $company = $order['company'];
         $billing = $order['billing_address'];
@@ -182,6 +187,24 @@ final class OrderBuilder
         }
 
         return Postprocessing::recomputeTotals($payload);
+    }
+
+    /**
+     * A line's tax-code key with the key its code is recorded under at
+     * placement: `product:<id>`, the total's code for a charge, store credit
+     * or a voucher, `discount` for the discount line. A line with no tax
+     * class has class 0 (step 4). Null for a line with neither.
+     *
+     * @param array{class: int, rates: list<array{id: int, rate: float, type: string}>}|null $key
+     * @return array{class: int, rates: list<array{id: int, rate: float, type: string}>, line: string|null}|null
+     */
+    private static function recordKey(?array $key, ?string $line): ?array
+    {
+        if ($key === null && $line === null) {
+            return null;
+        }
+
+        return ($key ?? ['class' => 0, 'rates' => []]) + ['line' => $line];
     }
 
     /**

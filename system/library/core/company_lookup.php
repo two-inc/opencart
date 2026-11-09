@@ -83,7 +83,9 @@ final class CompanyLookup
     /**
      * One company's register entry, by a search result's lookup id: its
      * organisation number, which some registers leave out of the search
-     * results, and its addresses. Null when the lookup failed.
+     * results, and its addresses, each with its phone number when the
+     * register has one and its postcode fitted to its country's format
+     * (PostcodeFormat). Null when the lookup failed.
      *
      * @return array{organization_number: string, addresses: list<array<string, string>>}|null
      */
@@ -98,9 +100,15 @@ final class CompanyLookup
             return null;
         }
         $addresses = [];
+        $country = is_string($body['country'] ?? null) ? $body['country'] : '';
         foreach (is_array($body['addresses'] ?? null) ? $body['addresses'] : [] as $address) {
             if (is_array($address)) {
-                $addresses[] = array_map('strval', array_filter(array_intersect_key($address, array_flip(['type', 'street_address', 'street', 'building', 'apartment', 'postal_code', 'city', 'region', 'country'])), 'is_scalar'));
+                $address = array_map('strval', array_filter(array_intersect_key($address, array_flip(['type', 'street_address', 'street', 'building', 'apartment', 'postal_code', 'city', 'region', 'country', 'phone_number'])), 'is_scalar'));
+                // TWO-27110: the postcode as its country writes it (the address's own country, else the company's).
+                if (isset($address['postal_code'])) {
+                    $address['postal_code'] = PostcodeFormat::fit($address['postal_code'], ($address['country'] ?? '') !== '' ? $address['country'] : $country);
+                }
+                $addresses[] = $address;
             }
         }
 

@@ -72,30 +72,38 @@ final class ProductPage
 
     /**
      * The fragment the product page carries: the message, the button, or
-     * both, each escaped. The brand name is always text, since OpenCart ships
-     * no brand mark and an unattributed offer is the failure this feature
-     * invites (section 20.4).
+     * both, each escaped. The brand name is always text (TWO-27110): with
+     * a brand mark (`mark`, its URL) the mark is shown and the name is kept
+     * for assistive technology only; without one the name is shown. In the
+     * button the brand stands where the label's %s is.
      *
-     * @param array{brand: string, message?: string, button?: array{label: string, add_url: string, checkout_url: string, unreachable: string, script: string}, stylesheet: string} $parts
+     * @param array{brand: string, mark?: string, message?: string, button?: array{label: string, add_url: string, checkout_url: string, unreachable: string, script: string}, stylesheet: string} $parts
      */
     public static function render(array $parts): string
     {
         $e = static fn (string $text): string => htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $mark = $parts['mark'] ?? '';
+        $brand = static fn (string $class): string => $mark === ''
+            ? '<span class="' . $class . '">' . $e($parts['brand']) . '</span>'
+            // A mark that fails to load shows the name instead, so the offer is never unattributed.
+            : '<img class="two-product-mark" src="' . $e($mark) . '" alt="" onerror="this.nextElementSibling.classList.remove(\'two-product-hidden\');this.remove()">'
+                . '<span class="' . $class . ' two-product-hidden">' . $e($parts['brand']) . '</span>';
         $html = '';
         if (($parts['message'] ?? '') !== '') {
             $html .= '<div class="two-product-promo">'
-                . '<span class="two-product-promo__brand">' . $e($parts['brand']) . '</span> '
+                . $brand('two-product-promo__brand') . ' '
                 . '<span class="two-product-promo__text">' . $e($parts['message']) . '</span>'
                 . '</div>';
         }
         if (isset($parts['button'])) {
             $button = $parts['button'];
+            $label = explode('%s', $button['label'], 2);
             $html .= '<div class="two-product-button">'
                 . '<button type="button" class="btn two-product-button__cta" data-two-buy-now'
                 . ' data-two-add-url="' . $e($button['add_url']) . '"'
                 . ' data-two-checkout-url="' . $e($button['checkout_url']) . '"'
                 . ' data-two-unreachable="' . $e($button['unreachable']) . '">'
-                . '<span class="two-product-button__label">' . $e($button['label']) . '</span>'
+                . '<span class="two-product-button__label">' . $e($label[0]) . (count($label) === 2 ? $brand('two-product-button__brand') . $e($label[1]) : '') . '</span>'
                 . '</button>'
                 . '<p class="two-product-button__error" role="alert" aria-live="polite"></p>'
                 . '</div>'

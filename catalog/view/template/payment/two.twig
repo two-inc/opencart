@@ -3,8 +3,9 @@
   {% if subtitle or about_url %}
     <p class="mb-3" data-two-subtitle>
       {% if subtitle %}<span>{{ subtitle|e }}</span>{% endif %}
-      {# The explainer link: noopener without noreferrer, as the brand's page attributes the visit by its Referer. #}
-      {% if about_url %}<a href="{{ about_url|e }}" target="_blank" rel="noopener" title="{{ text_about_tooltip|e }}" data-bs-toggle="tooltip" data-two-about>{{ text_about|e }}</a>{% endif %}
+      {# The explainer link: noopener without noreferrer, as the brand's page attributes the visit by its Referer.
+         A "?" icon the extension ships, named by its aria-label; the tooltip carries the explainer. #}
+      {% if about_url %}<a href="{{ about_url|e }}" target="_blank" rel="noopener" class="two-about" aria-label="{{ text_about|e }}" title="{{ text_about_tooltip|e }}" data-bs-toggle="tooltip" data-two-about><img class="two-about__icon" src="{{ about_icon|e }}" alt="" width="20" height="19"></a>{% endif %}
     </p>
   {% endif %}
   {% if in_tile %}

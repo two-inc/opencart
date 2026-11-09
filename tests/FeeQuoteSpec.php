@@ -218,6 +218,10 @@ final class FeeQuoteSpec
             [['surcharge_type' => 'fixed_and_percentage'], 'NOK', [new HttpResponse(503, '')], null, '{"percentage":2,"surcharge_basis":"buyer_pays","surcharge":10,"cap":50}', 'a failed quote is no quote'],
             [['surcharge_type' => 'fixed_and_percentage'], 'NOK', [new HttpResponse(200, '{"currency":"EUR","buyer_fee_share":"2"}')], null, '{"percentage":2,"surcharge_basis":"buyer_pays","surcharge":10,"cap":50}', 'an answer in another currency is refused, never converted again'],
             [['surcharge_type' => 'fixed_and_percentage'], 'NOK', [new HttpResponse(200, '{"currency":"NOK"}')], null, '{"percentage":2,"surcharge_basis":"buyer_pays","surcharge":10,"cap":50}', 'an answer with no fee is no quote'],
+            // TWO-27110: no upper bound on the percentage. 150 is sent as stored and Two decides: an answer is the fee,
+            // a refusal is no quote, so the fee gate withholds Two for that term and the health row names the failure.
+            [['surcharge_type' => 'percentage', 'surcharge_grid' => '{"30":{"percentage":"150"}}'], 'NOK', [$ok], ['net' => 25.5, 'currency' => 'NOK'], '{"percentage":150,"surcharge_basis":"buyer_pays"}', 'a percentage above 100 is sent as stored, and Two\'s answer is the fee'],
+            [['surcharge_type' => 'percentage', 'surcharge_grid' => '{"30":{"percentage":"150"}}'], 'NOK', [new HttpResponse(400, '{"error_code":"SCHEMA_ERROR"}')], null, '{"percentage":150,"surcharge_basis":"buyer_pays"}', 'a percentage above 100 that Two refuses is no quote'],
         ];
         foreach ($cases as [$settings, $currency, $responses, $expected, $share, $description]) {
             [$quotes, $transport, $settings] = self::quotes($settings, $responses);

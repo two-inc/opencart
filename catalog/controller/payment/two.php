@@ -50,6 +50,8 @@ use Opencart\System\Library\Extension\Two\Opencart\Services;
 class Two extends \Opencart\System\Engine\Controller
 {
     private const ROUTE = 'extension/two/payment/two';
+    /** The explainer link's "?" icon (TWO-27110): shipped with the extension, since themes have no icon set to rely on. */
+    private const ABOUT_ICON = 'extension/two/catalog/view/image/two_about.svg';
     private const TOKEN_PATTERN = '~^[0-9a-f]{48}\z~';
     /** How long a callback waits for another hit on the same order to finish. */
     private const LOCK_SECONDS = 30;
@@ -101,6 +103,7 @@ class Two extends \Opencart\System\Engine\Controller
             // Only an http(s) target is ever linked.
             'about_url' => $services->settings->showAboutLink() && preg_match('~^https?://~i', $aboutUrl) === 1 ? $aboutUrl : '',
             'text_about' => sprintf($this->language->get('text_about'), $brand),
+            'about_icon' => \Opencart\Catalog\Controller\Extension\Two\Event\TwoCheckout::versioned(self::ABOUT_ICON, Services::pluginVersion()),
             'text_about_tooltip' => sprintf($this->language->get('text_about_body'), $brand, $brand) . ' ' . $this->language->get('text_about_strong') . ' ' . $this->language->get('text_about_more'),
             'terms' => $chips,
             'selected_term' => $selected,

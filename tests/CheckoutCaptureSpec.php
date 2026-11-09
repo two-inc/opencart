@@ -14,6 +14,7 @@ use Opencart\System\Library\Extension\Two\Core\IdempotencyKey;
 use Opencart\System\Library\Extension\Two\Core\OrderBuilder;
 use Opencart\System\Library\Extension\Two\Core\OrderFlow;
 use Opencart\System\Library\Extension\Two\Core\OrderLock;
+use Opencart\System\Library\Extension\Two\Core\PostcodeFormat;
 use Opencart\System\Library\Extension\Two\Core\Postprocessing;
 use Opencart\System\Library\Extension\Two\Core\RateLimiter;
 use Opencart\System\Library\Extension\Two\Core\RecordProvider;
@@ -197,12 +198,29 @@ final class CheckoutCaptureSpec
         }
         $details = [
             [[self::json(200, ['national_identifier' => ['type' => 'GB_CRN', 'id' => '07844329'], 'addresses' => [['type' => 'BUSINESS_ADDRESS', 'street_address' => '1 High St', 'postal_code' => 'TW9 1AA', 'city' => 'Richmond', 'region' => null, 'country' => 'GB']]])], 'bEB0d2', ['organization_number' => '07844329', 'addresses' => [['type' => 'BUSINESS_ADDRESS', 'street_address' => '1 High St', 'postal_code' => 'TW9 1AA', 'city' => 'Richmond', 'country' => 'GB']]], 1, 'the number and addresses a search result left out'],
+            [[self::json(200, ['national_identifier' => ['id' => '12345678'], 'country' => 'NL', 'addresses' => [['type' => 'REGISTERED', 'street_address' => 'Dam 1', 'postal_code' => '1012jS', 'city' => 'Amsterdam', 'phone_number' => '+31 20 555 0100'], ['type' => 'VISITING', 'postal_code' => '00950', 'country' => 'PL']]])], 'bEB0d2', ['organization_number' => '12345678', 'addresses' => [['type' => 'REGISTERED', 'street_address' => 'Dam 1', 'postal_code' => '1012 jS', 'city' => 'Amsterdam', 'phone_number' => '+31 20 555 0100'], ['type' => 'VISITING', 'postal_code' => '00-950', 'country' => 'PL']]], 1, 'the registry phone is kept and each postcode fitted, to its own country else the company\'s (TWO-27110)'],
             [[self::json(404, [])], 'bEB0d2', null, 1, 'a failed lookup'],
             [[], '../v1/merchant', null, 0, 'a lookup id that is not one: nothing asked'],
             [[], '..', null, 0, 'two dots, which a path would normalise away: nothing asked'],
             [[], '-abc', null, 0, 'a lookup id must start with a letter or digit'],
             [[], 'a.b', null, 0, 'a dot is not in Two\'s lookup id alphabet'],
         ];
+        $fits = [
+            ['1234AB', 'NL', '1234 AB', 'the separator the country writes is put back'],
+            ['1234-ab', 'nl', '1234 ab', 'a hyphen is swapped for the space, letter case kept'],
+            ['00950', 'PL', '00-950', 'a hyphenated format'],
+            ['11122', 'SE', '111 22', 'a spaced format'],
+            ['VLT1117', 'MT', 'VLT 1117', 'letters then digits'],
+            ['1000-001', 'PT', '1000-001', 'already fitted'],
+            ['123 4AB', 'NL', '1234 AB', 'a stray space moves'],
+            ['12345', 'NL', '12345', 'one that does not fit the format is left alone'],
+            ['1234ABC', 'NL', '1234ABC', 'one character too many is left alone'],
+            ['EC1A1AA', 'GB', 'EC1A1AA', 'a country with no one format is left alone'],
+            ['', 'NL', '', 'nothing stays nothing'],
+        ];
+        foreach ($fits as [$postcode, $country, $expected, $description]) {
+            TinyAssert::same($expected, PostcodeFormat::fit($postcode, $country), 'postcode fit: ' . $description);
+        }
         foreach ($details as [$responses, $id, $expected, $calls, $description]) {
             [$lookup, $transport] = self::lookup($responses);
             TinyAssert::same([$expected, $calls], [$lookup->details($id), count($transport->calls)], 'company details: ' . $description);

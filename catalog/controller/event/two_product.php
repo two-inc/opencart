@@ -69,7 +69,8 @@ class TwoProduct extends \Opencart\System\Engine\Controller
         $services = new Services($this->db, $this->log, (int) $this->config->get('config_store_id'));
         $page = new ProductPage($services->settings, $services->verdict);
         $this->logUnrecognisedSwitches($services);
-        $brand = Brand::default()->productName;
+        $descriptor = Brand::default();
+        $brand = $descriptor->productName;
         $showsMessage = $page->showsMessage($methodEnabled);
         $showsButton = $page->showsButton($methodEnabled, $brand);
         if (!$showsMessage && !$showsButton) {
@@ -81,12 +82,17 @@ class TwoProduct extends \Opencart\System\Engine\Controller
         $language = (string) $this->config->get('config_language');
         $version = Services::pluginVersion();
         $parts = ['brand' => $brand, 'stylesheet' => TwoCheckout::versioned(self::STYLESHEET, $version)];
+        if ($descriptor->logo !== null) {
+            // The brand mark beside the name (TWO-27110).
+            $parts['mark'] = TwoCheckout::versioned('extension/two/' . $descriptor->logo, $version);
+        }
         if ($showsMessage) {
             $parts['message'] = $page->message((int) $this->config->get('config_language_id'), $this->language->get('two_product_text_about_strong'));
         }
         if ($showsButton) {
             $parts['button'] = [
-                'label' => sprintf($this->language->get('two_product_text_product_button'), $brand),
+                // %s is where the brand goes: its mark, or its name.
+                'label' => $this->language->get('two_product_text_product_button'),
                 'add_url' => $this->url->link('checkout/cart.add', 'language=' . $language, true),
                 'checkout_url' => $this->url->link('checkout/checkout', 'language=' . $language, true),
                 'unreachable' => $this->language->get('two_product_error_product_button_unreachable'),
