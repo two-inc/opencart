@@ -240,7 +240,7 @@ $_['text_health_fx'] = 'Wisselkoersen van %s opgehaald %s';
 $_['text_withheld_no_terms'] = 'er wordt geen betaaltermijn aangeboden: je account biedt geen van de termijnen die op het tabblad Betaaltermijnen zijn aangevinkt voor dit type termijn.';
 $_['text_withheld_fee_total_off'] = 'er is een toeslag ingesteld, maar het besteltotaal Two-toeslag betaaltermijnen is niet ingeschakeld. Schakel het in onder Extensies > Besteltotalen, of zet de toeslagmethode op Geen toeslag.';
 $_['text_withheld_tax_code_map_unreadable'] = 'opgeslagen belastingcodes voor regels met 0%% kunnen niet worden gelezen. Vink Opgeslagen belastingcodes wissen aan in de sectie Belastingcodes voor regels met 0%% (tabblad Orderbeheer) en sla op.';
-$_['error_surcharge_percent_range'] = '%1$s voor de termijn van %2$d dagen moet tussen 0 en 100 liggen: het is het deel van de toeslag dat aan de koper wordt doorberekend.';
+$_['error_surcharge_percent_range'] = '%1$s voor de termijn van %2$d dagen moet tussen 0 en 100 liggen: het is het deel van de vergoeding dat aan de koper wordt doorberekend.';
 
 // TWO-27051: vendor name (General), subtitle and the tile switches (Checkout fields), the confirmed status and Validate tax subtotals (Order management), the merchant fee per term (Payment terms). %s is the brand's product name.
 $_['entry_vendor_name'] = 'Leveranciersnaam (optioneel)';
