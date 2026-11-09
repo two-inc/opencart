@@ -45,14 +45,14 @@ final class CronRowsSpec
                 $cron->addCron($code, '', 'day', Services::CRON_ACTION, true);
             }
             // What the controller passes: OpenCart's loader hands a model over wrapped in a Proxy.
-            $model = self::proxied($cron);
+            $table = CronRows::onModel(self::proxied($cron));
             $store = new MemoryStore($case['stored'] === null ? [] : [CronRows::VERSION_KEY => $case['stored']]);
             foreach ($case['steps'] as $step) {
                 [$verb, $argument] = explode(' ', $step, 2);
                 if ($verb === 'install') {
-                    CronRows::install($model, $store, $argument);
+                    CronRows::install($table, $store, $argument);
                 } elseif ($verb === 'load') {
-                    CronRows::upgrade($model, $store, $argument);
+                    CronRows::upgrade($table, $store, $argument);
                 } elseif ($verb === 'delete') {
                     $cron->deleteCronByCode($argument);
                 } else {
@@ -76,7 +76,7 @@ final class CronRowsSpec
     private static function testRowsCarryTheirSchedule(): void
     {
         $cron = new Cron();
-        CronRows::upgrade(self::proxied($cron), new MemoryStore(), '2.0.0');
+        CronRows::upgrade(CronRows::onModel(self::proxied($cron)), new MemoryStore(), '2.0.0');
         $rows = array_map(static fn (array $row): array => [$row['code'], $row['description'], $row['cycle'], $row['action']], $cron->getCrons());
         TinyAssert::same([
             [self::REFRESH, Services::CRON_DESCRIPTION, Services::CRON_CYCLE, Services::CRON_ACTION],

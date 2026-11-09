@@ -169,7 +169,7 @@ class Two extends \Opencart\System\Engine\Controller
         // A missing cron row is added only once per extension version, so one the merchant deleted stays deleted (TWO-27148).
         $data['pending_table'] = DbOrderRecords::upgrade($this->db, new LogLogger($this->log, false), $settings->store()) ? '' : $this->language->get('text_pending_table');
         $this->load->model('setting/cron');
-        CronRows::upgrade($this->model_setting_cron, $settings->store(), Services::pluginVersion());
+        CronRows::upgrade(CronRows::onModel($this->model_setting_cron), $settings->store(), Services::pluginVersion());
         $waiting = DbOrderRecords::waitingCount($this->db, (int) $this->config->get('config_void_status_id'));
         $data['pending_stale'] = PendingCheck::scheduleStale($waiting, (int) $settings->store()->get(PendingCheck::LAST_RUN_KEY), time()) ? sprintf($this->language->get('text_pending_stale'), $waiting) : '';
         $shopCurrency = (string) $this->config->get('config_currency');
@@ -498,7 +498,7 @@ class Two extends \Opencart\System\Engine\Controller
         $this->model_setting_setting->editSetting(self::CODE, $defaults);
 
         $this->load->model('setting/cron');
-        CronRows::install($this->model_setting_cron, new DbSettingsStore($this->db), Services::pluginVersion());
+        CronRows::install(CronRows::onModel($this->model_setting_cron), new DbSettingsStore($this->db), Services::pluginVersion());
 
         $this->load->model('setting/event');
         $this->model_setting_event->deleteEventByCode(Services::EVENT_CODE);

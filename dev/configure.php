@@ -30,6 +30,9 @@ declare(strict_types=1);
 
 use Opencart\System\Library\Extension\Two\Core\Environment;
 use Opencart\System\Library\Extension\Two\Core\SettingsProvider;
+use Opencart\System\Library\Extension\Two\Core\SettingsStore;
+use Opencart\System\Library\Extension\Two\Opencart\CronRows;
+use Opencart\System\Library\Extension\Two\Opencart\CronTable;
 use Opencart\System\Library\Extension\Two\Opencart\DbOrderRecords;
 use Opencart\System\Library\Extension\Two\Opencart\DbRateLimits;
 use Opencart\System\Library\Extension\Two\Opencart\DbRefundRecords;
@@ -193,15 +196,54 @@ foreach ($given + $defaults as $key => $value) {
     say('set ' . $settingKey . ($key === 'api_key' ? '' : ' = ' . $value));
 }
 
-// 5. The daily merchant-record refresh in OpenCart's cron table, as install() registers it.
-if (query($db, "SELECT `cron_id` FROM `{$p}cron` WHERE `code` = ?", [Services::CRON_CODE]) === []) {
-    query($db, "INSERT INTO `{$p}cron` SET `code` = ?, `description` = ?, `cycle` = ?, `action` = ?, `status` = 1, `date_added` = NOW(), `date_modified` = NOW()", [Services::CRON_CODE, Services::CRON_DESCRIPTION, Services::CRON_CYCLE, Services::CRON_ACTION]);
-    say('registered cron ' . Services::CRON_CODE);
-}
-// The hourly pending check (TWO-26300), as install() registers it.
-if (query($db, "SELECT `cron_id` FROM `{$p}cron` WHERE `code` = ?", [Services::PENDING_CRON_CODE]) === []) {
-    query($db, "INSERT INTO `{$p}cron` SET `code` = ?, `description` = ?, `cycle` = ?, `action` = ?, `status` = 1, `date_added` = NOW(), `date_modified` = NOW()", [Services::PENDING_CRON_CODE, Services::PENDING_CRON_DESCRIPTION, Services::PENDING_CRON_CYCLE, Services::CRON_ACTION]);
-    say('registered cron ' . Services::PENDING_CRON_CODE);
+// 5. The daily merchant-record refresh and the hourly pending check (TWO-26300) in OpenCart's cron table, by the
+// settings page's rule: a missing row is added once per extension version, so one the merchant deleted stays
+// deleted on every later run until the next upgrade (TWO-27148).
+$cronTable = new class ($db, $p) implements CronTable {
+    public function __construct(private readonly mysqli $db, private readonly string $p)
+    {
+    }
+
+    public function exists(string $code): bool
+    {
+        return query($this->db, "SELECT `cron_id` FROM `{$this->p}cron` WHERE `code` = ?", [$code]) !== [];
+    }
+
+    public function add(string $code, string $description, string $cycle, string $action): void
+    {
+        query($this->db, "INSERT INTO `{$this->p}cron` SET `code` = ?, `description` = ?, `cycle` = ?, `action` = ?, `status` = 1, `date_added` = NOW(), `date_modified` = NOW()", [$code, $description, $cycle, $action]);
+    }
+
+    public function delete(string $code): void
+    {
+        query($this->db, "DELETE FROM `{$this->p}cron` WHERE `code` = ?", [$code]);
+    }
+};
+$settingStore = new class ($db, $p) implements SettingsStore {
+    public function __construct(private readonly mysqli $db, private readonly string $p)
+    {
+    }
+
+    public function get(string $key): ?string
+    {
+        $rows = query($this->db, "SELECT `value` FROM `{$this->p}setting` WHERE `store_id` = 0 AND `code` = ? AND `key` = ?", [TWO_SETTING_CODE, TWO_SETTING_CODE . '_' . $key]);
+
+        return $rows === [] ? null : (string) $rows[0]['value'];
+    }
+
+    public function setMany(array $values): void
+    {
+        foreach ($values as $key => $value) {
+            if ($this->get($key) === null) {
+                query($this->db, "INSERT INTO `{$this->p}setting` SET `store_id` = 0, `code` = ?, `key` = ?, `value` = ?, `serialized` = 0", [TWO_SETTING_CODE, TWO_SETTING_CODE . '_' . $key, $value]);
+            } else {
+                query($this->db, "UPDATE `{$this->p}setting` SET `value` = ? WHERE `store_id` = 0 AND `code` = ? AND `key` = ?", [$value, TWO_SETTING_CODE, TWO_SETTING_CODE . '_' . $key]);
+            }
+        }
+    }
+};
+foreach (CronRows::upgrade($cronTable, $settingStore, Services::pluginVersion()) as $code) {
+    say('registered cron ' . $code);
 }
 
 // 6. The order lifecycle on OpenCart's order history event, as install() registers it.
