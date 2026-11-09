@@ -8,7 +8,9 @@ use Opencart\System\Library\Extension\Two\Core\SettingsStore;
 
 /**
  * The extension's rows in OpenCart's cron table: the daily merchant-record
- * refresh and the hourly pending check.
+ * refresh and the hourly pending check. Each method takes the admin's
+ * `setting/cron` model as the controller holds it: OpenCart's loader wraps
+ * a model in a Proxy, so it is never an instance of the model class.
  */
 final class CronRows
 {
@@ -21,8 +23,12 @@ final class CronRows
         Services::PENDING_CRON_CODE => [Services::PENDING_CRON_DESCRIPTION, Services::PENDING_CRON_CYCLE],
     ];
 
-    /** install() replaces the rows, enabled, and stores the version. */
-    public static function install(\Opencart\Admin\Model\Setting\Cron $cron, SettingsStore $store, string $version): void
+    /**
+     * install() replaces the rows, enabled, and stores the version.
+     *
+     * @param \Opencart\System\Engine\Proxy<\Opencart\Admin\Model\Setting\Cron>|\Opencart\Admin\Model\Setting\Cron $cron
+     */
+    public static function install(\Opencart\System\Engine\Proxy|\Opencart\Admin\Model\Setting\Cron $cron, SettingsStore $store, string $version): void
     {
         foreach (self::ROWS as $code => [$description, $cycle]) {
             $cron->deleteCronByCode($code);
@@ -36,8 +42,10 @@ final class CronRows
      * an upgrade copies files and never runs install() again. A row the
      * merchant deleted stays deleted until the next upgrade (TWO-27148); one
      * they disabled is kept as it is.
+     *
+     * @param \Opencart\System\Engine\Proxy<\Opencart\Admin\Model\Setting\Cron>|\Opencart\Admin\Model\Setting\Cron $cron
      */
-    public static function upgrade(\Opencart\Admin\Model\Setting\Cron $cron, SettingsStore $store, string $version): void
+    public static function upgrade(\Opencart\System\Engine\Proxy|\Opencart\Admin\Model\Setting\Cron $cron, SettingsStore $store, string $version): void
     {
         if ($store->get(self::VERSION_KEY) === $version) {
             return;
