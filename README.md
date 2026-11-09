@@ -16,7 +16,7 @@ Version 2.x is for OpenCart 4.1. OpenCart 3 is not supported: the 1.x extension 
 2. In the OpenCart admin, open Extensions > Installer, upload `two.ocmod.zip`, then click Install beside it.
 3. Open Extensions > Extensions, choose Payments, and install Two. Then click Edit to configure it.
 
-To upgrade, replace the package in Extensions > Installer with the new release's `two.ocmod.zip`; your settings are kept. The new release updates its own order table the next time the scheduled URL runs or the settings page is opened, and adds any new OpenCart cron job when the settings page is opened, so open it once after upgrading. Do not uninstall Two under Extensions > Payments to upgrade: that deletes its settings.
+To upgrade, replace the package in Extensions > Installer with the new release's `two.ocmod.zip`; your settings are kept. The new release updates its own order table the next time the scheduled URL runs or the settings page is opened, and adds any missing OpenCart cron job the first time the settings page is opened after the upgrade, so open it once after upgrading. Do not uninstall Two under Extensions > Payments to upgrade: that deletes its settings.
 
 ## Configure
 
@@ -54,7 +54,7 @@ The buyer chooses from the payment terms your Two account offers. This tab narro
 
 Debug logging, the SSL verification bypass (off unless you switch it on, and a security risk whenever it is on), trusted proxies, the checkout rate limit, and custom request headers for when your IT administrator asks for one. A header ticked "Also send from browser" is visible to buyers.
 
-The tab also shows the extension's last 100 error log lines (with the API key and header values hidden), refreshes your Two merchant profile on demand, and shows the scheduled URL. Call it every 15 minutes from your server's crontab, for example `*/15 * * * * curl -fsS -H 'X-Two-Cron-Token: <token>' '<the URL without its token>'`: each call checks the orders above and refreshes the merchant profile when it is due. OpenCart's own cron (the Cron Jobs page) runs the same check hourly and the refresh daily, so a shop running only that still recovers orders, more slowly. The tab warns when orders are waiting and the URL has not run for an hour. The URL carries a random token, not your API key: keep it secret.
+The tab also shows the extension's last 100 error log lines (with the API key and header values hidden), refreshes your Two merchant profile on demand, and shows the scheduled URL. Call it every 15 minutes from your server's crontab, for example `*/15 * * * * curl -fsS -H 'X-Two-Cron-Token: <token>' '<the URL without its token>'`: each call checks the orders above and refreshes the merchant profile when it is due. OpenCart's own cron (the Cron Jobs page) runs the same check hourly and the refresh daily, so a shop running only that still recovers orders, more slowly. To stop one of these jobs, disable it on the Cron Jobs page rather than delete it: a deleted job stays deleted only until the next upgrade, which adds it back. The tab warns when orders are waiting and the URL has not run for an hour. The URL carries a random token, not your API key: keep it secret.
 
 ## Uninstall
 

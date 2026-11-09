@@ -100,6 +100,15 @@ ok "install() mapped fulfilment to Shipped"
 cron() { docker exec "$db" mariadb -uroot -padmin opencart -N -e "SELECT CONCAT(action, '|', cycle, '|', status) FROM oc_cron WHERE code = 'two_record_refresh'"; }
 [ "$(cron)" = 'extension/two/cron/two|day|1' ] || fail "install() did not register the record refresh cron (got '$(cron)')"
 ok "install() registered the record refresh cron"
+# TWO-27148: install() stores the version that registered the rows, and a row the merchant deletes stays deleted.
+version=$(php -r 'echo json_decode(file_get_contents("install.json"), true)["version"];')
+[ "$(setting cron_rows_version)" = "$version" ] || fail "install() did not store cron_rows_version $version (got '$(setting cron_rows_version)')"
+ok "install() stored cron_rows_version"
+pending() { docker exec "$db" mariadb -uroot -padmin opencart -N -e "SELECT COUNT(*) FROM oc_cron WHERE code = 'two_pending_check'"; }
+docker exec "$db" mariadb -uroot -padmin opencart -e "DELETE FROM oc_cron WHERE code = 'two_pending_check'"
+contains "settings page after a cron row is deleted" "$(admin extension/two/payment/two)" 'Edit Two settings'
+[ "$(pending)" = 0 ] || fail "the settings page re-added the deleted pending check cron"
+ok "a deleted cron row stays deleted after the settings page loads"
 lifecycle() { docker exec "$db" mariadb -uroot -padmin opencart -N -e "SELECT CONCAT(\`trigger\`, '|', action, '|', status) FROM oc_event WHERE code = 'two_order_lifecycle'"; }
 [ "$(lifecycle)" = 'catalog/model/checkout/order.addHistory/after|extension/two/event/two.history|1' ] || fail "install() did not register the order lifecycle event (got '$(lifecycle)')"
 ok "install() registered the order lifecycle event"
@@ -114,10 +123,15 @@ configure > /dev/null
 [ "$(setting status)" = 1 ] || fail "configure.php did not enable the extension"
 [ "$(configure | grep -c '^\[configure\] set')" = 0 ] || fail "a second configure.php run changed settings"
 ok "configure.php enables and is idempotent"
+[ "$(pending)" = 0 ] || fail "configure.php re-added the deleted pending check cron at the same version"
+ok "configure.php leaves a deleted cron row deleted at the same version"
 docker exec "$db" mariadb -uroot -padmin opencart -e "DELETE FROM oc_cron WHERE code = 'two_record_refresh'"
+store cron_rows_version 0.0.0
 configure > /dev/null
-[ "$(cron)" = 'extension/two/cron/two|day|1' ] || fail "configure.php did not register the record refresh cron"
-ok "configure.php registers the record refresh cron"
+[ "$(cron)" = 'extension/two/cron/two|day|1' ] || fail "configure.php did not register the record refresh cron after an upgrade"
+[ "$(pending)" = 1 ] || fail "configure.php did not register the pending check cron after an upgrade"
+[ "$(setting cron_rows_version)" = "$version" ] || fail "configure.php did not store cron_rows_version $version (got '$(setting cron_rows_version)')"
+ok "configure.php registers missing cron rows once after an upgrade"
 docker exec "$db" mariadb -uroot -padmin opencart -e "DELETE FROM oc_event WHERE code = 'two_order_lifecycle'"
 configure > /dev/null
 [ "$(lifecycle)" = 'catalog/model/checkout/order.addHistory/after|extension/two/event/two.history|1' ] || fail "configure.php did not register the order lifecycle event"

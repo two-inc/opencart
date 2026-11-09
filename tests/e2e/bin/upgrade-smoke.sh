@@ -48,8 +48,16 @@ docker compose -f tests/e2e/compose.yml exec -T -u www-data -e OPENCART_DIR=/var
   php /var/www/html/extension/two/dev/configure.php
 settings > "$upgrade/settings.after"
 
-# Every setting the release stored keeps its value; HEAD may add settings.
-lost=$(comm -23 <(sort "$upgrade/settings.before") <(sort "$upgrade/settings.after"))
+# Every setting the release stored keeps its value; HEAD may add settings. The version that last registered the
+# cron rows (TWO-27148) moves with every upgrade, so it is left out here and must be HEAD's.
+version_key=payment_two_cron_rows_version
+kept() { awk -F'\t' -v key="$version_key" '$1 != key' "$1" | sort; }
+lost=$(comm -23 <(kept "$upgrade/settings.before") <(kept "$upgrade/settings.after"))
+head_version=$(node -p 'require("./install.json").version')
+stored_version=$(awk -F'\t' -v key="$version_key" '$1 == key { print $2 }' "$upgrade/settings.after")
+if [ "$stored_version" != "$head_version" ]; then
+  lost="${lost}${lost:+$'\n'}${version_key} is '${stored_version}' after the upgrade, not HEAD's ${head_version}"
+fi
 # A release with no confirmed status keeps placing at the shop's default: the upgrade must not name one.
 if ! grep -q '^payment_two_confirmed_status_id' "$upgrade/settings.before" \
   && ! grep -qP '^payment_two_confirmed_status_id\t0$' "$upgrade/settings.after"; then

@@ -30,6 +30,9 @@ declare(strict_types=1);
 
 use Opencart\System\Library\Extension\Two\Core\Environment;
 use Opencart\System\Library\Extension\Two\Core\SettingsProvider;
+use Opencart\System\Library\Extension\Two\Core\SettingsStore;
+use Opencart\System\Library\Extension\Two\Opencart\CronRows;
+use Opencart\System\Library\Extension\Two\Opencart\CronTable;
 use Opencart\System\Library\Extension\Two\Opencart\DbOrderRecords;
 use Opencart\System\Library\Extension\Two\Opencart\DbRateLimits;
 use Opencart\System\Library\Extension\Two\Opencart\DbRefundRecords;
@@ -76,6 +79,26 @@ function query(mysqli $db, string $sql, array $params = []): array
     $result = $statement->get_result();
 
     return $result === false ? [] : $result->fetch_all(MYSQLI_ASSOC);
+}
+
+/**
+ * One of the extension's settings in the default store: inserted when it has no row, else overwritten only
+ * when asked to and different. Whether it wrote.
+ */
+function putSetting(mysqli $db, string $key, string $value, bool $overwrite): bool
+{
+    $p = DB_PREFIX;
+    $settingKey = TWO_SETTING_CODE . '_' . $key;
+    $stored = query($db, "SELECT `value` FROM `{$p}setting` WHERE `store_id` = 0 AND `code` = ? AND `key` = ?", [TWO_SETTING_CODE, $settingKey]);
+    if ($stored === []) {
+        query($db, "INSERT INTO `{$p}setting` SET `store_id` = 0, `code` = ?, `key` = ?, `value` = ?, `serialized` = 0", [TWO_SETTING_CODE, $settingKey, $value]);
+    } elseif ($overwrite && $stored[0]['value'] !== $value) {
+        query($db, "UPDATE `{$p}setting` SET `value` = ?, `serialized` = 0 WHERE `store_id` = 0 AND `code` = ? AND `key` = ?", [$value, TWO_SETTING_CODE, $settingKey]);
+    } else {
+        return false;
+    }
+
+    return true;
 }
 
 $shop = rtrim(getenv('OPENCART_DIR') ?: '/var/www/html', '/');
@@ -181,27 +204,56 @@ if ($apiKey !== '') {
 }
 
 foreach ($given + $defaults as $key => $value) {
-    $settingKey = TWO_SETTING_CODE . '_' . $key;
-    $stored = query($db, "SELECT `value` FROM `{$p}setting` WHERE `store_id` = 0 AND `code` = ? AND `key` = ?", [TWO_SETTING_CODE, $settingKey]);
-    if ($stored === []) {
-        query($db, "INSERT INTO `{$p}setting` SET `store_id` = 0, `code` = ?, `key` = ?, `value` = ?, `serialized` = 0", [TWO_SETTING_CODE, $settingKey, $value]);
-    } elseif (isset($given[$key]) && $stored[0]['value'] !== $value) {
-        query($db, "UPDATE `{$p}setting` SET `value` = ? WHERE `store_id` = 0 AND `code` = ? AND `key` = ?", [$value, TWO_SETTING_CODE, $settingKey]);
-    } else {
-        continue;
+    if (putSetting($db, $key, $value, isset($given[$key]))) {
+        say('set ' . TWO_SETTING_CODE . '_' . $key . ($key === 'api_key' ? '' : ' = ' . $value));
     }
-    say('set ' . $settingKey . ($key === 'api_key' ? '' : ' = ' . $value));
 }
 
-// 5. The daily merchant-record refresh in OpenCart's cron table, as install() registers it.
-if (query($db, "SELECT `cron_id` FROM `{$p}cron` WHERE `code` = ?", [Services::CRON_CODE]) === []) {
-    query($db, "INSERT INTO `{$p}cron` SET `code` = ?, `description` = ?, `cycle` = ?, `action` = ?, `status` = 1, `date_added` = NOW(), `date_modified` = NOW()", [Services::CRON_CODE, Services::CRON_DESCRIPTION, Services::CRON_CYCLE, Services::CRON_ACTION]);
-    say('registered cron ' . Services::CRON_CODE);
-}
-// The hourly pending check (TWO-26300), as install() registers it.
-if (query($db, "SELECT `cron_id` FROM `{$p}cron` WHERE `code` = ?", [Services::PENDING_CRON_CODE]) === []) {
-    query($db, "INSERT INTO `{$p}cron` SET `code` = ?, `description` = ?, `cycle` = ?, `action` = ?, `status` = 1, `date_added` = NOW(), `date_modified` = NOW()", [Services::PENDING_CRON_CODE, Services::PENDING_CRON_DESCRIPTION, Services::PENDING_CRON_CYCLE, Services::CRON_ACTION]);
-    say('registered cron ' . Services::PENDING_CRON_CODE);
+// 5. The daily merchant-record refresh and the hourly pending check (TWO-26300) in OpenCart's cron table, by the
+// settings page's rule: a missing row is added once per extension version, so one the merchant deleted stays
+// deleted on every later run until the next upgrade (TWO-27148).
+$cronTable = new class ($db, $p) implements CronTable {
+    public function __construct(private readonly mysqli $db, private readonly string $p)
+    {
+    }
+
+    public function exists(string $code): bool
+    {
+        return query($this->db, "SELECT `cron_id` FROM `{$this->p}cron` WHERE `code` = ?", [$code]) !== [];
+    }
+
+    public function add(string $code, string $description, string $cycle, string $action): void
+    {
+        query($this->db, "INSERT INTO `{$this->p}cron` SET `code` = ?, `description` = ?, `cycle` = ?, `action` = ?, `status` = 1, `date_added` = NOW(), `date_modified` = NOW()", [$code, $description, $cycle, $action]);
+    }
+
+    public function delete(string $code): void
+    {
+        query($this->db, "DELETE FROM `{$this->p}cron` WHERE `code` = ?", [$code]);
+    }
+};
+$settingStore = new class ($db, $p) implements SettingsStore {
+    public function __construct(private readonly mysqli $db, private readonly string $p)
+    {
+    }
+
+    public function get(string $key): ?string
+    {
+        $rows = query($this->db, "SELECT `value` FROM `{$this->p}setting` WHERE `store_id` = 0 AND `code` = ? AND `key` = ?", [TWO_SETTING_CODE, TWO_SETTING_CODE . '_' . $key]);
+
+        return $rows === [] ? null : (string) $rows[0]['value'];
+    }
+
+    public function setMany(array $values): void
+    {
+        foreach ($values as $key => $value) {
+            putSetting($this->db, $key, $value, true);
+        }
+    }
+};
+// The version the shop serves, from the install.json read above.
+foreach (CronRows::upgrade($cronTable, $settingStore, $manifest['version']) as $code) {
+    say('registered cron ' . $code);
 }
 
 // 6. The order lifecycle on OpenCart's order history event, as install() registers it.
