@@ -223,7 +223,7 @@ $_['help_surcharge_line_description'] = 'Etiqueta de la línea de comisión que 
 $_['help_surcharge_rounding_basis'] = 'Ajusta la comisión a un incremento exacto. Selecciona Ninguno para importes estándar de dos decimales.';
 $_['help_surcharge_rounding_step'] = 'Incremento al que se redondea la comisión. Solo se aplica cuando se selecciona una dirección de redondeo.';
 $_['help_surcharge_tax_class'] = 'La clase de impuesto con la que se cobra la comisión, como en cualquier producto: se aplican las reglas fiscales de la tienda según la dirección del comprador. Para dejar la comisión sin impuestos, crea una clase de impuesto con un tipo del 0 por ciento y selecciónala. Obligatorio mientras haya un recargo activo.';
-$_['help_surcharge_grid'] = 'El porcentaje es la parte de la comisión de %2$s que se repercute al comprador. El límite se aplica a toda la comisión: el porcentaje y la comisión fija juntos, no solo el porcentaje. Déjalo vacío si no quieres límite. Las comisiones fijas y los límites están en %1$s y se convierten con los tipos de cambio de %2$s para otras monedas.';
+$_['help_surcharge_grid'] = 'El porcentaje es la parte de la comisión de %2$s que se repercute al comprador, de 0 a 100. El límite se aplica a toda la comisión: el porcentaje y la comisión fija juntos, no solo el porcentaje. Déjalo vacío si no quieres límite. Las comisiones fijas y los límites están en %1$s y se convierten con los tipos de cambio de %2$s para otras monedas.';
 $_['error_term_type_unknown'] = 'Elige un tipo de plazo de pago de la lista.';
 $_['error_terms_none'] = 'Debes seleccionar al menos un plazo de pago.';
 $_['error_terms_unknown'] = 'Selecciona solo plazos que ofrezca tu cuenta.';
@@ -240,6 +240,7 @@ $_['text_health_fx'] = 'Tipos de cambio de %s obtenidos %s';
 $_['text_withheld_no_terms'] = 'no se ofrece ningún plazo de pago: tu cuenta no ofrece ninguno de los plazos marcados en la pestaña Plazos de pago para este tipo de plazo.';
 $_['text_withheld_fee_total_off'] = 'hay un recargo configurado, pero el total de pedido Comisión por plazos de pago de Two no está activado. Actívalo en Extensiones > Totales de pedido, o establece el método de recargo en No se aplica ningún recargo.';
 $_['text_withheld_tax_code_map_unreadable'] = 'los códigos de impuesto guardados para líneas al 0%% no se pueden leer. Marca Borrar los códigos de impuesto guardados en la sección Códigos de impuesto para líneas al 0%% (pestaña Gestión de pedidos) y guarda.';
+$_['error_surcharge_percent_range'] = '%1$s para el plazo de %2$d días debe estar entre 0 y 100: es la parte de la comisión que se repercute al comprador.';
 
 // TWO-27051: vendor name (General), subtitle and the tile switches (Checkout fields), the confirmed status and Validate tax subtotals (Order management), the merchant fee per term (Payment terms). %s is the brand's product name.
 $_['entry_vendor_name'] = 'Nombre del proveedor (opcional)';
