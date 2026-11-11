@@ -1,0 +1,95 @@
+{% if two_order_id %}
+<table class="table table-bordered">
+  <tbody>
+    <tr><td class="w-25">{{ text_two_order|e }}</td><td>{{ two_order_id|e }}</td></tr>
+    <tr><td>{{ text_two_state|e }}</td><td>{{ two_order_state|e }}</td></tr>
+    {% if read %}
+    <tr><td>{{ text_refunded|e }}</td><td>{{ refunded|e }} {{ currency|e }}</td></tr>
+    <tr><td>{{ text_remaining|e }}</td><td>{{ remaining|e }} {{ currency|e }}</td></tr>
+    {% endif %}
+  </tbody>
+</table>
+{% if check_action %}
+<form id="form-two-check" action="{{ check_action|e }}" method="post" class="mb-3 two-action">
+  <button type="submit" class="btn btn-primary"><i class="fa-solid fa-rotate"></i> {{ button_check_status|e }}</button>
+  <div class="form-text">{{ help_check_status|e }}</div>
+</form>
+{% endif %}
+{% if invoice %}
+<a href="{{ invoice|e }}" target="_blank" rel="noopener" class="btn btn-primary"><i class="fa-solid fa-file-pdf"></i> {{ button_invoice|e }}</a>
+{% endif %}
+{% if credit_note %}
+<a href="{{ credit_note|e }}" target="_blank" rel="noopener" class="btn btn-outline-primary"><i class="fa-solid fa-file-pdf"></i> {{ button_credit_note|e }}</a>
+{% endif %}
+{% if invoice %}
+<div class="form-text mb-3">{{ help_invoice|e }}{% if credit_note %} {{ help_credit_note|e }}{% endif %}</div>
+{% endif %}
+<h5 class="mt-3">{{ text_refund|e }}</h5>
+{% if not read and two_order_state != 'CANCELLED' %}
+<p>{{ text_refund_unread|e }}</p>
+{% elseif not refundable %}
+<p>{{ text_refund_unavailable|e }}</p>
+{% elseif unresolved %}
+<div class="alert alert-warning">{{ text_refund_blocked|e }}</div>
+{% else %}
+<form id="form-two-refund" action="{{ refund_action|e }}" method="post" class="two-action">
+  <p class="form-text">{{ text_refund_help|e }}</p>
+  <table class="table table-bordered">
+    <thead><tr><th>{{ column_line|e }}</th><th class="text-end">{{ column_quantity|e }}</th><th class="text-end">{{ column_net|e }}</th><th class="text-end">{{ column_tax|e }}</th><th class="text-end">{{ column_rate|e }}</th><th class="text-end">{{ column_left|e }}</th><th class="w-25">{{ column_refund_quantity|e }}</th></tr></thead>
+    <tbody>
+      {% for line in lines %}
+      <tr>
+        <td>{{ line.name|e }}</td><td class="text-end">{{ line.quantity|e }}</td><td class="text-end">{{ line.net_amount|e }}</td><td class="text-end">{{ line.tax_amount|e }}</td><td class="text-end">{{ line.tax_rate|e }}</td><td class="text-end">{{ line.left|e }}</td>
+        <td><input type="number" min="0" max="{{ line.left|e }}" step="1" name="two_refund_line[{{ line.id|e }}]" value="" class="form-control"{% if not line.left %} disabled{% endif %}/></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <div class="row mb-3">
+    <div class="col-sm-3"><label for="input-two-refund-net" class="form-label">{{ entry_refund_net|e }}</label><input type="text" inputmode="decimal" name="two_refund_net" id="input-two-refund-net" class="form-control"/></div>
+    <div class="col-sm-3"><label for="input-two-refund-tax" class="form-label">{{ entry_refund_tax|e }}</label><input type="text" inputmode="decimal" name="two_refund_tax" id="input-two-refund-tax" class="form-control"/></div>
+    <div class="col-sm-3"><label for="input-two-refund-rate" class="form-label">{{ entry_refund_rate|e }}</label>
+      <select name="two_refund_rate" id="input-two-refund-rate" class="form-select">{% for rate in rates %}<option value="{{ rate|e }}">{{ rate|e }}</option>{% endfor %}</select></div>
+    <div class="col-sm-3"><label for="input-two-refund-reason" class="form-label">{{ entry_refund_reason|e }}</label><input type="text" maxlength="255" name="two_refund_reason" id="input-two-refund-reason" class="form-control"/></div>
+  </div>
+  <button type="submit" class="btn btn-danger"><i class="fa-solid fa-rotate-left"></i> {{ button_refund|e }}</button>
+</form>
+{% endif %}
+{% if refunds %}
+<h5 class="mt-3">{{ text_refunds|e }}</h5>
+<table class="table table-bordered">
+  <thead><tr><th>{{ column_date|e }}</th><th class="text-end">{{ column_amount|e }}</th><th>{{ column_state|e }}</th></tr></thead>
+  <tbody>
+    {% for refund in refunds %}
+    <tr><td>{{ refund.date_added|e }}</td><td class="text-end">{{ refund.amount|e }} {{ refund.currency|e }}</td><td>{{ refund.state_text|e }}{% if refund.reason %}<div class="form-text">{{ refund.reason|e }}</div>{% endif %}
+      {% if refund.retry %}<form action="{{ retry_action|e }}" method="post" class="mt-2 two-action"><input type="hidden" name="two_refund_id" value="{{ refund.refund_id|e }}"/><button type="submit" class="btn btn-sm btn-warning"><i class="fa-solid fa-rotate"></i> {{ button_retry|e }}</button></form>{% endif %}</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% else %}
+<p>{{ text_no_two_order|e }}</p>
+{% endif %}
+{% if two_order_id %}
+<script>
+// Refund, retry and the status check post here, show the outcome, and reload the tab whatever it was, so the form, the figures and the Retry button are never stale.
+$(document).off('submit.two', '#two-order-panel form.two-action').on('submit.two', '#two-order-panel form.two-action', function (event) {
+  event.preventDefault();
+  var form = this;
+  var button = $(form).find('button[type=submit]');
+  $.ajax({
+    url: form.action.replaceAll('&amp;', '&'), type: 'post', data: $(form).serialize(), dataType: 'json',
+    beforeSend: function () { button.prop('disabled', true); },
+    error: function (xhr) {
+      $('.alert-dismissible').remove();
+      $('#alert').prepend($('<div class="alert alert-danger alert-dismissible"></div>').text('{{ error_ajax|e('js') }} (HTTP ' + xhr.status + ')').append(' <button type="button" class="btn-close" data-bs-dismiss="alert"></button>'));
+    },
+    success: function (json) {
+      $('.alert-dismissible').remove();
+      $('#alert').prepend($('<div class="alert alert-dismissible"></div>').addClass(json.success ? 'alert-success' : 'alert-danger').text(json.success || json.error || '').append(' <button type="button" class="btn-close" data-bs-dismiss="alert"></button>'));
+    },
+    complete: function () { $('#two-order-panel').load('{{ panel_action|e('js') }}'.replaceAll('&amp;', '&')); }
+  });
+});
+</script>
+{% endif %}

@@ -1,0 +1,105 @@
+/*
+ * The product page message and buy button (Build Guide section 20), the
+ * reference plugin's look. The brand mark is shown with the brand name kept
+ * as text for assistive technology (two-product-hidden); a brand with no
+ * mark shows its name.
+ */
+.two-product-promo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 20px 0 25px;
+    padding: 14px 16px;
+    border: 1px solid #d4d4d4;
+    /* Logical, so the accent stays on the leading edge in a right-to-left shop. */
+    border-inline-start: 4px solid #1a1a1a;
+    border-radius: 4px;
+    background: #fff;
+}
+
+.two-product-mark {
+    flex: 0 0 auto;
+    width: auto;
+    height: 1.25em;
+}
+
+.two-product-promo .two-product-mark {
+    height: 22px;
+}
+
+/* Out of sight, still read by assistive technology. */
+.two-product-hidden {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+
+.two-product-promo__brand {
+    flex: 0 0 auto;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+/* A long unbroken override (a pasted URL, say) wraps rather than overflowing the column. */
+.two-product-promo__text {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-weight: 600;
+    line-height: 1.3;
+    color: #1a1a1a;
+}
+
+.two-product-button {
+    margin: 0.5rem 0 1.5rem;
+}
+
+.two-product-button__cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: auto;
+    padding: 0.625rem 1rem;
+    border: 1px solid currentColor;
+    border-radius: 4px;
+    background: transparent;
+    font-weight: 600;
+    line-height: 1.2;
+    cursor: pointer;
+}
+
+.two-product-button__cta:hover,
+.two-product-button__cta:focus {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.two-product-button__cta[disabled] {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.two-product-button__label {
+    white-space: nowrap;
+}
+
+.two-product-button__error:empty {
+    display: none;
+}
+
+.two-product-button__error {
+    margin: 0.5rem 0 0;
+    font-size: 0.875rem;
+}
+
+/* "Buy with" and the brand mark side by side. */
+.two-product-button__label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35em;
+}

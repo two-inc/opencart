@@ -1,0 +1,157 @@
+name: Tests
+
+on:
+  push:
+    branches: [staging, main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  # The PHP minors to test, read from php.net on every run by
+  # dev/support-matrix.sh --php-unit (TWO-27172): every minor from the plugin's
+  # declared floor (phpVersion in phpstan.neon) to the newest one php.net
+  # supports. A minor whose first GA release came after the newest supported
+  # OpenCart release was tagged runs non-blocking, with a warning and a
+  # summary row. It reads php.net and the OpenCart releases, never Docker Hub,
+  # and a transport or parse failure fails discovery rather than skipping
+  # green.
+  discover:
+    name: Discover PHP versions
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      php: ${{ steps.gen.outputs.php }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve the PHP minors
+        id: gen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -o pipefail
+          php=$(bash dev/support-matrix.sh --php-unit)
+          echo "PHP minors: $php"
+          echo "php=$php" >> "$GITHUB_OUTPUT"
+          {
+            echo "## PHP unit and lint legs"
+            echo ""
+            echo "| PHP | Status | Reason |"
+            echo "|---|---|---|"
+            jq -r '.[] | if .provisional then "| \(.php) | ⚠️ tested, non-blocking | \(.provisional_reason) |" else "| \(.php) | ✅ tested | |" end' <<<"$php"
+          } >> "$GITHUB_STEP_SUMMARY"
+          jq -r '.[] | select(.provisional) | "::warning title=PHP tested non-blocking::PHP \(.php): \(.provisional_reason)"' <<<"$php"
+
+  test:
+    name: PHP ${{ matrix.php.php }}
+    needs: discover
+    runs-on: ubuntu-latest
+    # A PHP minor newer than every supported OpenCart release is exercised but
+    # cannot block (see dev/support-matrix.sh).
+    continue-on-error: ${{ matrix.php.provisional }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Every supported minor. A minor-only pin: setup-php resolves the
+        # newest patch.
+        php: ${{ fromJSON(needs.discover.outputs.php) }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php.php }}
+          coverage: none
+
+      - name: Syntax check
+        run: make lint
+
+      - name: Offline test suite
+        run: make test
+
+  phpstan:
+    name: PHPStan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          coverage: none
+
+      # Pins (PHPStan and the OpenCart floor sources, both checksum-verified)
+      # live in the Makefile, so CI and a local run use the same ones. One leg:
+      # the configs pin phpVersion to the PHP floor, so PHPStan's verdict does
+      # not depend on the PHP it runs on; the PHP job above lints every file
+      # on every supported minor.
+      - name: PHPStan
+        run: make phpstan
+
+  jest:
+    name: Jest (Node 20)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install
+        run: npm ci --no-audit --no-fund
+
+      - name: Run Jest
+        run: npm run test:js
+
+  smoke:
+    name: Install smoke (OpenCart 4.1.0.4)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # The same docker shop as `make install`: MariaDB, OpenCart from the
+      # pinned upstream zip via cli_install.php, then dev/configure.php.
+      - name: Install the shop and the extension
+        run: make install
+
+      - name: Smoke
+        run: make smoke
+
+      - name: Shop logs
+        if: failure()
+        run: docker compose logs --no-color | tail -200
+
+      - name: Tear down
+        if: always()
+        run: make clean
+
+  package:
+    name: Package
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build two.ocmod.zip
+        run: make archive
+
+      - name: Upload the package
+        uses: actions/upload-artifact@v4
+        with:
+          name: two.ocmod.zip
+          path: dist/two.ocmod.zip
+          if-no-files-found: error

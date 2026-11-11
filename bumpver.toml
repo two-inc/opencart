@@ -1,0 +1,16 @@
+# One version, in install.json: OpenCart shows it in Extensions > Installer,
+# the admin page reads it, and dev/package.sh reports it. Tagging and pushing
+# stay off: the version is bumped on a PR into staging, and the Release
+# workflow tags it and cuts the GitHub release once it reaches main.
+[tool.bumpver]
+current_version = "2.0.0"
+version_pattern = "MAJOR.MINOR.PATCH"
+commit_message = "chore: Bump version {old_version} -> {new_version}"
+commit = true
+fetch = true
+tag = false
+push = false
+
+[tool.bumpver.file_patterns]
+"install.json" = ['"version": "{version}"']
+"bumpver.toml" = ['current_version = "{version}"']

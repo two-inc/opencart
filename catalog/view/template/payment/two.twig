@@ -1,0 +1,93 @@
+{# OpenCart 4.1 renders Twig with autoescape off: every value is escaped here. #}
+<form id="form-two" class="mb-3" data-two-tile="{{ in_tile ? 'search' : 'address' }}">
+  {% if subtitle or about_url %}
+    <p class="mb-3" data-two-subtitle>
+      {% if subtitle %}<span>{{ subtitle|e }}</span>{% endif %}
+      {# The explainer link: noopener without noreferrer, as the brand's page attributes the visit by its Referer.
+         A "?" icon the extension ships, named by its aria-label; the tooltip carries the explainer. #}
+      {% if about_url %}<a href="{{ about_url|e }}" target="_blank" rel="noopener" class="two-about" aria-label="{{ text_about|e }}" title="{{ text_about_tooltip|e }}" data-bs-toggle="tooltip" data-two-about><img class="two-about__icon" src="{{ about_icon|e }}" alt="" width="20" height="19"></a>{% endif %}
+    </p>
+  {% endif %}
+  {% if in_tile %}
+    {# The one company control in tile placement: the shared search mounts on this field. Its country is the billing address's. #}
+    <div class="mb-3">
+      <label for="input-two-company" class="form-label">{{ entry_company|e }}</label>
+      <input type="text" name="two_company_name" id="input-two-company" value="{{ company.company_name|default('')|e }}" class="form-control" autocomplete="organization" data-two-capture-host="tile" data-two-country="{{ country|e }}">
+    </div>
+  {% elseif company %}
+    <p data-two-company-summary{% if saved_address %} data-two-saved-address{% endif %}>{{ text_company_from_address|format(company_label)|e }}</p>
+  {% else %}
+    <p class="text-danger" data-two-company-summary{% if saved_address %} data-two-saved-address{% endif %}>{{ text_company_missing|e }}{% if edit_address %} <a href="{{ edit_address|e }}" data-two-edit-address>{{ text_company_edit_address|e }}</a>{% endif %}</p>
+  {% endif %}
+  {% for field in fields %}
+    <div class="mb-3">
+      <label for="input-two-{{ field.name|e }}" class="form-label"{% if field.help %} title="{{ field.help|e }}"{% endif %}>{{ field.label|e }} <span class="text-muted">({{ text_optional|e }})</span></label>
+      <input type="{{ field.type|e }}" name="two_{{ field.name|e }}" id="input-two-{{ field.name|e }}" value="" class="form-control" maxlength="255" data-two-optional-field>
+    </div>
+  {% endfor %}
+  <div id="two-intent-notice" role="status" aria-live="polite"></div>
+  {% if terms %}
+    <div class="mb-3" data-two-terms>
+      <h4 class="h6" id="two-terms-title">{{ text_terms_title|e }}</h4>
+      <p class="form-text" id="two-terms-description">{{ text_terms_description|e }}</p>
+      <div class="d-flex flex-wrap gap-2" role="radiogroup" aria-labelledby="two-terms-title" aria-describedby="two-terms-description" data-two-term-chips>
+        {% for term in terms %}
+          <button type="button" role="radio" class="btn btn-sm {{ term.days == selected_term ? 'btn-primary' : 'btn-outline-primary' }}" data-two-term="{{ term.days }}" aria-checked="{{ term.days == selected_term ? 'true' : 'false' }}" tabindex="{{ term.days == selected_term ? '0' : '-1' }}"{% if term.name %} aria-label="{{ term.name|e }}"{% endif %}{% if terms|length == 1 %} aria-disabled="true"{% endif %}>
+            <span>{{ term.text|e }}</span> <span class="small" data-two-term-fee></span>
+          </button>
+        {% endfor %}
+      </div>
+      <p class="form-text mb-0" data-two-pay-in aria-live="polite">{{ text_pay_in|e }}</p>
+    </div>
+  {% endif %}
+</form>
+<div class="text-end">
+  <button type="button" id="button-two-confirm" class="btn btn-primary">{{ button_confirm|e }}</button>
+</div>
+<script type="text/javascript"><!--
+if (window.TwoCheckout) {
+    window.TwoCheckout.tileReady(document.getElementById('form-two'));
+}
+
+$('#button-two-confirm').on('click', function() {
+    if (window.TwoCheckout) {
+        // One confirm however often it is pressed, after pending company saves.
+        window.TwoCheckout.confirm(this, document.getElementById('form-two'));
+
+        return;
+    }
+
+    // The capture script did not load: place the order directly, once.
+    var element = this;
+
+    if (element.disabled) {
+        return;
+    }
+
+    $.ajax({
+        url: 'index.php?route=extension/two/payment/two.confirm&language={{ language|e('url') }}',
+        type: 'post',
+        data: $('#form-two').serialize(),
+        dataType: 'json',
+        beforeSend: function() {
+            $(element).button('loading');
+        },
+        complete: function() {
+            $(element).button('reset');
+        },
+        success: function(json) {
+            if (json['error']) {
+                // The controller escapes the notice.
+                $('#alert').prepend('<div class="alert alert-danger alert-dismissible"><i class="fa-solid fa-circle-exclamation"></i> ' + json['error'] + ' <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>');
+            }
+
+            if (json['redirect']) {
+                location = json['redirect'];
+            }
+        },
+        error: function(xhr, ajaxOptions, thrownError) {
+            console.log(thrownError + "\r\n" + xhr.statusText + "\r\n" + xhr.responseText);
+        }
+    });
+});
+//--></script>

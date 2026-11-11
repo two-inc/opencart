@@ -1,0 +1,15 @@
+# Third PHPStan pass: the offline suite alone. It runs apart from the main
+# pass because its OpenCart doubles in tests/fixtures/ (DB, the cron model
+# and Proxy) declare the real class names, so no OpenCart sources are
+# scanned here; the test bootstrap loads the doubles and the extension's
+# autoloader instead.
+parameters:
+    level: 6
+    phpVersion: 80100
+    paths:
+        - tests
+    # The E2E harness: Playwright, and a seed run inside the shop container.
+    excludePaths:
+        - tests/e2e
+    bootstrapFiles:
+        - tests/bootstrap.php

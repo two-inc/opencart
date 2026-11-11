@@ -1,0 +1,73 @@
+# The E2E shop: the same image as `make install` (dev/docker), at the
+# OpenCart and PHP versions the leg names, plus the Two API stub. Run through
+# `make e2e-up`, which sets the project name, ports and versions, so it never
+# collides with the `make install` shop.
+#
+# With the stub profile (every PR) the stub answers as api.sandbox.two.inc on
+# this network, over HTTPS with the CA from tests/e2e/bin/tls.sh, and the
+# shop's environment is sandbox. Without it (the sandbox leg) the shop reaches
+# Two's real sandbox.
+name: ${E2E_PROJECT:-two-opencart-e2e}
+
+services:
+  db:
+    image: mariadb:10.11
+    environment:
+      MARIADB_ROOT_PASSWORD: admin
+      MARIADB_DATABASE: opencart
+    tmpfs:
+      - /var/lib/mysql
+
+  opencart:
+    build:
+      context: ../../dev/docker
+      args:
+        PHP_IMAGE: php:${E2E_PHP:-8.4}-apache
+        OPENCART_VERSION: ${E2E_OPENCART:-4.1.0.4}
+        OPENCART_SHA256: ${E2E_OPENCART_SHA256:-cdef537f5a0a7e1b4ddbe16f589dd2e80b10150a09bfbe93ce76ef2d5c3218c0}
+    image: two-opencart-e2e:${E2E_OPENCART:-4.1.0.4}-php${E2E_PHP:-8.4}
+    depends_on:
+      - db
+    ports:
+      - "127.0.0.1:${E2E_PORT:-1240}:80"
+    environment:
+      DB_HOSTNAME: db
+      DB_USERNAME: root
+      DB_PASSWORD: admin
+      DB_DATABASE: opencart
+      OPENCART_HTTP_SERVER: http://localhost:${E2E_PORT:-1240}/
+      ADMIN_USERNAME: admin
+      ADMIN_EMAIL: exampleuser@two.inc
+      ADMIN_PASSWORD: examplepassword123
+      TWO_INTERNAL_ENVIRONMENTS: ""
+    # Trust the stub's CA when there is one, then the usual first boot.
+    command:
+      - bash
+      - -c
+      - |
+        if [ -s /e2e-tls/ca.crt ]; then cp /e2e-tls/ca.crt /usr/local/share/ca-certificates/two-e2e.crt && update-ca-certificates >/dev/null; fi
+        exec two-opencart-start
+    volumes:
+      # The extension under test: this checkout, or the upgrade smoke's copy.
+      - ${E2E_EXTENSION_DIR:-../..}:/var/www/html/extension/two:ro
+      - ./.tls:/e2e-tls:ro
+
+  stub:
+    profiles: [stub]
+    image: node:20-alpine
+    command: ["node", "/stub/two-api-stub.mjs"]
+    environment:
+      TWO_API_STUB_PORT: ${TWO_API_STUB_PORT:?TWO_API_STUB_PORT must be set}
+      # The key tests/e2e/bin/prepare.sh gives the shop (and config.ts the specs).
+      TWO_API_STUB_KEY: e2e-stub-key
+      TLS_KEY: /tls/stub.key
+      TLS_CERT: /tls/stub.crt
+    ports:
+      - "127.0.0.1:${TWO_API_STUB_PORT}:${TWO_API_STUB_PORT}"
+    volumes:
+      - ./stub:/stub:ro
+      - ./.tls:/tls:ro
+    networks:
+      default:
+        aliases:
+          - api.sandbox.two.inc

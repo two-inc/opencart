@@ -1,0 +1,13 @@
+{
+  "name": "two-opencart-e2e",
+  "private": true,
+  "description": "Playwright suite for the Two OpenCart extension. Dev only, not packaged.",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.61.1",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  }
+}

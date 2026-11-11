@@ -1,0 +1,7 @@
+# The repo root is the extension directory, and a shop serves it under
+# extension/two/. Only the runtime paths are public: admin/, catalog/,
+# system/ and install.json. Everything else (dev/, tests/, .git, the repo
+# tooling) is refused. The CLI scripts also refuse web requests themselves.
+<If "%{REQUEST_URI} =~ m#/extension/two/(?!(admin|catalog|system)/|install\.json$)#">
+    Require all denied
+</If>

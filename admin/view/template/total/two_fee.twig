@@ -1,0 +1,44 @@
+{{ header }}{{ column_left }}
+<div id="content">
+  <div class="page-header">
+    <div class="container-fluid">
+      <div class="float-end">
+        <button type="submit" form="form-total" data-bs-toggle="tooltip" title="{{ button_save|e }}" class="btn btn-primary"><i class="fa-solid fa-save"></i></button>
+        <a href="{{ back|e }}" data-bs-toggle="tooltip" title="{{ button_back|e }}" class="btn btn-light"><i class="fa-solid fa-reply"></i></a></div>
+      <h1>{{ heading_title|e }}</h1>
+      <ol class="breadcrumb">
+        {% for breadcrumb in breadcrumbs %}
+          <li class="breadcrumb-item"><a href="{{ breadcrumb.href|e }}">{{ breadcrumb.text|e }}</a></li>
+        {% endfor %}
+      </ol>
+    </div>
+  </div>
+  <div class="container-fluid">
+    <div class="card">
+      <div class="card-header"><i class="fa-solid fa-pencil"></i> {{ text_edit|e }}</div>
+      <div class="card-body">
+        <p>{{ text_intro|e }}</p>
+        <form id="form-total" action="{{ save|e }}" method="post" data-oc-toggle="ajax">
+          <div class="row mb-3">
+            <label class="col-sm-2 col-form-label">{{ entry_status|e }}</label>
+            <div class="col-sm-10">
+              <div class="form-check form-switch form-switch-lg">
+                <input type="hidden" name="total_two_fee_status" value="0"/>
+                <input type="checkbox" name="total_two_fee_status" value="1" id="input-status" class="form-check-input"{% if total_two_fee_status %} checked{% endif %}/>
+              </div>
+            </div>
+          </div>
+          <div class="row mb-3">
+            <label for="input-sort-order" class="col-sm-2 col-form-label">{{ entry_sort_order|e }}</label>
+            <div class="col-sm-10">
+              <input type="text" name="total_two_fee_sort_order" value="{{ total_two_fee_sort_order|e }}" id="input-sort-order" class="form-control"/>
+              <div class="form-text text-muted">{{ help_sort_order|e }}</div>
+              <div id="error-sort-order" class="invalid-feedback"></div>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{{ footer }}

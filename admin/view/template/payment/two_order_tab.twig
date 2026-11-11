@@ -1,0 +1,28 @@
+<div id="two-order-panel" data-panel="{{ panel_action|e }}" data-loading="{{ text_panel_loading|e }}" data-error="{{ error_panel|e }}"><p class="text-muted">{{ text_panel_loading|e }}</p></div>
+<script>
+// The tab's content reads Two, so it loads when the tab is opened, never with the order page itself.
+(function () {
+  var panel = $('#two-order-panel');
+  var pane = panel.closest('.tab-pane');
+  var state = 'idle';
+  var load = function () {
+    if (state !== 'idle') {
+      return;
+    }
+    state = 'loading';
+    panel.html($('<p class="text-muted"></p>').text(panel.data('loading')));
+    panel.load(String(panel.data('panel')).replaceAll('&amp;', '&'), function (response, status, xhr) {
+      if (status === 'error') {
+        state = 'idle';
+        panel.html($('<p class="text-danger"></p>').text(panel.data('error') + ' (HTTP ' + xhr.status + ')'));
+      } else {
+        state = 'loaded';
+      }
+    });
+  };
+  $(document).on('show.bs.tab', 'a[href="#' + pane.attr('id') + '"]', load);
+  if (pane.hasClass('active')) {
+    load();
+  }
+})();
+</script>

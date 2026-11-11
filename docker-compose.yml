@@ -1,0 +1,48 @@
+services:
+  db:
+    image: mariadb:10.11
+    container_name: two-opencart-db
+    environment:
+      MARIADB_ROOT_PASSWORD: admin
+      MARIADB_DATABASE: opencart
+    volumes:
+      - opencart_db:/var/lib/mysql
+    networks:
+      - opencart
+
+  opencart:
+    build:
+      context: dev/docker
+    image: two-opencart-dev:4.1.0.4
+    container_name: two-opencart
+    depends_on:
+      - db
+    ports:
+      - "${PORT:-1238}:80"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      DB_HOSTNAME: db
+      DB_USERNAME: root
+      DB_PASSWORD: admin
+      DB_DATABASE: opencart
+      OPENCART_HTTP_SERVER: http://localhost:${PORT:-1238}/
+      ADMIN_USERNAME: ${ADMIN_USER:-admin}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-exampleuser@two.inc}
+      ADMIN_PASSWORD: ${ADMIN_PASSWD:-examplepassword123}
+      # Offers the staging environment in the plugin admin. Empty unless the
+      # Makefile or .env sets it. Read when the container is created.
+      TWO_INTERNAL_ENVIRONMENTS: ${TWO_INTERNAL_ENVIRONMENTS:-}
+    volumes:
+      # The repo root is the extension directory, as on the staging shops.
+      # Read-only: OpenCart's Installer > Uninstall deletes everything under
+      # extension/two, which here is the checkout and its .git.
+      - .:/var/www/html/extension/two:ro
+    networks:
+      - opencart
+
+networks:
+  opencart:
+
+volumes:
+  opencart_db:

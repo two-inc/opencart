@@ -1,0 +1,14 @@
+# Second PHPStan pass over the core alone, with no OpenCart sources and no
+# shop constants. Any OpenCart class, function or constant used in the core
+# is an unknown symbol here, so the boundary fails analysis as well as
+# tests/CoreBoundarySpec.php.
+parameters:
+    level: 6
+    phpVersion: 80100
+    paths:
+        - system/library/core
+    ignoreErrors:
+        -
+            identifier: property.onlyWritten
+            path: system/library/core/*
+            reportUnmatched: false

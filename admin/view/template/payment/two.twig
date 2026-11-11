@@ -1,0 +1,586 @@
+{{ header }}{{ column_left }}
+<div id="content">
+  <div class="page-header">
+    <div class="container-fluid">
+      <div class="float-end">
+        <button type="submit" form="form-payment" data-bs-toggle="tooltip" title="{{ button_save }}" class="btn btn-primary"><i class="fa-solid fa-save"></i></button>
+        <a href="{{ back }}" data-bs-toggle="tooltip" title="{{ button_back }}" class="btn btn-light"><i class="fa-solid fa-reply"></i></a>
+      </div>
+      <h1>{{ heading_title }}</h1>
+      <ol class="breadcrumb">
+        {% for breadcrumb in breadcrumbs %}
+          <li class="breadcrumb-item"><a href="{{ breadcrumb.href }}">{{ breadcrumb.text }}</a></li>
+        {% endfor %}
+      </ol>
+    </div>
+  </div>
+  <div class="container-fluid">
+    <div class="card">
+      <div class="card-header"><i class="fa-solid fa-pencil"></i> {{ text_edit }}</div>
+      <div class="card-body">
+        {% if opencart_version.state == 'unsupported' %}<div class="alert alert-danger" id="two-opencart-unsupported" role="alert"><i class="fa-solid fa-circle-exclamation"></i> {{ opencart_version.text|e }}</div>{% endif %}
+        <form id="form-payment" action="{{ save }}" method="post" data-oc-toggle="ajax">
+          <ul class="nav nav-tabs" id="two-tabs">
+            <li class="nav-item"><a href="#tab-general" data-bs-toggle="tab" class="nav-link active">{{ tab_general }}</a></li>
+            <li class="nav-item"><a href="#tab-checkout-fields" data-bs-toggle="tab" class="nav-link">{{ tab_checkout_fields }}</a></li>
+            <li class="nav-item"><a href="#tab-payment-terms" data-bs-toggle="tab" class="nav-link">{{ tab_payment_terms }}</a></li>
+            <li class="nav-item"><a href="#tab-order-management" data-bs-toggle="tab" class="nav-link">{{ tab_order_management }}</a></li>
+            <li class="nav-item"><a href="#tab-diagnostics" data-bs-toggle="tab" class="nav-link">{{ tab_diagnostics }}</a></li>
+          </ul>
+          <div class="tab-content pt-3">
+
+            <div id="tab-general" class="tab-pane active">
+              <div id="two-merchant-panel" class="alert alert-success{% if key_status != 'ok' %} d-none{% endif %}">
+                <strong>{{ text_key_verified }}</strong>
+                <div class="small mt-1">
+                  {{ text_merchant_id }}: <span id="two-merchant-id">{{ merchant_id|e }}</span>
+                  <span id="two-merchant-short-name-row" class="ms-3{% if not merchant_short_name %} d-none{% endif %}">{{ text_merchant_short_name }}: <span id="two-merchant-short-name">{{ merchant_short_name|e }}</span></span>
+                  {% if record_fetched_at %}<span class="ms-3">{{ text_record_fetched_at }}: {{ record_fetched_at|e }}</span>{% endif %}
+                </div>
+              </div>
+              <div class="row mb-3">
+                <label class="col-sm-2 col-form-label">{{ entry_health }}</label>
+                <div class="col-sm-10">
+                  <p id="two-health" class="form-control-plaintext {% if health.ok %}text-success{% else %}text-danger{% endif %}">{{ health.text|e }}</p>
+                </div>
+              </div>
+              <div class="row mb-3">
+                <label class="col-sm-2 col-form-label">{{ entry_status }}</label>
+                <div class="col-sm-10">
+                  <div class="form-check form-switch form-switch-lg">
+                    <input type="hidden" name="payment_two_status" value="0"/>
+                    <input type="checkbox" name="payment_two_status" value="1" id="input-status" class="form-check-input"{% if payment_two_status %} checked{% endif %}/>
+                  </div>
+                </div>
+              </div>
+              <div class="row mb-3 required">
+                <label for="input-environment" class="col-sm-2 col-form-label">{{ entry_environment }}</label>
+                <div class="col-sm-10">
+                  <select name="payment_two_environment" id="input-environment" class="form-select">
+                    {% for option in environments %}
+                      <option value="{{ option.value }}"{% if option.value == environment %} selected{% endif %}>{{ option.text }}</option>
+                    {% endfor %}
+                  </select>
+                  <div id="error-environment" class="invalid-feedback"></div>
+                  {% if environment_unhealthy %}<div class="text-danger small mt-1">{{ environment_unhealthy|e }}</div>{% endif %}
+                  <div class="form-text">{{ help_environment }}</div>
+                </div>
+              </div>
+              <div class="row mb-3 required">
+                <label for="input-api-key" class="col-sm-2 col-form-label">{{ entry_api_key }}</label>
+                <div class="col-sm-10">
+                  <input type="password" name="payment_two_api_key" value="" autocomplete="new-password" placeholder="{% if api_key_saved %}{{ text_key_saved }}{% else %}{{ entry_api_key }}{% endif %}" id="input-api-key" class="form-control" data-verify-url="{{ verify_key }}" data-checking="{{ text_key_checking }}"/>
+                  <div id="error-api-key" class="invalid-feedback"></div>
+                  <div id="two-key-status" class="small mt-1 {% if key_status == 'invalid_key' %}text-danger{% else %}text-warning{% endif %}">{{ key_message|e }}</div>
+                  <div class="form-text">{{ help_api_key }}</div>
+                </div>
+              </div>
+              <div class="row mb-3">
+                <label for="input-sort-order" class="col-sm-2 col-form-label">{{ entry_sort_order }}</label>
+                <div class="col-sm-10">
+                  <input type="text" name="payment_two_sort_order" value="{{ payment_two_sort_order }}" placeholder="{{ entry_sort_order }}" id="input-sort-order" class="form-control"/>
+                </div>
+              </div>
+              <div class="row mb-3">
+                <label for="input-vendor-name" class="col-sm-2 col-form-label">{{ entry_vendor_name|e }}</label>
+                <div class="col-sm-10">
+                  <input type="text" name="payment_two_vendor_name" value="{{ vendor_name|e }}" id="input-vendor-name" class="form-control" maxlength="255"/>
+                  <div id="error-vendor-name" class="invalid-feedback"></div>
+                  <div class="form-text">{{ help_vendor_name|e }}</div>
+                </div>
+              </div>
+            </div>
+
+            <div id="tab-checkout-fields" class="tab-pane">
+              <div class="row mb-3 required">
+                <label class="col-sm-2 col-form-label">{{ entry_title }}</label>
+                <div class="col-sm-10" id="input-title">
+                  {% for language in languages %}
+                    <div class="input-group mb-1">
+                      <div class="input-group-text"><img src="{{ language.image }}" title="{{ language.name }}"/></div>
+                      <input type="text" name="payment_two_title[{{ language.language_id }}]" value="{{ titles[language.language_id]|e }}" placeholder="{{ entry_title }}" id="input-title-{{ language.language_id }}" class="form-control"/>
+                    </div>
+                  {% endfor %}
+                  <div id="error-title" class="invalid-feedback"></div>
+                  <div class="form-text">{{ help_title }}</div>
+                </div>
+              </div>
+              <div class="row mb-3">
+                <label class="col-sm-2 col-form-label">{{ entry_subtitle|e }}</label>
+                <div class="col-sm-10" id="input-subtitle">
+                  {% for language in languages %}
+                    <div class="input-group mb-1">
+                      <div class="input-group-text"><img src="{{ language.image }}" title="{{ language.name }}"/></div>
+                      <input type="text" name="payment_two_subtitle[{{ language.language_id }}]" value="{{ subtitles[language.language_id]|e }}" placeholder="{{ entry_subtitle|e }}" id="input-subtitle-{{ language.language_id }}" class="form-control" maxlength="255"/>
+                    </div>
+                  {% endfor %}
+                  <div id="error-subtitle" class="invalid-feedback"></div>
+                  <div class="form-text">{{ help_subtitle|e }}</div>
+                </div>
+              </div>
+              {% for field in product_switches %}
+                <div class="row mb-3">
+                  <label class="col-sm-2 col-form-label">{{ field.label|e }}</label>
+                  <div class="col-sm-10">
+                    <div class="form-check form-switch form-switch-lg">
+                      <input type="hidden" name="payment_two_{{ field.key }}" value="0"/>
+                      <input type="checkbox" name="payment_two_{{ field.key }}" value="1" id="input-{{ field.key|replace({'_': '-'}) }}" class="form-check-input"{% if field.on %} checked{% endif %}/>
+                    </div>
+                    <div id="error-{{ field.key|replace({'_': '-'}) }}" class="invalid-feedback"></div>
+                    <div class="form-text">{{ field.help|e }}</div>
+                  </div>
+                </div>
+              {% endfor %}
+              <div class="row mb-3">
+                <label class="col-sm-2 col-form-label">{{ entry_product_message|e }}</label>
+                <div class="col-sm-10" id="input-product-message">
+                  {% for language in languages %}
+                    <div class="input-group mb-1">
+                      <div class="input-group-text"><img src="{{ language.image }}" title="{{ language.name }}"/></div>
+                      <input type="text" name="payment_two_product_message[{{ language.language_id }}]" value="{{ product_messages[language.language_id]|e }}" placeholder="{{ entry_product_message|e }}" id="input-product-message-{{ language.language_id }}" class="form-control"/>
+                    </div>
+                  {% endfor %}
+                  <div id="error-product-message" class="invalid-feedback"></div>
+                  <div class="form-text">{{ help_product_message|e }}</div>
+                </div>
+              </div>
+              <div class="row mb-3">
+                <label class="col-sm-2 col-form-label">{{ entry_company_search_in_address }}</label>
+                <div class="col-sm-10">
+                  <div class="form-check form-switch form-switch-lg">
+                    <input type="hidden" name="payment_two_company_search_in_address" value="0"/>
+                    <input type="checkbox" name="payment_two_company_search_in_address" value="1" id="input-company-search-in-address" class="form-check-input"{% if company_search_in_address %} checked{% endif %}/>
+                  </div>
+                  <div id="error-company-search-in-address" class="invalid-feedback"></div>
+                  <div class="form-text">{{ help_company_search_in_address }}</div>
+                </div>
+              </div>
+              <div class="row mb-3">
+                <label class="col-sm-2 col-form-label">{{ entry_address_lookup }}</label>
+                <div class="col-sm-10">
+                  <div class="form-check form-switch form-switch-lg">
+                    <input type="hidden" name="payment_two_address_lookup" value="0"/>
+                    <input type="checkbox" name="payment_two_address_lookup" value="1" id="input-address-lookup" class="form-check-input"{% if address_lookup and company_search_in_address %} checked{% endif %}{% if not company_search_in_address %} disabled{% endif %}/>
+                  </div>
+                  <div id="error-address-lookup" class="invalid-feedback"></div>
+                  <div class="form-text">{{ help_address_lookup }}</div>
+                </div>
+              </div>
+              <div class="row mb-3">
+                <label for="input-min-order-amount" class="col-sm-2 col-form-label">{{ entry_min_order_amount|e }}</label>
+                <div class="col-sm-10">
+                  <input type="text" name="payment_two_min_order_amount" value="{{ min_order_amount|e }}" id="input-min-order-amount" class="form-control" inputmode="decimal"/>
+                  <div id="error-min-order-amount" class="invalid-feedback"></div>
+                  <div class="form-text">{{ help_min_order_amount }}</div>
+                </div>
+              </div>
+              <div class="row mb-3">
+                <label for="input-min-order-basis" class="col-sm-2 col-form-label">{{ entry_min_order_basis }}</label>
+                <div class="col-sm-10">
+                  <select name="payment_two_min_order_basis" id="input-min-order-basis" class="form-select">
+                    <option value=""{% if min_order_basis == '' %} selected{% endif %}>{{ text_basis_default }}</option>
+                    <option value="gross"{% if min_order_basis == 'gross' %} selected{% endif %}>{{ text_basis_option_gross }}</option>
+                    <option value="net"{% if min_order_basis == 'net' %} selected{% endif %}>{{ text_basis_option_net }}</option>
+                  </select>
+                  <div id="error-min-order-basis" class="invalid-feedback"></div>
+                  <div class="form-text">{{ help_min_order_basis }}</div>
+                </div>
+              </div>
+              {% for field in tile_switches|merge(optional_fields) %}
+                <div class="row mb-3">
+                  <label class="col-sm-2 col-form-label">{{ field.label|e }}</label>
+                  <div class="col-sm-10">
+                    <div class="form-check form-switch form-switch-lg">
+                      <input type="hidden" name="payment_two_{{ field.key }}" value="0"/>
+                      <input type="checkbox" name="payment_two_{{ field.key }}" value="1" id="input-{{ field.key|replace({'_': '-'}) }}" class="form-check-input"{% if field.on %} checked{% endif %}/>
+                    </div>
+                    <div id="error-{{ field.key|replace({'_': '-'}) }}" class="invalid-feedback"></div>
+                    <div class="form-text">{{ field.help|e }}</div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+
+            <div id="tab-payment-terms" class="tab-pane">
+              {% if not record_terms %}
+                <div class="alert alert-warning">{{ text_terms_none|e }}</div>
+              {% endif %}
+              <div class="row mb-3">
+                <label for="input-payment-term-type" class="col-sm-2 col-form-label">{{ entry_payment_term_type|e }}</label>
+                <div class="col-sm-10">
+                  <select name="payment_two_payment_term_type" id="input-payment-term-type" class="form-select">
+                    <option value="STANDARD"{% if payment_term_type == 'STANDARD' %} selected{% endif %}>{{ text_term_type_standard|e }}</option>
+                    <option value="EOM"{% if payment_term_type == 'EOM' %} selected{% endif %}>{{ text_term_type_eom|e }}</option>
+                  </select>
+                  <div id="error-payment-term-type" class="invalid-feedback"></div>
+                  <div class="form-text">{{ help_payment_term_type|e }}</div>
+                </div>
+              </div>
+              <div class="row mb-3">
+                <label class="col-sm-2 col-form-label">{{ entry_payment_terms|e }}</label>
+                {# url->link() answers already HTML-escaped (&amp;): escaping it again sends &amp;user_token, and OpenCart answers with its login page. #}
+                <div class="col-sm-10" id="input-payment-terms" data-two-fee-rates="{{ fee_rates }}" data-two-fee-text="{{ fee_text|e }}">
+                  <input type="hidden" name="payment_two_payment_terms[]" value=""/>
+                  {% for days in record_terms %}
+                    <div class="form-check form-check-inline">
+                      <input type="checkbox" name="payment_two_payment_terms[]" value="{{ days }}" id="input-payment-term-{{ days }}" class="form-check-input"{% if days in ticked_terms %} checked{% endif %}/>
+                      <label for="input-payment-term-{{ days }}" class="form-check-label">{{ text_days|format(days)|e }} <span class="text-muted small" data-two-term-fee="{{ days }}"></span></label>
+                    </div>
+                  {% endfor %}
+                  <div class="form-text" data-two-fee-notice></div>
+                  <div id="error-payment-terms" class="invalid-feedback"></div>
+                  <div class="form-text">{{ help_payment_terms|e }}</div>
+                </div>
+              </div>
+              <div class="row mb-3">
+                <label for="input-default-payment-term" class="col-sm-2 col-form-label">{{ entry_default_payment_term|e }}</label>
+                <div class="col-sm-10">
+                  <select name="payment_two_default_payment_term" id="input-default-payment-term" class="form-select">
+                    <option value="">{{ text_default_term_auto|e }}</option>
+                    {% for days in record_terms %}
+                      <option value="{{ days }}"{% if days == default_payment_term %} selected{% endif %}>{{ text_days|format(days)|e }}</option>
+                    {% endfor %}
+                  </select>
+                  <div id="error-default-payment-term" class="invalid-feedback"></div>
+                  <div class="form-text">{{ help_default_payment_term|e }}</div>
+                </div>
+              </div>
+              <fieldset>
+                <legend>{{ legend_surcharge|e }}</legend>
+                <div class="row mb-3">
+                  <label for="input-surcharge-type" class="col-sm-2 col-form-label">{{ entry_surcharge_type|e }}</label>
+                  <div class="col-sm-10">
+                    <select name="payment_two_surcharge_type" id="input-surcharge-type" class="form-select">
+                      {% for value, label in surcharge_types %}
+                        <option value="{{ value|e }}"{% if value == surcharge.type %} selected{% endif %}>{{ label|e }}</option>
+                      {% endfor %}
+                    </select>
+                    <div id="error-surcharge-type" class="invalid-feedback"></div>
+                    <div class="form-text">{{ help_surcharge_type|e }}</div>
+                  </div>
+                </div>
+                <div class="row mb-3">
+                  <label for="input-surcharge-differential" class="col-sm-2 col-form-label">{{ entry_surcharge_differential|e }}</label>
+                  <div class="col-sm-10">
+                    <select name="payment_two_surcharge_differential" id="input-surcharge-differential" class="form-select">
+                      <option value="0"{% if not surcharge.differential %} selected{% endif %}>{{ text_differential_total|e }}</option>
+                      <option value="1"{% if surcharge.differential %} selected{% endif %}>{{ text_differential_difference|e }}</option>
+                    </select>
+                    <div class="form-text">{{ help_surcharge_differential|e }}</div>
+                  </div>
+                </div>
+                <div class="row mb-3">
+                  <label for="input-surcharge-line-description" class="col-sm-2 col-form-label">{{ entry_surcharge_line_description|e }}</label>
+                  <div class="col-sm-10">
+                    <input type="text" name="payment_two_surcharge_line_description" value="{{ surcharge.line_description|e }}" id="input-surcharge-line-description" class="form-control" maxlength="255"/>
+                    <div class="form-text">{{ help_surcharge_line_description|e }}</div>
+                  </div>
+                </div>
+                <div class="row mb-3">
+                  <label for="input-surcharge-rounding-basis" class="col-sm-2 col-form-label">{{ entry_surcharge_rounding_basis|e }}</label>
+                  <div class="col-sm-10">
+                    <select name="payment_two_surcharge_rounding_basis" id="input-surcharge-rounding-basis" class="form-select">
+                      {% for value, label in rounding_bases %}
+                        <option value="{{ value|e }}"{% if value == surcharge.rounding_basis %} selected{% endif %}>{{ label|e }}</option>
+                      {% endfor %}
+                    </select>
+                    <div id="error-surcharge-rounding-basis" class="invalid-feedback"></div>
+                    <div class="form-text">{{ help_surcharge_rounding_basis|e }}</div>
+                  </div>
+                </div>
+                <div class="row mb-3">
+                  <label for="input-surcharge-rounding-step" class="col-sm-2 col-form-label">{{ entry_surcharge_rounding_step|e }}</label>
+                  <div class="col-sm-10">
+                    <select name="payment_two_surcharge_rounding_step" id="input-surcharge-rounding-step" class="form-select">
+                      <option value="">{{ text_no_rounding|e }}</option>
+                      {% for step in rounding_steps %}
+                        <option value="{{ step|e }}"{% if step == surcharge.rounding_step %} selected{% endif %}>{{ step|e }}</option>
+                      {% endfor %}
+                    </select>
+                    <div id="error-surcharge-rounding-step" class="invalid-feedback"></div>
+                    <div class="form-text">{{ help_surcharge_rounding_step|e }}</div>
+                  </div>
+                </div>
+                <div class="row mb-3">
+                  <label for="input-surcharge-tax-class-id" class="col-sm-2 col-form-label">{{ entry_surcharge_tax_class|e }}</label>
+                  <div class="col-sm-10">
+                    <select name="payment_two_surcharge_tax_class_id" id="input-surcharge-tax-class-id" class="form-select">
+                      <option value="">{{ text_select|e }}</option>
+                      {% for tax_class in tax_classes %}
+                        <option value="{{ tax_class.tax_class_id|e }}"{% if tax_class.tax_class_id == surcharge.tax_class_id %} selected{% endif %}>{{ tax_class.title|e }}</option>
+                      {% endfor %}
+                    </select>
+                    <div id="error-surcharge-tax-class-id" class="invalid-feedback"></div>
+                    <div class="form-text">{{ help_surcharge_tax_class|e }}</div>
+                  </div>
+                </div>
+                <div class="row mb-3">
+                  <label class="col-sm-2 col-form-label">{{ entry_surcharge_grid|e }}</label>
+                  <div class="col-sm-10">
+                    <table class="table table-sm" id="input-surcharge-grid">
+                      <thead>
+                        <tr><th scope="col">{{ column_term|e }}</th><th scope="col">{{ column_percentage|e }}</th><th scope="col">{{ column_fixed|e }}</th><th scope="col">{{ column_cap|e }}</th></tr>
+                      </thead>
+                      <tbody>
+                        {% for row in surcharge_grid %}
+                          <tr>
+                            <th scope="row">{{ text_days|format(row.days)|e }}</th>
+                            {% for column in ['percentage', 'fixed', 'cap'] %}
+                              <td><input type="text" name="payment_two_surcharge_grid[{{ row.days }}][{{ column }}]" value="{{ row[column]|e }}" class="form-control form-control-sm" inputmode="decimal" aria-label="{{ (column_labels[column] ~ ', ' ~ text_days|format(row.days))|e }}"/></td>
+                            {% endfor %}
+                          </tr>
+                        {% endfor %}
+                      </tbody>
+                    </table>
+                    <div id="error-surcharge-grid" class="invalid-feedback"></div>
+                    <div class="form-text">{{ help_surcharge_grid|e }}</div>
+                  </div>
+                </div>
+              </fieldset>
+            </div>
+
+            <div id="tab-order-management" class="tab-pane">
+              <fieldset>
+                <legend>{{ legend_status_mapping }}</legend>
+                <p>{{ text_status_mapping_intro }}</p>
+                <p><strong>{{ text_default_mappings }}</strong><br/>{{ text_default_confirmed|e }}<br/>{{ text_default_fulfil }}<br/>{{ text_default_cancel }}<br/>{{ text_default_refund }}</p>
+                <div class="row mb-3 required">
+                  <label for="input-confirmed-status-id" class="col-sm-2 col-form-label">{{ entry_confirmed|e }}</label>
+                  <div class="col-sm-10">
+                    {# Status names are OpenCart's own, stored escaped, so they render as OpenCart renders them. #}
+                    <select name="payment_two_confirmed_status_id" id="input-confirmed-status-id" class="form-select">
+                      {% for status in order_statuses %}
+                        <option value="{{ status.order_status_id }}"{% if status.order_status_id == confirmed_status_id %} selected{% endif %}>{{ status.name }}</option>
+                      {% endfor %}
+                    </select>
+                    <div id="error-confirmed-status-id" class="invalid-feedback"></div>
+                    <div class="form-text">{{ help_confirmed|e }}</div>
+                  </div>
+                </div>
+                <div class="row mb-3">
+                  <label for="input-fulfil-status-ids" class="col-sm-2 col-form-label">{{ entry_fulfil }}</label>
+                  <div class="col-sm-10">
+                    <input type="hidden" name="payment_two_fulfil_status_ids[]" value=""/>
+                    <select name="payment_two_fulfil_status_ids[]" id="input-fulfil-status-ids" class="form-select" multiple size="8">
+                      {% for status in order_statuses %}
+                        <option value="{{ status.order_status_id }}"{% if status.order_status_id in fulfil_status_ids %} selected{% endif %}>{{ status.name }}</option>
+                      {% endfor %}
+                    </select>
+                    <div id="error-fulfil-status-ids" class="invalid-feedback"></div>
+                    <div class="form-text">{{ help_fulfil }}
+                      {# Status names are OpenCart's own, stored escaped, so they render as OpenCart renders them. #}
+                      <br/><strong class="{% if fulfil_active %}text-success{% else %}text-danger{% endif %}">{{ text_currently_active }}</strong>
+                      <span class="{% if fulfil_active %}text-success fw-bold{% else %}text-danger{% endif %}">{% if fulfil_active %}{{ fulfil_active }}{% else %}{{ text_none_selected }}{% endif %}</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="row mb-3 required">
+                  <label for="input-cancel-status-id" class="col-sm-2 col-form-label">{{ entry_cancel }}</label>
+                  <div class="col-sm-10">
+                    <select name="payment_two_cancel_status_id" id="input-cancel-status-id" class="form-select">
+                      <option value="0"></option>
+                      {% for status in order_statuses %}
+                        <option value="{{ status.order_status_id }}"{% if status.order_status_id == cancel_status_id %} selected{% endif %}>{{ status.name }}</option>
+                      {% endfor %}
+                    </select>
+                    <div id="error-cancel-status-id" class="invalid-feedback"></div>
+                    <div class="form-text">{{ help_cancel }}</div>
+                  </div>
+                </div>
+                <div class="row mb-3 required">
+                  <label for="input-refund-status-id" class="col-sm-2 col-form-label">{{ entry_refund }}</label>
+                  <div class="col-sm-10">
+                    <select name="payment_two_refund_status_id" id="input-refund-status-id" class="form-select">
+                      <option value="0"></option>
+                      {% for status in order_statuses %}
+                        <option value="{{ status.order_status_id }}"{% if status.order_status_id == refund_status_id %} selected{% endif %}>{{ status.name }}</option>
+                      {% endfor %}
+                    </select>
+                    <div id="error-refund-status-id" class="invalid-feedback"></div>
+                    <div class="form-text">{{ help_refund }}</div>
+                  </div>
+                </div>
+              </fieldset>
+              <fieldset>
+                <legend>{{ legend_tax|e }}</legend>
+                <div class="row mb-3">
+                  <label class="col-sm-2 col-form-label">{{ entry_enable_tax_subtotals|e }}</label>
+                  <div class="col-sm-10">
+                    <div class="form-check form-switch form-switch-lg">
+                      <input type="hidden" name="payment_two_enable_tax_subtotals" value="0"/>
+                      <input type="checkbox" name="payment_two_enable_tax_subtotals" value="1" id="input-enable-tax-subtotals" class="form-check-input"{% if enable_tax_subtotals %} checked{% endif %}/>
+                    </div>
+                    <div id="error-enable-tax-subtotals" class="invalid-feedback"></div>
+                    <div class="form-text">{{ help_enable_tax_subtotals|e }}</div>
+                  </div>
+                </div>
+                <div class="row mb-3">
+                  <label for="input-buyer-vat-field" class="col-sm-2 col-form-label">{{ entry_buyer_vat_field|e }}</label>
+                  <div class="col-sm-10">
+                    <select name="payment_two_buyer_vat_field" id="input-buyer-vat-field" class="form-select">
+                      <option value="">{{ text_tax_codes_none|e }}</option>
+                      {% for field in buyer_vat_fields %}
+                        <option value="{{ field.id|e }}"{% if field.id == buyer_vat_field %} selected{% endif %}>{{ field.name|e }}</option>
+                      {% endfor %}
+                    </select>
+                    <div id="error-buyer-vat-field" class="invalid-feedback"></div>
+                    <div class="form-text">{{ help_buyer_vat_field|e }}</div>
+                  </div>
+                </div>
+                {% if tax_codes.view != 'hidden' %}
+                  <div id="two-tax-codes" class="mb-3">
+                    <h5>{{ legend_tax_codes|e }}</h5>
+                    {% for notice in tax_codes.notices %}
+                      <div class="alert alert-{{ notice.level|e }}">{{ notice.text|e }}</div>
+                    {% endfor %}
+                    {% if tax_codes.clear %}
+                      <div class="form-check mb-3">
+                        <input type="checkbox" name="payment_two_tax_codes_clear" value="1" id="input-tax-codes-clear" class="form-check-input"/>
+                        <label for="input-tax-codes-clear" class="form-check-label">{{ entry_tax_codes_clear|e }}</label>
+                      </div>
+                    {% endif %}
+                    {% if tax_codes.view == 'rows' %}
+                      <p class="form-text">{{ text_tax_codes_intro|e }}</p>
+                      <div id="error-tax-code-map" class="invalid-feedback d-block"></div>
+                      {% for block in tax_codes.blocks %}
+                        <div class="table-responsive">
+                          <table class="table table-bordered table-sm">
+                            <thead><tr><th colspan="2">{{ block.title|e }}</th></tr></thead>
+                            <tbody>
+                              {% for row in block.rows %}
+                                <tr>
+                                  <td>{{ row.label|e }}</td>
+                                  <td style="min-width: 16rem;">
+                                    <select name="payment_two_tax_code_map[{{ row.key|e }}]" class="form-select form-select-sm" aria-label="{{ block.title|e }}: {{ row.label|e }}">
+                                      {% for option in row.options %}
+                                        <option value="{{ option.value|e }}"{% if option.value == row.selected %} selected{% endif %}>{{ option.label|e }}</option>
+                                      {% endfor %}
+                                    </select>
+                                  </td>
+                                </tr>
+                              {% endfor %}
+                            </tbody>
+                          </table>
+                        </div>
+                      {% endfor %}
+                    {% endif %}
+                  </div>
+                {% endif %}
+              </fieldset>
+            </div>
+
+            <div id="tab-diagnostics" class="tab-pane">
+              <div class="row mb-3">
+                <label class="col-sm-2 col-form-label">{{ entry_debug_mode|e }}</label>
+                <div class="col-sm-10">
+                  <div class="form-check form-switch form-switch-lg">
+                    <input type="hidden" name="payment_two_debug_mode" value="0"/>
+                    <input type="checkbox" name="payment_two_debug_mode" value="1" id="input-debug-mode" class="form-check-input"{% if debug_mode %} checked{% endif %}/>
+                  </div>
+                  <div id="error-debug-mode" class="invalid-feedback"></div>
+                  <div class="form-text">{{ help_debug_mode|e }}</div>
+                </div>
+              </div>
+              <div class="row mb-3">
+                <label class="col-sm-2 col-form-label">{{ entry_disable_ssl_verify|e }}</label>
+                <div class="col-sm-10">
+                  <div class="form-check form-switch form-switch-lg">
+                    <input type="hidden" name="payment_two_disable_ssl_verify" value="0"/>
+                    <input type="checkbox" name="payment_two_disable_ssl_verify" value="1" id="input-disable-ssl-verify" class="form-check-input"{% if disable_ssl_verify %} checked{% endif %}/>
+                  </div>
+                  <div id="error-disable-ssl-verify" class="invalid-feedback"></div>
+                  <div class="form-text text-danger">{{ help_disable_ssl_verify|e }}</div>
+                </div>
+              </div>
+              <div class="row mb-3">
+                <label for="input-trusted-proxies" class="col-sm-2 col-form-label">{{ entry_trusted_proxies }}</label>
+                <div class="col-sm-10">
+                  <textarea name="payment_two_trusted_proxies" rows="3" id="input-trusted-proxies" class="form-control">{{ trusted_proxies|e }}</textarea>
+                  <div id="error-trusted-proxies" class="invalid-feedback"></div>
+                  <div class="form-text">{{ help_trusted_proxies }}</div>
+                </div>
+              </div>
+              <div class="row mb-3">
+                <label class="col-sm-2 col-form-label">{{ entry_custom_headers|e }}</label>
+                <div class="col-sm-10" id="input-custom-headers" data-two-headers>
+                  {# The marker posts even with no rows, so removing every row saves an empty table. #}
+                  <input type="hidden" name="payment_two_custom_headers_posted" value="1"/>
+                  <table class="table table-sm w-auto mb-2">
+                    <thead><tr><th>{{ column_header_name|e }}</th><th>{{ column_header_value|e }}</th><th class="text-center">{{ column_header_browser|e }}</th><th></th></tr></thead>
+                    <tbody data-two-header-rows>
+                    {% for row in custom_headers %}
+                      <tr data-two-header-row>
+                        <td><input type="text" name="payment_two_custom_headers[{{ loop.index0 }}][name]" value="{{ row.name|e }}" class="form-control" autocomplete="off"/></td>
+                        <td><input type="text" name="payment_two_custom_headers[{{ loop.index0 }}][value]" value="{{ row.value|e }}" class="form-control" autocomplete="off"/></td>
+                        <td class="text-center align-middle"><input type="checkbox" name="payment_two_custom_headers[{{ loop.index0 }}][send_from_browser]" value="1" class="form-check-input"{% if row.send_from_browser %} checked{% endif %}/></td>
+                        <td class="align-middle"><button type="button" class="btn btn-outline-danger btn-sm" data-two-header-remove>{{ button_header_remove|e }}</button></td>
+                      </tr>
+                    {% endfor %}
+                    </tbody>
+                  </table>
+                  <template data-two-header-template>
+                    <tr data-two-header-row>
+                      <td><input type="text" name="payment_two_custom_headers[__i__][name]" value="" class="form-control" autocomplete="off"/></td>
+                      <td><input type="text" name="payment_two_custom_headers[__i__][value]" value="" class="form-control" autocomplete="off"/></td>
+                      <td class="text-center align-middle"><input type="checkbox" name="payment_two_custom_headers[__i__][send_from_browser]" value="1" class="form-check-input"/></td>
+                      <td class="align-middle"><button type="button" class="btn btn-outline-danger btn-sm" data-two-header-remove>{{ button_header_remove|e }}</button></td>
+                    </tr>
+                  </template>
+                  <button type="button" class="btn btn-outline-primary btn-sm" data-two-header-add>{{ button_header_add|e }}</button>
+                  <div id="error-custom-headers" class="invalid-feedback"></div>
+                  <div class="form-text">{{ help_custom_headers|e }}</div>
+                </div>
+              </div>
+              <div class="row mb-3">
+                <label class="col-sm-2 col-form-label">{{ entry_disable_rate_limit }}</label>
+                <div class="col-sm-10">
+                  <div class="form-check form-switch form-switch-lg">
+                    <input type="hidden" name="payment_two_disable_rate_limit" value="0"/>
+                    <input type="checkbox" name="payment_two_disable_rate_limit" value="1" id="input-disable-rate-limit" class="form-check-input"{% if disable_rate_limit %} checked{% endif %}/>
+                  </div>
+                  <div id="error-disable-rate-limit" class="invalid-feedback"></div>
+                  <div class="form-text">{{ help_disable_rate_limit }}</div>
+                </div>
+              </div>
+              <div class="row mb-3">
+                <label class="col-sm-2 col-form-label">{{ entry_error_log|e }}</label>
+                <div class="col-sm-10">
+                  <a href="{{ error_log }}" target="_blank" rel="noopener" class="btn btn-outline-secondary" id="two-error-log-link">{{ button_error_log|e }}</a>
+                </div>
+              </div>
+              <div class="row mb-3">
+                <label class="col-sm-2 col-form-label">{{ entry_refresh_profile|e }}</label>
+                <div class="col-sm-10">
+                  <button type="button" class="btn btn-outline-secondary" data-two-refresh="{{ refresh_profile }}" data-two-refresh-error="{{ error_profile_refresh|e }}"><i class="fa-solid fa-rotate"></i> {{ button_refresh_profile|e }}</button>
+                  <span class="ms-2 small" data-two-refresh-result role="status"></span>
+                  <div class="form-text">{{ help_refresh_profile|e }}</div>
+                </div>
+              </div>
+              <div class="row mb-3">
+                <label for="input-cron-url" class="col-sm-2 col-form-label">{{ entry_cron_url|e }}</label>
+                <div class="col-sm-10">
+                  <input type="text" id="input-cron-url" class="form-control" value="{{ cron_url|e }}" readonly/>
+                  <div class="form-text">{{ help_cron_url|e }}</div>
+                  <div class="form-text" id="two-cron-last-run">{{ cron_last_run|e }}</div>
+                  {% if pending_table %}<div class="alert alert-warning mt-2" id="two-pending-table">{{ pending_table|e }}</div>{% endif %}
+                  {% if pending_stale %}<div class="alert alert-warning mt-2" id="two-pending-stale">{{ pending_stale|e }}</div>{% endif %}
+                </div>
+              </div>
+              <div class="row mb-3">
+                <label class="col-sm-2 col-form-label">{{ entry_opencart_version|e }}</label>
+                <div class="col-sm-10">
+                  <p id="two-opencart-version" class="form-control-plaintext {% if opencart_version.state == 'ok' %}text-success{% elseif opencart_version.state == 'unsupported' %}text-danger{% else %}text-warning{% endif %}" data-state="{{ opencart_version.state|e }}">{{ opencart_version.text|e }}</p>
+                </div>
+              </div>
+            </div>
+
+          </div>
+          {# Last field of the form: a save without it was cut short by max_input_vars, and its tax code rows are refused. #}
+          <input type="hidden" name="payment_two_form_end" value="1"/>
+        </form>
+      </div>
+      <div class="card-footer text-end text-muted small">{{ brand_name }} {{ text_version }} {{ version }}</div>
+    </div>
+  </div>
+</div>
+{{ footer }}

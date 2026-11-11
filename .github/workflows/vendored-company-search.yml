@@ -1,0 +1,46 @@
+name: Vendored company search
+
+# The shared company search modules in catalog/view/javascript/two/ are copies
+# of the Magento plugin's, byte for byte (TWO-26721). This fails when any copy
+# differs from the Magento plugin's staging branch, so a change lands in the
+# shared source and is re-vendored here, never patched in this repo. The
+# nightly run catches a change there with none here. No secrets: the source
+# repo is public.
+#
+# The script runs from the base branch's copy (staging on a push or the nightly
+# run), so a PR cannot change the script it is checked with, short of editing
+# this workflow, which a pull_request run takes from the PR itself. Only the PR
+# that first adds the script, when the base has none, runs its own.
+on:
+  pull_request:
+  push:
+    branches: [staging, main]
+  schedule:
+    - cron: "23 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  vendored:
+    name: Vendored company search drift
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          BASE: ${{ github.base_ref || 'staging' }}
+        run: |
+          script=dev/ci/vendored-company-search.sh
+          if git cat-file -e "origin/${BASE}:${script}" 2>/dev/null; then
+            git show "origin/${BASE}:${script}" > "${RUNNER_TEMP}/vendored-check.sh"
+            echo "Running the check from origin/${BASE}."
+          else
+            cp "$script" "${RUNNER_TEMP}/vendored-check.sh"
+            echo "origin/${BASE} has no check yet: running this branch's."
+          fi
+          bash "${RUNNER_TEMP}/vendored-check.sh"

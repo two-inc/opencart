@@ -1,0 +1,10 @@
+# The shared company search modules are vendored byte for byte from the
+# Magento plugin (TWO-26721). Changes land there and are re-vendored here with
+# dev/ci/vendored-company-search.sh --write, so a PR touching these files, the
+# drift check or its workflow asks the owners below for review.
+/catalog/view/javascript/two/company-search-panel.js        @two-inc/knandos
+/catalog/view/javascript/two/company-capture-component.js   @two-inc/knandos
+/catalog/view/javascript/two/company-identity.js            @two-inc/knandos
+/catalog/view/javascript/two/sole-trader.js                 @two-inc/knandos
+/dev/ci/vendored-company-search.sh                          @two-inc/knandos
+/.github/workflows/vendored-company-search.yml              @two-inc/knandos

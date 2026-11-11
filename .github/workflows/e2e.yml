@@ -1,0 +1,233 @@
+name: E2E
+
+# Playwright against the docker shop (tests/e2e/compose.yml), on every OpenCart
+# 4.1 release times every supported PHP minor, discovered from upstream on
+# every run (dev/support-matrix.sh, TWO-27172). Every PR runs the stub legs:
+# the Two API stub answers as api.sandbox.two.inc inside the compose network,
+# so the extension runs unchanged and CI needs no secrets. Staging pushes and the
+# nightly run add one checkout against Two's real sandbox, which needs the
+# TWO_SANDBOX_API_KEY secret and is skipped, saying so, without it. Every PR
+# also runs the upgrade smoke (tests/e2e/bin/upgrade-smoke.sh).
+
+on:
+  pull_request:
+  push:
+    branches: [staging, main]
+  schedule:
+    - cron: "41 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # The one source for the stub's published port: the stub refuses to start
+  # without it, and the order's payment_url is built from it.
+  TWO_API_STUB_PORT: "8099"
+  E2E_PORT: "1240"
+
+jobs:
+  # Which OpenCart x PHP combinations the stub legs run on, read from upstream
+  # on every run by dev/support-matrix.sh, whose header states the window and
+  # the sources: every OpenCart 4.1 release from the declared floor, except
+  # those the plugin does not support (skipped with a warning), each with the
+  # sha256 its download is checked against, times every PHP minor from the
+  # declared floor to the newest php.net supports.
+  #
+  # Honest CI (TWO-24998): the run or skip decision is made here. A combination
+  # that cannot run never becomes a green leg: it is listed in this job's step
+  # summary, and each OpenCart release with combinations not run gets one
+  # ::warning:: naming its PHP minors and the reason. A transport or parse
+  # failure, or a release whose download no longer matches its recorded
+  # sha256, fails discovery rather than emitting an empty matrix. A PHP minor
+  # newer than the OpenCart release runs non-blocking, with a warning and a
+  # summary row.
+  discover:
+    name: Discover the support matrix
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      combos: ${{ steps.gen.outputs.combos }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Classify every combination in the support window
+        id: gen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -o pipefail
+          all=$(bash dev/support-matrix.sh --emit-all)
+          echo "$all" > "$RUNNER_TEMP/matrix.json"
+          combos=$(jq -c '.e2e' <<<"$all")
+          skips=$(jq -c '.skips' <<<"$all")
+          echo "combos=$combos" >> "$GITHUB_OUTPUT"
+          echo "Runnable combinations:"
+          jq . <<<"$combos"
+          {
+            echo "## OpenCart x PHP coverage"
+            echo ""
+            echo "| OpenCart | PHP | Status | Reason |"
+            echo "|---|---|---|---|"
+            jq -r '.[] | select(.provisional | not) | "| \(.opencart) | \(.php) | ✅ tested | |"' <<<"$combos"
+            jq -r '.[] | select(.provisional) | "| \(.opencart) | \(.php) | ⚠️ tested, non-blocking | \(.provisional_reason) |"' <<<"$combos"
+            jq -r '.[] | "| \(.opencart) | \(.php) | 🚫 NOT run | \(.reason) |"' <<<"$skips"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # GitHub keeps only 10 annotations of a level per step, so the warnings
+      # are grouped (one per OpenCart release and reason, naming its PHP
+      # minors; the summary above keeps a row per combination) and each kind
+      # has its own step.
+      - name: Warn on the combinations not tested
+        run: |
+          jq -r '.skips | group_by([.opencart, .reason])[]
+            | "::warning title=Combination NOT tested::OpenCart \(.[0].opencart) on PHP \(map(.php) | join(", ")): \(.[0].reason)"' \
+            "$RUNNER_TEMP/matrix.json"
+
+      - name: Warn on the combinations tested non-blocking
+        run: |
+          jq -r '[.e2e[] | select(.provisional)] | group_by([.opencart, .provisional_reason])[]
+            | "::warning title=Combination tested non-blocking::OpenCart \(.[0].opencart) on PHP \(map(.php) | join(", ")): \(.[0].provisional_reason)"' \
+            "$RUNNER_TEMP/matrix.json"
+
+  e2e:
+    name: E2E (OpenCart ${{ matrix.combo.opencart }}, PHP ${{ matrix.combo.php }})
+    needs: discover
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    # A PHP minor newer than the OpenCart release is exercised but cannot
+    # block (see dev/support-matrix.sh).
+    continue-on-error: ${{ matrix.combo.provisional }}
+    strategy:
+      fail-fast: false
+      # No max-parallel: these legs talk to the Two API stub, company search
+      # included, never to Two itself. 4.1.0.0 voids an unplaced order on
+      # every checkout edit, so its legs place whole orders there too.
+      matrix:
+        combo: ${{ fromJSON(needs.discover.outputs.combos) }}
+    env:
+      E2E_OPENCART: ${{ matrix.combo.opencart }}
+      E2E_OPENCART_SHA256: ${{ matrix.combo.sha256 }}
+      E2E_PHP: ${{ matrix.combo.php }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: tests/e2e/package-lock.json
+
+      - name: Start the shop and the Two API stub
+        run: make e2e-up
+
+      # The PHP inside the shop: another minor than the leg's fails; behind
+      # php.net's newest patch of its minor, however long, is a warning, never
+      # a failure.
+      - name: PHP is the leg's minor, at the latest patch
+        run: |
+          running=$(docker compose -f tests/e2e/compose.yml exec -T opencart php -r 'echo PHP_VERSION;')
+          bash dev/check-php-patch.sh "php:${E2E_PHP}-apache (OpenCart ${E2E_OPENCART})" "$running" "$E2E_PHP"
+
+      - name: Install Playwright
+        working-directory: tests/e2e
+        run: |
+          npm ci --no-audit --no-fund
+          npx playwright install --with-deps chromium
+
+      - name: Run the suite
+        working-directory: tests/e2e
+        run: npx playwright test
+
+      - name: Shop logs
+        if: failure()
+        run: |
+          docker compose -f tests/e2e/compose.yml logs --no-color | tail -200
+          docker compose -f tests/e2e/compose.yml exec -T opencart cat /var/www/html/system/storage/logs/error.log || true
+
+      - name: Upload the report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-opencart-${{ matrix.combo.opencart }}-php${{ matrix.combo.php }}
+          path: |
+            tests/e2e/test-results/
+            tests/e2e/playwright-report/
+          retention-days: 7
+
+      - name: Tear down
+        if: always()
+        run: make e2e-down
+
+  sandbox:
+    name: E2E against Two's sandbox (OpenCart 4.1.0.4)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/staging')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      E2E_SANDBOX_API_KEY: ${{ secrets.TWO_SANDBOX_API_KEY }}
+    steps:
+      - name: Check for the sandbox key
+        id: key
+        run: |
+          if [ -z "$E2E_SANDBOX_API_KEY" ]; then
+            echo "::notice::Sandbox leg skipped: the TWO_SANDBOX_API_KEY secret is not available to this run."
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.key.outputs.present == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.key.outputs.present == 'true'
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: tests/e2e/package-lock.json
+
+      - name: Start the shop on Two's sandbox
+        if: steps.key.outputs.present == 'true'
+        run: make e2e-up
+
+      - name: Run the sandbox checkout
+        if: steps.key.outputs.present == 'true'
+        working-directory: tests/e2e
+        run: |
+          npm ci --no-audit --no-fund
+          npx playwright install --with-deps chromium
+          npx playwright test
+
+      - name: Shop logs
+        if: failure() && steps.key.outputs.present == 'true'
+        run: docker compose -f tests/e2e/compose.yml exec -T opencart cat /var/www/html/system/storage/logs/error.log || true
+
+      - name: Tear down
+        if: always() && steps.key.outputs.present == 'true'
+        run: make e2e-down
+
+  upgrade:
+    name: Upgrade smoke (last release to HEAD)
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Upgrade from the last release
+        run: tests/e2e/bin/upgrade-smoke.sh
+
+      - name: Tear down
+        if: always()
+        run: make e2e-down

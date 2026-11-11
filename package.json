@@ -1,0 +1,12 @@
+{
+  "name": "two-inc/opencart",
+  "description": "Two for OpenCart: dev-only manifest for the Jest suite over the extension's browser scripts. Not packaged.",
+  "private": true,
+  "scripts": {
+    "test:js": "jest --config tests/js/jest.config.js"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0"
+  }
+}
