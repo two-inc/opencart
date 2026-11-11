@@ -604,7 +604,7 @@ describe('no country selected', () => {
     };
 
     test.each([
-        [[['', false, 'Velg land', 0]], 'on load with no country the row stays up and answers with the sentence'],
+        [[], 'on load with no country the row stays up and answers with the sentence'],
         [[['222', false, 'Ingen treff', 1], ['', false, 'Velg land', 0]], 'clearing a covered country'],
         [[['74', true, null, 0], ['', false, 'Velg land', 0]], 'clearing an uncovered country brings the row back'],
         [[['', false, 'Velg land', 0], ['160', false, 'Ingen treff', 1]], 'selecting a country after loading without one'],
@@ -613,9 +613,7 @@ describe('no country selected', () => {
         document.body.innerHTML = FORM;
         const { hosts, calls } = start(config({ countries: { 222: 'GB', 160: 'NO', 74: 'FR' } }), { s: { items: [] } });
         await flush();
-        for (const [value, withdrawn, message, sent] of steps) {
-            choose(value);
-            await flush();
+        const check = async (value, withdrawn, message, sent) => {
             const before = calls.filter(([route]) => route === 's').length;
             const host = hosts.payment;
             const state = { withdrawn: host.component.panel().isDisabled(), message: null, sent: 0 };
@@ -625,6 +623,13 @@ describe('no country selected', () => {
                 state.sent = calls.filter(([route]) => route === 's').length - before;
             }
             expect([state, value, description]).toEqual([{ withdrawn, message, sent }, value, description]);
+        };
+        // Before any change event, so the load state answers for start() alone.
+        await check('load', false, 'Velg land', 0);
+        for (const [value, withdrawn, message, sent] of steps) {
+            choose(value);
+            await flush();
+            await check(value, withdrawn, message, sent);
         }
     });
 });
