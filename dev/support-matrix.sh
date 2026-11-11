@@ -20,7 +20,9 @@
 #                opencart/opencart GitHub releases (not drafts or pre-releases)
 #                from the declared floor up, within its series. A newer series
 #                (4.2, 5.x) gets a warning, never legs: the plugin does not
-#                declare it.
+#                declare it. The releases in oc_unsupported (below) are in
+#                the window but never get legs: the plugin does not support
+#                them.
 #                The PHP each release accepts: "require.php" in its own
 #                composer.json at the release tag, the same floor its
 #                installer checks. OpenCart states a floor and no ceiling.
@@ -38,6 +40,8 @@
 #             one. setup-php resolves the newest patch of each.
 #   e2e       Every OpenCart release in the window, times every PHP minor in
 #             php_unit, classified, first match wins:
+#               skip  OpenCart X is unsupported (oc_unsupported): an upstream
+#                     bug breaks orders there
 #               skip  OpenCart X requires PHP Y or later (its composer.json)
 #               skip  no php:<minor>-apache image to build the shop on
 #               run, provisional: the PHP minor's first GA release came after
@@ -69,6 +73,17 @@ esac
 REPO=opencart/opencart
 HUB=https://hub.docker.com/v2/namespaces/library/repositories/php/tags
 DIGESTS=dev/opencart-releases.sha256
+
+# OpenCart releases the plugin does not support: an upstream bug there breaks
+# orders for every payment method. Each gets visible skip rows and a warning,
+# never a leg. Any release not listed is picked up as usual. The extension
+# warns merchants on the same releases from its own list (TWO-27238): change
+# the two together.
+declare -A oc_unsupported=(
+    [4.1.0.1]="fixed in 4.1.0.4 (TWO-27233: guest checkout fails)"
+    [4.1.0.2]="fixed in 4.1.0.4 (TWO-27232: an admin order edit drops the order to status 0)"
+    [4.1.0.3]="fixed in 4.1.0.4 (TWO-27232: an admin order edit drops the order to status 0)"
+)
 
 log() { if [ "$mode" = report ]; then echo "$@"; fi; }
 die() { echo "::error::support-matrix: $*" >&2; exit 2; }
@@ -179,6 +194,11 @@ oc_window=$(cut -f1 <<<"$oc_releases" \
 declare -A oc_sha=() oc_php=() oc_date=() oc_skip=()
 log "OpenCart window (every $oc_series release from the floor):"
 for v in $oc_window; do
+    if [ -n "${oc_unsupported[$v]:-}" ]; then
+        oc_skip[$v]="unsupported: upstream OpenCart bug, ${oc_unsupported[$v]}"
+        log "  $v (${oc_skip[$v]})"
+        continue
+    fi
     IFS=$'\t' read -r _ published asset < <(awk -F'\t' -v t="$v" '$1 == t' <<<"$oc_releases")
     [ "$published" != - ] || published=
     recorded=$(awk -v f="opencart-$v.zip" '$1 !~ /^#/ && $2 == f { print $1 }' "$DIGESTS")

@@ -33,8 +33,9 @@ env:
 jobs:
   # Which OpenCart x PHP combinations the stub legs run on, read from upstream
   # on every run by dev/support-matrix.sh, whose header states the window and
-  # the sources: every OpenCart 4.1 release from the declared floor, each with
-  # the sha256 its download is checked against, times every PHP minor from the
+  # the sources: every OpenCart 4.1 release from the declared floor, except
+  # those the plugin does not support (skipped with a warning), each with the
+  # sha256 its download is checked against, times every PHP minor from the
   # declared floor to the newest php.net supports.
   #
   # Honest CI (TWO-24998): the run or skip decision is made here. A combination
