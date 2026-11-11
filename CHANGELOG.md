@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 A rewrite of the extension for OpenCart 4.1. It does not run on OpenCart 3, and the 1.x extension for OpenCart 3 can no longer reach Two, so moving to OpenCart 4.1 and this version is the way to keep offering Two.
 
 ### Added
-- **OpenCart 4.1 support** (TWO-26647). Installs through Extensions > Installer from `two.ocmod.zip` and appears under Extensions > Payments. Tested on every OpenCart 4.1 release from 4.1.0.0, on every PHP minor from 8.1.
+- **OpenCart 4.1 support** (TWO-26647, TWO-27172). Installs through Extensions > Installer from `two.ocmod.zip` and appears under Extensions > Payments. Supports OpenCart 4.1.0.0 and 4.1.0.4 or later, tested on each of those releases on every PHP minor from 8.1. OpenCart 4.1.0.1 to 4.1.0.3 are not supported: bugs in OpenCart itself break orders there for every payment method, so upgrade to 4.1.0.4 or later.
 - **Settings in five tabs** (TWO-26649, TWO-27051). General, Checkout fields, Payment terms, Order management and Diagnostics, with the API key checked as you type and a line saying whether Two can be offered at checkout right now.
 - **Company search at checkout** (TWO-26668, TWO-26721, TWO-26775). The buyer finds their company by name in the address form and the company address is filled in; the company stays with a saved address and works on the address edit form. Sole traders are guided through their own flow.
 - **Optional checkout fields** (TWO-26668). Invoice email, PO number, project and department, each switched on separately, plus an optional pre-approval check before the order is placed.
