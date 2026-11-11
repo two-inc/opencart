@@ -91,8 +91,8 @@ jobs:
 
       - name: Warn on the combinations tested non-blocking
         run: |
-          jq -r '.e2e[] | select(.provisional)
-            | "::warning title=Combination tested non-blocking::OpenCart \(.opencart) / PHP \(.php): \(.provisional_reason)"' \
+          jq -r '[.e2e[] | select(.provisional)] | group_by([.opencart, .provisional_reason])[]
+            | "::warning title=Combination tested non-blocking::OpenCart \(.[0].opencart) on PHP \(map(.php) | join(", ")): \(.[0].provisional_reason)"' \
             "$RUNNER_TEMP/matrix.json"
 
   e2e:
