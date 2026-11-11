@@ -75,9 +75,14 @@ export function isUnplaced(orderId: number): boolean {
   return [0, voided].includes(orderStatusId(orderId));
 }
 
-/** Makes the order look 31 minutes old, so the pending check selects it. */
+/**
+ * Makes the order look last touched 31 minutes ago, so the pending check
+ * selects it. date_modified only: the order sent to Two carries a delivery
+ * date from date_added, so moving date_added across midnight would make the
+ * order no longer match Two's and the check would refuse it (TWO-27231).
+ */
 export function backdate(orderId: number): void {
-  sql(`UPDATE oc_order SET date_added = NOW() - INTERVAL 31 MINUTE, date_modified = NOW() - INTERVAL 31 MINUTE WHERE order_id = ${orderId}`);
+  sql(`UPDATE oc_order SET date_modified = NOW() - INTERVAL 31 MINUTE WHERE order_id = ${orderId}`);
 }
 
 /** The order's history comments, oldest first. */

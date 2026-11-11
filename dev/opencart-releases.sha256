@@ -1,0 +1,12 @@
+# sha256 of each upstream OpenCart release zip the e2e shop is built from
+# (dev/support-matrix.sh, TWO-27172), in sha256sum's format. Upstream
+# publishes no checksums of its own. GitHub records a digest for release
+# assets uploaded since mid 2025, and the discover job fails closed when that
+# digest and the one here disagree, so a swapped download stops the run. A
+# new 4.1 release with no line here runs on GitHub's digest, with a warning to
+# record it: hash the asset, check it matches, and add the line in a PR.
+5d9883de4e37852dbb71c83b8833b9aa4419bc3e71d808e62e38522b2fd1b294  opencart-4.1.0.0.zip
+f4bb15d3821d318b10174fe80a89d65c8d9f9b73eec04e927a1d6cbf9cfb9ba9  opencart-4.1.0.1.zip
+87f60c472e0a713aa68093018dbc0e9337b2dacedacece4fff2a86e5f24b36f4  opencart-4.1.0.2.zip
+a968864e2ae8a8dc227a85360d5dd0815ff4e56f8f748198bb83bed9a762e6a3  opencart-4.1.0.3.zip
+cdef537f5a0a7e1b4ddbe16f589dd2e80b10150a09bfbe93ce76ef2d5c3218c0  opencart-4.1.0.4.zip

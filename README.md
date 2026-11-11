@@ -6,8 +6,8 @@ Version 2.x is for OpenCart 4.1. OpenCart 3 is not supported: the 1.x extension 
 
 ## Requirements
 
-- OpenCart 4.1.x. Each release is tested on 4.1.0.0 and 4.1.0.4.
-- PHP 8.1 or later. Each release is tested on PHP 8.1 and 8.4.
+- OpenCart 4.1.0.0, or 4.1.0.4 or later. OpenCart 4.1.0.1 to 4.1.0.3 are not supported: bugs in OpenCart itself break orders there for every payment method, so upgrade to 4.1.0.4 or later. CI tests every supported OpenCart 4.1 release, from 4.1.0.0 to the newest.
+- PHP 8.1 or later. CI tests every PHP minor from 8.1 to the newest that php.net supports, on every supported OpenCart 4.1 release. `dev/support-matrix.sh` lists what that resolves to today.
 - A Two merchant account and its API key.
 
 ## Install

@@ -55,7 +55,9 @@ final class CurlTransport implements Transport
         $response = curl_exec($ch);
         $status = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
         $error = curl_error($ch);
-        curl_close($ch);
+        // No curl_close(): the handle is freed with $ch. The call has done
+        // nothing since PHP 8.0 and its deprecation notice on PHP 8.5 lands
+        // in the response (TWO-27230).
 
         if (!is_string($response) || $error !== '' || $status === 0) {
             return HttpResponse::unreachable($error);
