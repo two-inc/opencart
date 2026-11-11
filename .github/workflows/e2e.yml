@@ -40,7 +40,8 @@ jobs:
   #
   # Honest CI (TWO-24998): the run or skip decision is made here. A combination
   # that cannot run never becomes a green leg: it is listed in this job's step
-  # summary and gets one ::warning:: with its reason. A transport or parse
+  # summary, and each OpenCart release with combinations not run gets one
+  # ::warning:: naming its PHP minors and the reason. A transport or parse
   # failure, or a release whose download no longer matches its recorded
   # sha256, fails discovery rather than emitting an empty matrix. A PHP minor
   # newer than the OpenCart release runs non-blocking, with a warning and a
@@ -62,6 +63,7 @@ jobs:
         run: |
           set -o pipefail
           all=$(bash dev/support-matrix.sh --emit-all)
+          echo "$all" > "$RUNNER_TEMP/matrix.json"
           combos=$(jq -c '.e2e' <<<"$all")
           skips=$(jq -c '.skips' <<<"$all")
           echo "combos=$combos" >> "$GITHUB_OUTPUT"
@@ -76,8 +78,22 @@ jobs:
             jq -r '.[] | select(.provisional) | "| \(.opencart) | \(.php) | ⚠️ tested, non-blocking | \(.provisional_reason) |"' <<<"$combos"
             jq -r '.[] | "| \(.opencart) | \(.php) | 🚫 NOT run | \(.reason) |"' <<<"$skips"
           } >> "$GITHUB_STEP_SUMMARY"
-          jq -r '.[] | select(.provisional) | "::warning title=Combination tested non-blocking::OpenCart \(.opencart) / PHP \(.php): \(.provisional_reason)"' <<<"$combos"
-          jq -r '.[] | "::warning title=Combination NOT tested::OpenCart \(.opencart) / PHP \(.php): \(.reason)"' <<<"$skips"
+
+      # GitHub keeps only 10 annotations of a level per step, so the warnings
+      # are grouped (one per OpenCart release and reason, naming its PHP
+      # minors; the summary above keeps a row per combination) and each kind
+      # has its own step.
+      - name: Warn on the combinations not tested
+        run: |
+          jq -r '.skips | group_by([.opencart, .reason])[]
+            | "::warning title=Combination NOT tested::OpenCart \(.[0].opencart) on PHP \(map(.php) | join(", ")): \(.[0].reason)"' \
+            "$RUNNER_TEMP/matrix.json"
+
+      - name: Warn on the combinations tested non-blocking
+        run: |
+          jq -r '.e2e[] | select(.provisional)
+            | "::warning title=Combination tested non-blocking::OpenCart \(.opencart) / PHP \(.php): \(.provisional_reason)"' \
+            "$RUNNER_TEMP/matrix.json"
 
   e2e:
     name: E2E (OpenCart ${{ matrix.combo.opencart }}, PHP ${{ matrix.combo.php }})
@@ -111,12 +127,13 @@ jobs:
       - name: Start the shop and the Two API stub
         run: make e2e-up
 
-      # The PHP inside the shop against php.net's newest patch of its minor.
-      # Behind, however long: a warning, never a failure.
-      - name: PHP is the latest patch
+      # The PHP inside the shop: another minor than the leg's fails; behind
+      # php.net's newest patch of its minor, however long, is a warning, never
+      # a failure.
+      - name: PHP is the leg's minor, at the latest patch
         run: |
           running=$(docker compose -f tests/e2e/compose.yml exec -T opencart php -r 'echo PHP_VERSION;')
-          bash dev/check-php-patch.sh "php:${E2E_PHP}-apache (OpenCart ${E2E_OPENCART})" "$running"
+          bash dev/check-php-patch.sh "php:${E2E_PHP}-apache (OpenCart ${E2E_OPENCART})" "$running" "$E2E_PHP"
 
       - name: Install Playwright
         working-directory: tests/e2e
