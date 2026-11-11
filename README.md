@@ -22,6 +22,8 @@ To upgrade, replace the package in Extensions > Installer with the new release's
 
 The settings page has five tabs, saved together. A setting that is not valid is named beside its field.
 
+On OpenCart 4.1.0.1 to 4.1.0.3, which the extension does not support because bugs in OpenCart itself break orders there, a red banner at the top of the page and the OpenCart version row on the Diagnostics tab say so and ask you to upgrade to 4.1.0.4 or later. Nothing is blocked: the settings still save and Two is still offered at checkout.
+
 ### General
 
 Switch the payment method on, choose Sandbox or Production, and paste the API key from your Two merchant account; the key is checked as you type. Sort order places Two among your other payment methods. The top of the tab says whether Two can be offered at checkout right now, and why not when it cannot.

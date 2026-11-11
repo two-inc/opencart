@@ -21,3 +21,5 @@ define('DB_PASSWORD', '');
 define('DB_DATABASE', 'opencart');
 define('DB_PORT', '3306');
 define('DB_PREFIX', 'oc_');
+// The running release, which OpenCart's index.php defines (the admin's unsupported release warning reads it).
+define('VERSION', '4.1.0.0');

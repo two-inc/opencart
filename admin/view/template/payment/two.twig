@@ -18,6 +18,7 @@
     <div class="card">
       <div class="card-header"><i class="fa-solid fa-pencil"></i> {{ text_edit }}</div>
       <div class="card-body">
+        {% if not opencart_version.ok %}<div class="alert alert-danger" id="two-opencart-unsupported" role="alert"><i class="fa-solid fa-circle-exclamation"></i> {{ opencart_version.text|e }}</div>{% endif %}
         <form id="form-payment" action="{{ save }}" method="post" data-oc-toggle="ajax">
           <ul class="nav nav-tabs" id="two-tabs">
             <li class="nav-item"><a href="#tab-general" data-bs-toggle="tab" class="nav-link active">{{ tab_general }}</a></li>
@@ -563,6 +564,12 @@
                   <div class="form-text" id="two-cron-last-run">{{ cron_last_run|e }}</div>
                   {% if pending_table %}<div class="alert alert-warning mt-2" id="two-pending-table">{{ pending_table|e }}</div>{% endif %}
                   {% if pending_stale %}<div class="alert alert-warning mt-2" id="two-pending-stale">{{ pending_stale|e }}</div>{% endif %}
+                </div>
+              </div>
+              <div class="row mb-3">
+                <label class="col-sm-2 col-form-label">{{ entry_opencart_version|e }}</label>
+                <div class="col-sm-10">
+                  <p id="two-opencart-version" class="form-control-plaintext {% if opencart_version.ok %}text-success{% else %}text-danger{% endif %}">{{ opencart_version.text|e }}</p>
                 </div>
               </div>
             </div>

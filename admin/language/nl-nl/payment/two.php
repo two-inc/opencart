@@ -326,6 +326,11 @@ $_['help_cron_url'] = 'Roep dit elke 15 minuten aan vanuit de crontab van uw ser
 $_['text_cron_last_run'] = 'De geplande vernieuwing is voor het laatst uitgevoerd op %s.';
 $_['text_cron_never'] = 'De geplande vernieuwing is nog niet uitgevoerd.';
 $_['text_pending_stale'] = '%d Two-bestellingen wachten tot de koper terugkeert, en de geplande URL heeft het afgelopen uur niet gedraaid. Plan hem elke 15 minuten in, zodat geverifieerde bestellingen worden geplaatst.';
+$_['entry_opencart_version'] = 'OpenCart-versie';
+$_['text_opencart_supported'] = 'OpenCart %s wordt ondersteund.';
+$_['text_opencart_unsupported'] = 'OpenCart %1$s wordt niet ondersteund. Een bekende fout in deze OpenCart-versie kan bestellingen breken, ongeacht de betaalmethode: %2$s. Werk OpenCart bij naar %3$s of hoger.';
+$_['text_opencart_bug_guest_checkout'] = 'gasten kunnen het afrekenen niet voltooien';
+$_['text_opencart_bug_order_edit'] = 'een bestelling die in de beheeromgeving wordt bewerkt, wordt een ontbrekende bestelling';
 $_['text_pending_table'] = 'De Two-bestellingentabel mist kolommen die de controle van bestellingen waarvan de koper niet terugkwam nodig heeft, en de extensie kon ze niet toevoegen (het foutlogboek zegt waarom). Tot ze zijn toegevoegd, worden die bestellingen niet bij Two gecontroleerd.';
 
 // TWO-27055: the product page message and buy button (Checkout fields).
