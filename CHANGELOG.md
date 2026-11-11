@@ -23,6 +23,7 @@ A rewrite of the extension for OpenCart 4.1. It does not run on OpenCart 3, and 
 - **Product page message and buy button** (TWO-27055). Optional: a line naming Two under the add to cart button, and a "Buy with Two" button that opens checkout with Two chosen.
 - **Tax codes for 0% lines** (TWO-27058). Where Two requires a code on every 0% line (today Spain), you choose the code for each case your own tax setup produces, and pick the customer field that holds the buyer's VAT number.
 - **Diagnostics** (TWO-27051). Debug logging, the last 100 error log lines with secrets hidden, an on-demand refresh of your Two merchant profile, a daily scheduled refresh, custom request headers, trusted proxies and checkout rate limiting.
+- **Warning on unsupported OpenCart releases** (TWO-27238). On OpenCart 4.1.0.1 to 4.1.0.3, where bugs in OpenCart itself break orders for every payment method, the settings page shows a red banner and the Diagnostics tab a failing OpenCart version row, asking you to upgrade to 4.1.0.4 or later. On a release outside 4.1 the row says it has not been tested with the extension. Nothing is blocked: settings save and Two stays offered.
 - **Order postprocessing event** (TWO-26651). A permanent, documented OpenCart event that lets your developer adjust every order request just before it is sent to Two.
 
 ### Changed

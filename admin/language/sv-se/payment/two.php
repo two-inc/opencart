@@ -326,6 +326,12 @@ $_['help_cron_url'] = 'Anropa denna var 15:e minut från serverns crontab. Varje
 $_['text_cron_last_run'] = 'Den schemalagda uppdateringen kördes senast %s.';
 $_['text_cron_never'] = 'Den schemalagda uppdateringen har inte körts ännu.';
 $_['text_pending_stale'] = '%d Two-ordrar väntar på att köparen ska återvända, och den schemalagda URL:en har inte körts den senaste timmen. Schemalägg den var 15:e minut så att verifierade ordrar läggs.';
+$_['entry_opencart_version'] = 'OpenCart-version';
+$_['text_opencart_supported'] = 'OpenCart %s stöds.';
+$_['text_opencart_untested'] = 'OpenCart %s har inte testats med det här tillägget.';
+$_['text_opencart_unsupported'] = 'OpenCart %1$s stöds inte. Ett känt fel i den här OpenCart-versionen kan förstöra ordrar, oavsett betalningsmetod: %2$s. Uppgradera OpenCart till %3$s eller senare.';
+$_['text_opencart_bug_guest_checkout'] = 'gäster kan inte slutföra köpet i kassan';
+$_['text_opencart_bug_order_edit'] = 'en order som redigeras i administrationen blir en saknad order';
 $_['text_pending_table'] = 'Two-ordertabellen saknar kolumner som kontrollen av ordrar som köparen inte återvände från behöver, och tillägget kunde inte lägga till dem (felloggen anger varför). Tills de har lagts till kontrolleras dessa ordrar inte hos Two.';
 
 // TWO-27055: the product page message and buy button (Checkout fields).

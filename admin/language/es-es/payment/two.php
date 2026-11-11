@@ -326,6 +326,12 @@ $_['help_cron_url'] = 'Llame a esta URL cada 15 minutos desde el crontab de su s
 $_['text_cron_last_run'] = 'La actualización programada se ejecutó por última vez el %s.';
 $_['text_cron_never'] = 'La actualización programada aún no se ha ejecutado.';
 $_['text_pending_stale'] = '%d pedidos de Two esperan a que el comprador vuelva, y la URL programada no se ha ejecutado en la última hora. Prográmela cada 15 minutos para que se registren los pedidos verificados.';
+$_['entry_opencart_version'] = 'Versión de OpenCart';
+$_['text_opencart_supported'] = 'OpenCart %s es compatible.';
+$_['text_opencart_untested'] = 'OpenCart %s no se ha probado con esta extensión.';
+$_['text_opencart_unsupported'] = 'OpenCart %1$s no es compatible. Un error conocido de esta versión de OpenCart puede romper los pedidos, sea cual sea el método de pago: %2$s. Actualiza OpenCart a la versión %3$s o posterior.';
+$_['text_opencart_bug_guest_checkout'] = 'los invitados no pueden completar la compra';
+$_['text_opencart_bug_order_edit'] = 'al editar un pedido en la administración, pasa a ser un pedido perdido';
 $_['text_pending_table'] = 'A la tabla de pedidos de Two le faltan columnas que necesita la comprobación de los pedidos de compradores que no volvieron, y la extensión no pudo añadirlas (el registro de errores indica el motivo). Hasta que se añadan, esos pedidos no se comprueban con Two.';
 
 // TWO-27055: the product page message and buy button (Checkout fields).
