@@ -58,3 +58,14 @@ test("the Diagnostics tab: SSL verification on by default, a tokenised refresh U
   const log = await page.request.get((await page.locator("#two-error-log-link").getAttribute("href")) ?? "");
   expect([log.status(), (await log.text()).includes('id="two-error-log')], "the error log view opens behind the admin login").toEqual([200, true]);
 });
+
+test("the Diagnostics tab's OpenCart version row is ok on the release CI runs, with no unsupported banner", async ({ page }) => {
+  // CI runs only supported releases (dev/support-matrix.sh skips the rest).
+  const version = process.env.E2E_OPENCART ?? "4.1.0.4";
+  await openSettings(page);
+  await expect(page.locator("#two-opencart-unsupported"), "no banner on a supported release").toHaveCount(0);
+  await page.click('a[href="#tab-diagnostics"]');
+  const row = page.locator("#two-opencart-version");
+  await expect(row, "the row is in the ok state").toHaveAttribute("data-state", "ok");
+  await expect(row, "the row names the running release as supported").toHaveText(`OpenCart ${version} is supported.`);
+});
