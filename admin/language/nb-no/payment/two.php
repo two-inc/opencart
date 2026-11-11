@@ -328,6 +328,7 @@ $_['text_cron_never'] = 'Den planlagte oppdateringen har ikke kjørt ennå.';
 $_['text_pending_stale'] = '%d Two-ordrer venter på at kjøperen skal komme tilbake, og den planlagte URL-en har ikke kjørt den siste timen. Planlegg den hvert 15. minutt, så blir bekreftede ordrer lagt inn.';
 $_['entry_opencart_version'] = 'OpenCart-versjon';
 $_['text_opencart_supported'] = 'OpenCart %s støttes.';
+$_['text_opencart_untested'] = 'OpenCart %s er ikke testet med denne utvidelsen.';
 $_['text_opencart_unsupported'] = 'OpenCart %1$s støttes ikke. En kjent feil i denne OpenCart-versjonen kan ødelegge ordrer, uansett betalingsmåte: %2$s. Oppgrader OpenCart til %3$s eller nyere.';
 $_['text_opencart_bug_guest_checkout'] = 'gjester kan ikke fullføre kjøpet i kassen';
 $_['text_opencart_bug_order_edit'] = 'en ordre som redigeres i administrasjonen, blir en manglende ordre';

@@ -328,6 +328,7 @@ $_['text_cron_never'] = 'De geplande vernieuwing is nog niet uitgevoerd.';
 $_['text_pending_stale'] = '%d Two-bestellingen wachten tot de koper terugkeert, en de geplande URL heeft het afgelopen uur niet gedraaid. Plan hem elke 15 minuten in, zodat geverifieerde bestellingen worden geplaatst.';
 $_['entry_opencart_version'] = 'OpenCart-versie';
 $_['text_opencart_supported'] = 'OpenCart %s wordt ondersteund.';
+$_['text_opencart_untested'] = 'OpenCart %s is niet getest met deze extensie.';
 $_['text_opencart_unsupported'] = 'OpenCart %1$s wordt niet ondersteund. Een bekende fout in deze OpenCart-versie kan bestellingen breken, ongeacht de betaalmethode: %2$s. Werk OpenCart bij naar %3$s of hoger.';
 $_['text_opencart_bug_guest_checkout'] = 'gasten kunnen het afrekenen niet voltooien';
 $_['text_opencart_bug_order_edit'] = 'een bestelling die in de beheeromgeving wordt bewerkt, wordt een ontbrekende bestelling';

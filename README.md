@@ -22,7 +22,7 @@ To upgrade, replace the package in Extensions > Installer with the new release's
 
 The settings page has five tabs, saved together. A setting that is not valid is named beside its field.
 
-On OpenCart 4.1.0.1 to 4.1.0.3, which the extension does not support because bugs in OpenCart itself break orders there, a red banner at the top of the page and the OpenCart version row on the Diagnostics tab say so and ask you to upgrade to 4.1.0.4 or later. Nothing is blocked: the settings still save and Two is still offered at checkout.
+On OpenCart 4.1.0.1 to 4.1.0.3, which the extension does not support because bugs in OpenCart itself break orders there, a red banner at the top of the page and the OpenCart version row on the Diagnostics tab say so and ask you to upgrade to 4.1.0.4 or later. On a release outside the 4.1 series the extension is tested on (4.0, or 4.2 and later), the row says that release has not been tested with the extension, with no banner. Nothing is blocked: the settings still save and Two is still offered at checkout.
 
 ### General
 
