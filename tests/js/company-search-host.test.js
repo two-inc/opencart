@@ -590,3 +590,46 @@ test.each([
     const { hosts } = start(config(published === undefined ? {} : { custom_headers: published }));
     expect([hosts.payment.component.config().customHeaders, description]).toEqual([expected, description]);
 });
+
+// TWO-27235: with no country the search row stays up and answers with the
+// select-a-country sentence, sending nothing; re-selecting a country restores
+// search. The registry covers GB and NO, not the third option's FR.
+describe('no country selected', () => {
+    const FORM = ADDRESS('payment').replace('<option value="222">', '<option value=""></option><option value="222">')
+        .replace('<option value="160">Norway</option>', '<option value="160">Norway</option><option value="74">France</option>');
+    const choose = (value) => {
+        const select = document.getElementById('input-payment-country');
+        select.value = value;
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+
+    test.each([
+        [[], 'on load with no country the row stays up and answers with the sentence'],
+        [[['222', false, 'Ingen treff', 1], ['', false, 'Velg land', 0]], 'clearing a covered country'],
+        [[['74', true, null, 0], ['', false, 'Velg land', 0]], 'clearing an uncovered country brings the row back'],
+        [[['', false, 'Velg land', 0], ['160', false, 'Ingen treff', 1]], 'selecting a country after loading without one'],
+        [[['222', false, 'Ingen treff', 1], ['', false, 'Velg land', 0], ['222', false, 'Ingen treff', 0]], 're-selecting the same country restores search (cached)'],
+    ])('%#', async (steps, description) => {
+        document.body.innerHTML = FORM;
+        const { hosts, calls } = start(config({ countries: { 222: 'GB', 160: 'NO', 74: 'FR' } }), { s: { items: [] } });
+        await flush();
+        const check = async (value, withdrawn, message, sent) => {
+            const before = calls.filter(([route]) => route === 's').length;
+            const host = hosts.payment;
+            const state = { withdrawn: host.component.panel().isDisabled(), message: null, sent: 0 };
+            if (!withdrawn) {
+                await host.transport.searchCompanies({ term: 'acme', getCountryCode: () => host.country() });
+                state.message = host.transport.noResultsMessage();
+                state.sent = calls.filter(([route]) => route === 's').length - before;
+            }
+            expect([state, value, description]).toEqual([{ withdrawn, message, sent }, value, description]);
+        };
+        // Before any change event, so the load state answers for start() alone.
+        await check('load', false, 'Velg land', 0);
+        for (const [value, withdrawn, message, sent] of steps) {
+            choose(value);
+            await flush();
+            await check(value, withdrawn, message, sent);
+        }
+    });
+});

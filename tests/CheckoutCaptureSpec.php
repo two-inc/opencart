@@ -190,6 +190,7 @@ final class CheckoutCaptureSpec
             [[self::json(200, ['unexpected' => true])], 'acme', 'NO', null, ['/companies/v2/company?country=NO&q=acme&limit=50&offset=0'], 'an answer without items is a failure'],
             [[], 'ac ', 'NO', [], [], 'a term under three characters asks nothing'],
             [[], 'acme', 'Norway', [], [], 'a country that is not a code asks nothing'],
+            [[], 'acme', '', [], [], 'an empty country asks nothing'],
         ];
         foreach ($cases as [$responses, $term, $country, $expected, $paths, $description]) {
             [$lookup, $transport] = self::lookup($responses);
