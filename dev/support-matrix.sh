@@ -8,8 +8,9 @@
 #     {"e2e": [runnable combos], "skips": [combos not run, with reasons],
 #      "php_unit": [PHP minors for the unit and lint jobs]}
 #   dev/support-matrix.sh --php-unit   the php_unit list alone, as a JSON
-#     array. Reads only this checkout and php.net, so an outage of GitHub or
-#     Docker Hub cannot block the unit jobs.
+#     array of {php, provisional, provisional_reason}. Reads this checkout,
+#     php.net and the opencart/opencart releases, never Docker Hub, so a
+#     registry outage cannot block the unit jobs.
 #
 # Support window, and where each part comes from:
 #   PHP          php.net/releases (?json): the minors in supported_versions,
@@ -37,7 +38,11 @@
 #
 # Matrices:
 #   php_unit  Every PHP minor from the declared floor to the newest supported
-#             one. setup-php resolves the newest patch of each.
+#             one. setup-php resolves the newest patch of each. A minor whose
+#             first GA release came after the newest supported OpenCart
+#             release was tagged is provisional: no OpenCart release the
+#             plugin supports can have declared it, so its unit leg runs
+#             non-blocking (continue-on-error) with a warning, as e2e does.
 #   e2e       Every OpenCart release in the window, times every PHP minor in
 #             php_unit, classified, first match wins:
 #               skip  OpenCart X is unsupported (oc_unsupported): an upstream
@@ -149,10 +154,6 @@ php_unit=$(jq -r '.[].version' <<<"$php_json" \
 [ -n "$php_unit" ] || die "no PHP minors between the floor $php_floor and $php_newest"
 log "PHP supported (php.net): $(tr '\n' ' ' <<<"$php_supported")"
 log "PHP unit, lint and e2e: $(tr '\n' ' ' <<<"$php_unit")"
-if [ "$mode" = unit ]; then
-    jq -R . <<<"$php_unit" | jq -sc '.'
-    exit 0
-fi
 
 # Each minor's first GA release date (YYYY-MM-DD). The first GA is the lowest
 # patch php.net lists, not always .0: PHP 8.4 shipped as 8.4.1.
@@ -183,13 +184,40 @@ oc_releases=$(jq -r '.[] | select((.draft | not) and (.prerelease | not))
 cut -f1 <<<"$oc_releases" | grep -qxF "$oc_floor" \
     || die "OpenCart $oc_floor (the declared floor) is not among the $REPO releases"
 for s in $(cut -f1 <<<"$oc_releases" | while read -r t; do series "$t"; done | sort -V -u); do
-    if ! ver_le "$s" "$oc_series"; then
+    if [ "$mode" != unit ] && ! ver_le "$s" "$oc_series"; then
         newest=$(cut -f1 <<<"$oc_releases" | grep "^$s\." | tail -1)
         echo "::warning title=OpenCart series not tested::OpenCart $newest is released; the plugin declares OpenCart $oc_series only, so CI does not test $s" >&2
     fi
 done
 oc_window=$(cut -f1 <<<"$oc_releases" \
     | while read -r t; do if [ "$(series "$t")" = "$oc_series" ] && ver_le "$oc_floor" "$t"; then echo "$t"; fi; done)
+
+# tagged <release>: the date (YYYY-MM-DD) of the commit the release tag names.
+tagged() {
+    local date
+    date=$(github "repos/$REPO/commits/$1" | jq -r '.commit.committer.date // empty') || exit 2
+    [ -n "$date" ] || die "no commit date for the OpenCart $1 tag"
+    echo "${date%%T*}"
+}
+
+# The unit legs: a minor newer than the newest supported OpenCart release is
+# provisional (see Matrices above).
+oc_newest=$(for t in $oc_window; do if [ -z "${oc_unsupported[$t]:-}" ]; then echo "$t"; fi; done | tail -1)
+[ -n "$oc_newest" ] || die "every OpenCart release in the window is unsupported"
+oc_newest_date=$(tagged "$oc_newest")
+unit=$(for php in $php_unit; do
+    reason=''
+    if [[ ${php_ga[$php]} > $oc_newest_date ]]; then
+        reason="PHP $php (first GA ${php_ga[$php]}) is newer than OpenCart $oc_newest (tagged $oc_newest_date), the newest release the plugin supports; runs non-blocking"
+    fi
+    jq -nc --arg php "$php" --arg reason "$reason" \
+        '{php: $php, provisional: ($reason != ""), provisional_reason: $reason}'
+done | jq -sc '.')
+log "PHP unit legs non-blocking: $(jq -r '[.[] | select(.provisional) | .php] | if length == 0 then "none" else join(" ") end' <<<"$unit")"
+if [ "$mode" = unit ]; then
+    echo "$unit"
+    exit 0
+fi
 
 declare -A oc_sha=() oc_php=() oc_date=() oc_skip=()
 log "OpenCart window (every $oc_series release from the floor):"
@@ -219,9 +247,7 @@ for v in $oc_window; do
     [[ $constraint =~ ^\>=[[:space:]]*([0-9]+\.[0-9]+) ]] \
         || die "OpenCart $v composer.json requires PHP '$constraint', not a '>=' floor this script understands"
     oc_php[$v]=${BASH_REMATCH[1]}
-    tagged=$(github "repos/$REPO/commits/$v" | jq -r '.commit.committer.date // empty') || exit 2
-    [ -n "$tagged" ] || die "no commit date for the OpenCart $v tag"
-    oc_date[$v]=${tagged%%T*}
+    oc_date[$v]=$(tagged "$v") || exit 2
     log "  $v (tagged ${oc_date[$v]}, requires PHP ${oc_php[$v]}, sha256 ${oc_sha[$v]:-none})"
 done
 
@@ -256,7 +282,6 @@ all=$(printf '%s\n' "${entries[@]}" | jq -sc '.')
 e2e=$(jq -c '[.[] | select(.reason == "") | del(.reason)]' <<<"$all")
 provisional=$(jq '[.[] | select(.reason == "" and .provisional)] | length' <<<"$all")
 skips=$(jq -c '[.[] | select(.reason != "") | {opencart, php, reason}]' <<<"$all")
-unit=$(jq -R . <<<"$php_unit" | jq -sc '.')
 runs=$(jq length <<<"$e2e")
 [ "$runs" -gt "$provisional" ] \
     || die "no blocking e2e combination ($runs runnable, $provisional of them non-blocking), so e2e could never fail"

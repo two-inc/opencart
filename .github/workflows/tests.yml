@@ -10,9 +10,11 @@ jobs:
   # The PHP minors to test, read from php.net on every run by
   # dev/support-matrix.sh --php-unit (TWO-27172): every minor from the plugin's
   # declared floor (phpVersion in phpstan.neon) to the newest one php.net
-  # supports. It reads nothing else, so only a php.net outage can hold the
-  # unit jobs up, and a transport or parse failure fails discovery rather than
-  # skipping green.
+  # supports. A minor whose first GA release came after the newest supported
+  # OpenCart release was tagged runs non-blocking, with a warning and a
+  # summary row. It reads php.net and the OpenCart releases, never Docker Hub,
+  # and a transport or parse failure fails discovery rather than skipping
+  # green.
   discover:
     name: Discover PHP versions
     runs-on: ubuntu-latest
@@ -25,22 +27,35 @@ jobs:
 
       - name: Resolve the PHP minors
         id: gen
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -o pipefail
           php=$(bash dev/support-matrix.sh --php-unit)
           echo "PHP minors: $php"
           echo "php=$php" >> "$GITHUB_OUTPUT"
+          {
+            echo "## PHP unit and lint legs"
+            echo ""
+            echo "| PHP | Status | Reason |"
+            echo "|---|---|---|"
+            jq -r '.[] | if .provisional then "| \(.php) | ⚠️ tested, non-blocking | \(.provisional_reason) |" else "| \(.php) | ✅ tested | |" end' <<<"$php"
+          } >> "$GITHUB_STEP_SUMMARY"
+          jq -r '.[] | select(.provisional) | "::warning title=PHP tested non-blocking::PHP \(.php): \(.provisional_reason)"' <<<"$php"
 
   test:
-    name: PHP ${{ matrix.php-version }}
+    name: PHP ${{ matrix.php.php }}
     needs: discover
     runs-on: ubuntu-latest
+    # A PHP minor newer than every supported OpenCart release is exercised but
+    # cannot block (see dev/support-matrix.sh).
+    continue-on-error: ${{ matrix.php.provisional }}
     strategy:
       fail-fast: false
       matrix:
         # Every supported minor. A minor-only pin: setup-php resolves the
         # newest patch.
-        php-version: ${{ fromJSON(needs.discover.outputs.php) }}
+        php: ${{ fromJSON(needs.discover.outputs.php) }}
 
     steps:
       - name: Checkout
@@ -49,7 +64,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: ${{ matrix.php-version }}
+          php-version: ${{ matrix.php.php }}
           coverage: none
 
       - name: Syntax check
